@@ -1,11 +1,14 @@
 import { createServerFn } from '@tanstack/react-start';
 import { getRequest } from '@tanstack/react-start/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, ilike } from 'drizzle-orm';
 import { db } from '@/db';
-import { tournaments } from '@/db/schema';
+import { persons, tournamentParticipants, tournaments } from '@/db/schema';
 import { createSupabaseServerClient } from './supabase.server';
 import type {
+  AddParticipantInput,
+  CreateGuestInput,
   CreateTournamentInput,
+  UpdateParticipantInput,
   UpdateTournamentInput,
 } from './validators';
 
@@ -139,3 +142,166 @@ export const deleteTournamentFn = createServerFn({ method: 'POST' })
 
     return { success: true };
   });
+
+// ──────────────────────────────────────────────
+// Search persons (for adding to a tournament)
+// ──────────────────────────────────────────────
+
+export const searchPersonsFn = createServerFn({ method: 'GET' })
+  .inputValidator((data: { query: string; tournamentId: string }) => data)
+  .handler(async ({ data }) => {
+    await requireAuth();
+
+    // Get existing participant personIds so we can exclude them
+    const existing = await db.query.tournamentParticipants.findMany({
+      where: eq(tournamentParticipants.tournamentId, data.tournamentId),
+      columns: { personId: true },
+    });
+    const existingPersonIds = new Set(existing.map((p) => p.personId));
+
+    // Search persons by display name
+    const results = await db.query.persons.findMany({
+      where: ilike(persons.displayName, `%${data.query}%`),
+      with: {
+        user: true,
+      },
+      limit: 20,
+    });
+
+    // Filter out persons already in the tournament
+    return results
+      .filter((p) => !existingPersonIds.has(p.id))
+      .map((p) => ({
+        id: p.id,
+        displayName: p.displayName,
+        currentHandicap: p.currentHandicap,
+        isGuest: p.userId == null,
+        email: p.user?.email ?? null,
+      }));
+  });
+
+// ──────────────────────────────────────────────
+// Create a guest person (no user account)
+// ──────────────────────────────────────────────
+
+export const createGuestPersonFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: CreateGuestInput) => data)
+  .handler(async ({ data }) => {
+    const user = await requireAuth();
+
+    const [person] = await db
+      .insert(persons)
+      .values({
+        displayName: data.displayName,
+        currentHandicap: data.currentHandicap?.toString() ?? null,
+        createdByUserId: user.id,
+        // userId is null → this is a guest
+      })
+      .returning();
+
+    return { personId: person.id };
+  });
+
+// ──────────────────────────────────────────────
+// Add a participant to a tournament
+// ──────────────────────────────────────────────
+
+export const addParticipantFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: AddParticipantInput) => data)
+  .handler(async ({ data }) => {
+    await requireAuth();
+
+    // Verify tournament exists
+    const tournament = await db.query.tournaments.findFirst({
+      where: eq(tournaments.id, data.tournamentId),
+    });
+    if (!tournament) throw new Error('Tournament not found');
+
+    // Check person isn't already a participant
+    const existingParticipant =
+      await db.query.tournamentParticipants.findFirst({
+        where: and(
+          eq(tournamentParticipants.tournamentId, data.tournamentId),
+          eq(tournamentParticipants.personId, data.personId),
+        ),
+      });
+    if (existingParticipant) throw new Error('Person is already a participant');
+
+    const [participant] = await db
+      .insert(tournamentParticipants)
+      .values({
+        tournamentId: data.tournamentId,
+        personId: data.personId,
+        role: data.role ?? 'player',
+        handicapOverride: data.handicapOverride?.toString() ?? null,
+      })
+      .returning();
+
+    return { participantId: participant.id };
+  });
+
+// ──────────────────────────────────────────────
+// Update a participant (role, handicap override)
+// ──────────────────────────────────────────────
+
+export const updateParticipantFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: UpdateParticipantInput) => data)
+  .handler(async ({ data }) => {
+    await requireAuth();
+
+    const existing = await db.query.tournamentParticipants.findFirst({
+      where: eq(tournamentParticipants.id, data.participantId),
+    });
+    if (!existing) throw new Error('Participant not found');
+
+    const updates: Record<string, unknown> = {};
+    if (data.role !== undefined) updates.role = data.role;
+    if (data.handicapOverride !== undefined)
+      updates.handicapOverride = data.handicapOverride?.toString() ?? null;
+
+    if (Object.keys(updates).length > 0) {
+      await db
+        .update(tournamentParticipants)
+        .set(updates)
+        .where(eq(tournamentParticipants.id, data.participantId));
+    }
+
+    return { success: true };
+  });
+
+// ──────────────────────────────────────────────
+// Remove a participant from a tournament
+// ──────────────────────────────────────────────
+
+export const removeParticipantFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: { participantId: string }) => data)
+  .handler(async ({ data }) => {
+    await requireAuth();
+
+    const existing = await db.query.tournamentParticipants.findFirst({
+      where: eq(tournamentParticipants.id, data.participantId),
+    });
+    if (!existing) throw new Error('Participant not found');
+
+    await db
+      .delete(tournamentParticipants)
+      .where(eq(tournamentParticipants.id, data.participantId));
+
+    return { success: true };
+  });
+
+// ──────────────────────────────────────────────
+// Get current user's person record (for "Add Myself")
+// ──────────────────────────────────────────────
+
+export const getMyPersonFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const user = await requireAuth();
+
+    const person = await db.query.persons.findFirst({
+      where: eq(persons.userId, user.id),
+    });
+
+    return person ?? null;
+  },
+);

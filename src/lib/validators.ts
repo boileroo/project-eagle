@@ -94,3 +94,46 @@ export const updateTournamentSchema = createTournamentSchema.extend({
   id: z.string().uuid(),
 });
 export type UpdateTournamentInput = z.infer<typeof updateTournamentSchema>;
+
+// ──────────────────────────────────────────────
+// Tournament participant schemas
+// ──────────────────────────────────────────────
+
+export const addParticipantSchema = z.object({
+  tournamentId: z.string().uuid(),
+  personId: z.string().uuid(),
+  role: z.enum(['commissioner', 'marker', 'player', 'spectator']).default('player'),
+  handicapOverride: z
+    .number()
+    .min(-10)
+    .max(54)
+    .multipleOf(0.1)
+    .nullable()
+    .optional(),
+});
+export type AddParticipantInput = z.infer<typeof addParticipantSchema>;
+
+export const updateParticipantSchema = z.object({
+  participantId: z.string().uuid(),
+  role: z.enum(['commissioner', 'marker', 'player', 'spectator']).optional(),
+  handicapOverride: z
+    .number()
+    .min(-10)
+    .max(54)
+    .multipleOf(0.1)
+    .nullable()
+    .optional(),
+});
+export type UpdateParticipantInput = z.infer<typeof updateParticipantSchema>;
+
+export const createGuestSchema = z.object({
+  displayName: z.string().min(2, 'Name must be at least 2 characters'),
+  currentHandicap: z
+    .number()
+    .min(-10)
+    .max(54)
+    .multipleOf(0.1)
+    .nullable()
+    .optional(),
+});
+export type CreateGuestInput = z.infer<typeof createGuestSchema>;

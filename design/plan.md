@@ -124,7 +124,7 @@ The core "commissioner" workflow: create a tournament, add people, assign to rou
 
 ### 3.2 Person & Account Model ✅
 
-**Revised approach:** Users don't "add people." They *are* players by virtue of having an account. Guests are only created in tournament context.
+**Revised approach:** Users don't "add people." They _are_ players by virtue of having an account. Guests are only created in tournament context.
 
 - On signup, trigger auto-creates a `person` record linked to the profile
 - Users manage their own player info (display name, handicap) via `/account`
@@ -134,11 +134,16 @@ The core "commissioner" workflow: create a tournament, add people, assign to rou
 - RLS: users can update own person, creators can manage guest persons
 - Existing users backfilled with person records via migration
 
-### 3.3 Tournament Participants
+### 3.3 Tournament Participants ✅
 
-- Add persons to a tournament → `TournamentParticipant` records
-- Commissioner sets optional handicap override
-- Participant list with remove/edit
+- "Join" button for current user to add themselves to a tournament
+- "Add Player" dialog with search (by name) across all persons
+- "Add Guest" tab to create a guest person inline and add to tournament
+- Role management via dropdown (commissioner / player / marker / spectator)
+- Handicap override dialog per participant
+- Remove participant from tournament
+- Server functions: searchPersonsFn, addParticipantFn, removeParticipantFn, updateParticipantFn, createGuestPersonFn, getMyPersonFn
+- Validators: addParticipantSchema, updateParticipantSchema, createGuestSchema
 
 ### 3.4 Round Management
 

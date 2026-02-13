@@ -1,8 +1,19 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { getTournamentFn, deleteTournamentFn } from '@/lib/tournaments.server';
+import {
+  getTournamentFn,
+  deleteTournamentFn,
+  searchPersonsFn,
+  addParticipantFn,
+  removeParticipantFn,
+  updateParticipantFn,
+  createGuestPersonFn,
+  getMyPersonFn,
+} from '@/lib/tournaments.server';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -12,36 +23,47 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks';
+import { useRouter } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
   loader: async ({ params }) => {
-    const tournament = await getTournamentFn({
-      data: { tournamentId: params.tournamentId },
-    });
-    return { tournament };
+    const [tournament, myPerson] = await Promise.all([
+      getTournamentFn({ data: { tournamentId: params.tournamentId } }),
+      getMyPersonFn(),
+    ]);
+    return { tournament, myPerson };
   },
   component: TournamentDetailPage,
 });
 
 function TournamentDetailPage() {
-  const { tournament } = Route.useLoaderData();
+  const { tournament, myPerson } = Route.useLoaderData();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const router = useRouter();
   const [deleting, setDeleting] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const isOwner = user?.id === tournament.createdByUserId;
+  const iAmParticipant = myPerson
+    ? tournament.participants.some((p) => p.personId === myPerson.id)
+    : false;
 
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await deleteTournamentFn({
-        data: { tournamentId: tournament.id },
-      });
+      await deleteTournamentFn({ data: { tournamentId: tournament.id } });
       toast.success('Tournament deleted.');
       navigate({ to: '/tournaments' });
     } catch (error) {
@@ -49,7 +71,53 @@ function TournamentDetailPage() {
         error instanceof Error ? error.message : 'Failed to delete tournament',
       );
       setDeleting(false);
-      setDialogOpen(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  const handleAddMyself = async () => {
+    if (!myPerson) return;
+    try {
+      await addParticipantFn({
+        data: {
+          tournamentId: tournament.id,
+          personId: myPerson.id,
+          role: isOwner ? 'commissioner' : 'player',
+        },
+      });
+      toast.success('Added to the tournament!');
+      router.invalidate();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to add yourself',
+      );
+    }
+  };
+
+  const handleRemoveParticipant = async (participantId: string, name: string) => {
+    try {
+      await removeParticipantFn({ data: { participantId } });
+      toast.success(`${name} removed from tournament.`);
+      router.invalidate();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to remove participant',
+      );
+    }
+  };
+
+  const handleRoleChange = async (
+    participantId: string,
+    role: 'commissioner' | 'marker' | 'player' | 'spectator',
+  ) => {
+    try {
+      await updateParticipantFn({ data: { participantId, role } });
+      toast.success('Role updated.');
+      router.invalidate();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update role',
+      );
     }
   };
 
@@ -79,7 +147,7 @@ function TournamentDetailPage() {
               </Link>
             </Button>
 
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="destructive">Delete</Button>
               </DialogTrigger>
@@ -96,7 +164,7 @@ function TournamentDetailPage() {
                 <DialogFooter>
                   <Button
                     variant="outline"
-                    onClick={() => setDialogOpen(false)}
+                    onClick={() => setDeleteDialogOpen(false)}
                   >
                     Cancel
                   </Button>
@@ -121,16 +189,27 @@ function TournamentDetailPage() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Players</span>
-            <Badge variant="secondary">
-              {tournament.participants.length} player
-              {tournament.participants.length !== 1 ? 's' : ''}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
+                {tournament.participants.length} player
+                {tournament.participants.length !== 1 ? 's' : ''}
+              </Badge>
+              {!iAmParticipant && myPerson && (
+                <Button size="sm" variant="outline" onClick={handleAddMyself}>
+                  Join
+                </Button>
+              )}
+              <AddParticipantDialog
+                tournamentId={tournament.id}
+                onAdded={() => router.invalidate()}
+              />
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {tournament.participants.length === 0 ? (
             <p className="text-muted-foreground text-sm">
-              No players yet. Add players to this tournament to get started.
+              No players yet. Add yourself or invite others to get started.
             </p>
           ) : (
             <div className="space-y-2">
@@ -139,22 +218,69 @@ function TournamentDetailPage() {
                   key={p.id}
                   className="flex items-center justify-between rounded-md border px-3 py-2"
                 >
-                  <span className="text-sm font-medium">
-                    {p.person.displayName}
-                  </span>
                   <div className="flex items-center gap-2">
-                    {p.handicapOverride != null && (
-                      <Badge variant="outline">
-                        HC {p.handicapOverride}
+                    <span className="text-sm font-medium">
+                      {p.person.displayName}
+                    </span>
+                    {p.person.userId == null && (
+                      <Badge variant="outline" className="text-xs">
+                        Guest
                       </Badge>
                     )}
-                    <Badge
-                      variant={
-                        p.role === 'commissioner' ? 'default' : 'secondary'
-                      }
-                    >
-                      {p.role}
-                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {(p.handicapOverride ?? p.person.currentHandicap) != null && (
+                      <Badge variant="outline">
+                        HC{' '}
+                        {p.handicapOverride ?? p.person.currentHandicap}
+                      </Badge>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-7 px-2">
+                          <Badge
+                            variant={
+                              p.role === 'commissioner'
+                                ? 'default'
+                                : 'secondary'
+                            }
+                          >
+                            {p.role}
+                          </Badge>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {(
+                          ['commissioner', 'player', 'marker', 'spectator'] as const
+                        ).map((role) => (
+                          <DropdownMenuItem
+                            key={role}
+                            onClick={() => handleRoleChange(p.id, role)}
+                            disabled={p.role === role}
+                          >
+                            {role.charAt(0).toUpperCase() + role.slice(1)}
+                            {p.role === role ? ' ✓' : ''}
+                          </DropdownMenuItem>
+                        ))}
+                        <DropdownMenuSeparator />
+                        <EditHandicapDialog
+                          participant={p}
+                          onSaved={() => router.invalidate()}
+                        />
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() =>
+                            handleRemoveParticipant(
+                              p.id,
+                              p.person.displayName,
+                            )
+                          }
+                        >
+                          Remove
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}
@@ -208,5 +334,312 @@ function TournamentDetailPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Add Participant Dialog (search + add guest)
+// ──────────────────────────────────────────────
+
+function AddParticipantDialog({
+  tournamentId,
+  onAdded,
+}: {
+  tournamentId: string;
+  onAdded: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<'search' | 'guest'>('search');
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<
+    { id: string; displayName: string; currentHandicap: string | null; isGuest: boolean; email: string | null }[]
+  >([]);
+  const [searching, setSearching] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  // Guest form state
+  const [guestName, setGuestName] = useState('');
+  const [guestHandicap, setGuestHandicap] = useState('');
+
+  const handleSearch = useCallback(
+    async (q: string) => {
+      setQuery(q);
+      if (q.length < 2) {
+        setResults([]);
+        return;
+      }
+      setSearching(true);
+      try {
+        const data = await searchPersonsFn({
+          data: { query: q, tournamentId },
+        });
+        setResults(data);
+      } catch {
+        // ignore search errors
+      }
+      setSearching(false);
+    },
+    [tournamentId],
+  );
+
+  const handleAddPerson = async (personId: string) => {
+    setAdding(true);
+    try {
+      await addParticipantFn({
+        data: { tournamentId, personId, role: 'player' },
+      });
+      toast.success('Player added!');
+      setOpen(false);
+      setQuery('');
+      setResults([]);
+      onAdded();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to add player',
+      );
+    }
+    setAdding(false);
+  };
+
+  const handleAddGuest = async () => {
+    if (guestName.length < 2) {
+      toast.error('Name must be at least 2 characters');
+      return;
+    }
+    setAdding(true);
+    try {
+      const hc = guestHandicap ? parseFloat(guestHandicap) : null;
+      const { personId } = await createGuestPersonFn({
+        data: {
+          displayName: guestName,
+          currentHandicap: hc,
+        },
+      });
+      await addParticipantFn({
+        data: { tournamentId, personId, role: 'player' },
+      });
+      toast.success(`${guestName} added as a guest!`);
+      setOpen(false);
+      setGuestName('');
+      setGuestHandicap('');
+      onAdded();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to add guest',
+      );
+    }
+    setAdding(false);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) {
+          setQuery('');
+          setResults([]);
+          setTab('search');
+          setGuestName('');
+          setGuestHandicap('');
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button size="sm">Add Player</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Player</DialogTitle>
+          <DialogDescription>
+            Search for an existing player or add a guest.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Tab toggle */}
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant={tab === 'search' ? 'default' : 'outline'}
+            onClick={() => setTab('search')}
+          >
+            Search
+          </Button>
+          <Button
+            size="sm"
+            variant={tab === 'guest' ? 'default' : 'outline'}
+            onClick={() => setTab('guest')}
+          >
+            Add Guest
+          </Button>
+        </div>
+
+        {tab === 'search' ? (
+          <div className="space-y-3">
+            <Input
+              placeholder="Search by name…"
+              value={query}
+              onChange={(e) => handleSearch(e.target.value)}
+              autoFocus
+            />
+            {searching && (
+              <p className="text-muted-foreground text-sm">Searching…</p>
+            )}
+            {results.length > 0 && (
+              <div className="max-h-60 space-y-1 overflow-y-auto">
+                {results.map((person) => (
+                  <div
+                    key={person.id}
+                    className="flex items-center justify-between rounded-md border px-3 py-2"
+                  >
+                    <div>
+                      <span className="text-sm font-medium">
+                        {person.displayName}
+                      </span>
+                      {person.isGuest && (
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          Guest
+                        </Badge>
+                      )}
+                      {person.email && (
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          {person.email}
+                        </span>
+                      )}
+                      {person.currentHandicap && (
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          HC {person.currentHandicap}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAddPerson(person.id)}
+                      disabled={adding}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {query.length >= 2 && results.length === 0 && !searching && (
+              <p className="text-muted-foreground text-sm">
+                No matches found.{' '}
+                <button
+                  type="button"
+                  className="text-primary underline"
+                  onClick={() => {
+                    setTab('guest');
+                    setGuestName(query);
+                  }}
+                >
+                  Add as guest instead?
+                </button>
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="guestName">Name</Label>
+              <Input
+                id="guestName"
+                placeholder="e.g. Dave Smith"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div>
+              <Label htmlFor="guestHandicap">Handicap (optional)</Label>
+              <Input
+                id="guestHandicap"
+                type="number"
+                step="0.1"
+                placeholder="e.g. 18.4"
+                value={guestHandicap}
+                onChange={(e) => setGuestHandicap(e.target.value)}
+              />
+            </div>
+            <DialogFooter>
+              <Button onClick={handleAddGuest} disabled={adding}>
+                {adding ? 'Adding…' : 'Add Guest'}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Edit Handicap Override Dialog (inline in dropdown)
+// ──────────────────────────────────────────────
+
+function EditHandicapDialog({
+  participant,
+  onSaved,
+}: {
+  participant: { id: string; handicapOverride: string | null };
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(participant.handicapOverride ?? '');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const hc = value ? parseFloat(value) : null;
+      await updateParticipantFn({
+        data: { participantId: participant.id, handicapOverride: hc },
+      });
+      toast.success('Handicap override updated.');
+      setOpen(false);
+      onSaved();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update handicap',
+      );
+    }
+    setSaving(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+          Set Handicap Override
+        </DropdownMenuItem>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Handicap Override</DialogTitle>
+          <DialogDescription>
+            Set a tournament-specific handicap. Leave blank to use the player's
+            current handicap.
+          </DialogDescription>
+        </DialogHeader>
+        <Input
+          type="number"
+          step="0.1"
+          placeholder="e.g. 18.4"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          autoFocus
+        />
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

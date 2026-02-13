@@ -2,10 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { getMyAccountFn, updateMyAccountFn } from '@/lib/persons.server';
-import {
-  updateAccountSchema,
-  type UpdateAccountInput,
-} from '@/lib/validators';
+import { updateAccountSchema, type UpdateAccountInput } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {

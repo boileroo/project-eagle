@@ -16,12 +16,15 @@ import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AppAccountRouteImport } from './routes/_app/account'
 import { Route as AppTournamentsIndexRouteImport } from './routes/_app/tournaments/index'
+import { Route as AppPeopleIndexRouteImport } from './routes/_app/people/index'
 import { Route as AppCoursesIndexRouteImport } from './routes/_app/courses/index'
 import { Route as AppTournamentsNewRouteImport } from './routes/_app/tournaments/new'
+import { Route as AppPeopleNewRouteImport } from './routes/_app/people/new'
 import { Route as AppCoursesNewRouteImport } from './routes/_app/courses/new'
 import { Route as AppTournamentsTournamentIdIndexRouteImport } from './routes/_app/tournaments/$tournamentId/index'
 import { Route as AppCoursesCourseIdIndexRouteImport } from './routes/_app/courses/$courseId/index'
 import { Route as AppTournamentsTournamentIdEditRouteImport } from './routes/_app/tournaments/$tournamentId/edit'
+import { Route as AppPeoplePersonIdEditRouteImport } from './routes/_app/people/$personId/edit'
 import { Route as AppCoursesCourseIdEditRouteImport } from './routes/_app/courses/$courseId/edit'
 
 const AuthRoute = AuthRouteImport.update({
@@ -57,6 +60,11 @@ const AppTournamentsIndexRoute = AppTournamentsIndexRouteImport.update({
   path: '/tournaments/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPeopleIndexRoute = AppPeopleIndexRouteImport.update({
+  id: '/people/',
+  path: '/people/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCoursesIndexRoute = AppCoursesIndexRouteImport.update({
   id: '/courses/',
   path: '/courses/',
@@ -65,6 +73,11 @@ const AppCoursesIndexRoute = AppCoursesIndexRouteImport.update({
 const AppTournamentsNewRoute = AppTournamentsNewRouteImport.update({
   id: '/tournaments/new',
   path: '/tournaments/new',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPeopleNewRoute = AppPeopleNewRouteImport.update({
+  id: '/people/new',
+  path: '/people/new',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCoursesNewRoute = AppCoursesNewRouteImport.update({
@@ -89,6 +102,11 @@ const AppTournamentsTournamentIdEditRoute =
     path: '/tournaments/$tournamentId/edit',
     getParentRoute: () => AppRoute,
   } as any)
+const AppPeoplePersonIdEditRoute = AppPeoplePersonIdEditRouteImport.update({
+  id: '/people/$personId/edit',
+  path: '/people/$personId/edit',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCoursesCourseIdEditRoute = AppCoursesCourseIdEditRouteImport.update({
   id: '/courses/$courseId/edit',
   path: '/courses/$courseId/edit',
@@ -101,10 +119,13 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
   '/courses/new': typeof AppCoursesNewRoute
+  '/people/new': typeof AppPeopleNewRoute
   '/tournaments/new': typeof AppTournamentsNewRoute
   '/courses/': typeof AppCoursesIndexRoute
+  '/people/': typeof AppPeopleIndexRoute
   '/tournaments/': typeof AppTournamentsIndexRoute
   '/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute
+  '/people/$personId/edit': typeof AppPeoplePersonIdEditRoute
   '/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
   '/courses/$courseId/': typeof AppCoursesCourseIdIndexRoute
   '/tournaments/$tournamentId/': typeof AppTournamentsTournamentIdIndexRoute
@@ -115,10 +136,13 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
   '/courses/new': typeof AppCoursesNewRoute
+  '/people/new': typeof AppPeopleNewRoute
   '/tournaments/new': typeof AppTournamentsNewRoute
   '/courses': typeof AppCoursesIndexRoute
+  '/people': typeof AppPeopleIndexRoute
   '/tournaments': typeof AppTournamentsIndexRoute
   '/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute
+  '/people/$personId/edit': typeof AppPeoplePersonIdEditRoute
   '/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
   '/courses/$courseId': typeof AppCoursesCourseIdIndexRoute
   '/tournaments/$tournamentId': typeof AppTournamentsTournamentIdIndexRoute
@@ -132,10 +156,13 @@ export interface FileRoutesById {
   '/_auth/signup': typeof AuthSignupRoute
   '/_app/': typeof AppIndexRoute
   '/_app/courses/new': typeof AppCoursesNewRoute
+  '/_app/people/new': typeof AppPeopleNewRoute
   '/_app/tournaments/new': typeof AppTournamentsNewRoute
   '/_app/courses/': typeof AppCoursesIndexRoute
+  '/_app/people/': typeof AppPeopleIndexRoute
   '/_app/tournaments/': typeof AppTournamentsIndexRoute
   '/_app/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute
+  '/_app/people/$personId/edit': typeof AppPeoplePersonIdEditRoute
   '/_app/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
   '/_app/courses/$courseId/': typeof AppCoursesCourseIdIndexRoute
   '/_app/tournaments/$tournamentId/': typeof AppTournamentsTournamentIdIndexRoute
@@ -148,10 +175,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/courses/new'
+    | '/people/new'
     | '/tournaments/new'
     | '/courses/'
+    | '/people/'
     | '/tournaments/'
     | '/courses/$courseId/edit'
+    | '/people/$personId/edit'
     | '/tournaments/$tournamentId/edit'
     | '/courses/$courseId/'
     | '/tournaments/$tournamentId/'
@@ -162,10 +192,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/courses/new'
+    | '/people/new'
     | '/tournaments/new'
     | '/courses'
+    | '/people'
     | '/tournaments'
     | '/courses/$courseId/edit'
+    | '/people/$personId/edit'
     | '/tournaments/$tournamentId/edit'
     | '/courses/$courseId'
     | '/tournaments/$tournamentId'
@@ -178,10 +211,13 @@ export interface FileRouteTypes {
     | '/_auth/signup'
     | '/_app/'
     | '/_app/courses/new'
+    | '/_app/people/new'
     | '/_app/tournaments/new'
     | '/_app/courses/'
+    | '/_app/people/'
     | '/_app/tournaments/'
     | '/_app/courses/$courseId/edit'
+    | '/_app/people/$personId/edit'
     | '/_app/tournaments/$tournamentId/edit'
     | '/_app/courses/$courseId/'
     | '/_app/tournaments/$tournamentId/'
@@ -243,6 +279,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTournamentsIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/people/': {
+      id: '/_app/people/'
+      path: '/people'
+      fullPath: '/people/'
+      preLoaderRoute: typeof AppPeopleIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/courses/': {
       id: '/_app/courses/'
       path: '/courses'
@@ -255,6 +298,13 @@ declare module '@tanstack/react-router' {
       path: '/tournaments/new'
       fullPath: '/tournaments/new'
       preLoaderRoute: typeof AppTournamentsNewRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/people/new': {
+      id: '/_app/people/new'
+      path: '/people/new'
+      fullPath: '/people/new'
+      preLoaderRoute: typeof AppPeopleNewRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/courses/new': {
@@ -285,6 +335,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTournamentsTournamentIdEditRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/people/$personId/edit': {
+      id: '/_app/people/$personId/edit'
+      path: '/people/$personId/edit'
+      fullPath: '/people/$personId/edit'
+      preLoaderRoute: typeof AppPeoplePersonIdEditRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/courses/$courseId/edit': {
       id: '/_app/courses/$courseId/edit'
       path: '/courses/$courseId/edit'
@@ -299,10 +356,13 @@ interface AppRouteChildren {
   AppAccountRoute: typeof AppAccountRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCoursesNewRoute: typeof AppCoursesNewRoute
+  AppPeopleNewRoute: typeof AppPeopleNewRoute
   AppTournamentsNewRoute: typeof AppTournamentsNewRoute
   AppCoursesIndexRoute: typeof AppCoursesIndexRoute
+  AppPeopleIndexRoute: typeof AppPeopleIndexRoute
   AppTournamentsIndexRoute: typeof AppTournamentsIndexRoute
   AppCoursesCourseIdEditRoute: typeof AppCoursesCourseIdEditRoute
+  AppPeoplePersonIdEditRoute: typeof AppPeoplePersonIdEditRoute
   AppTournamentsTournamentIdEditRoute: typeof AppTournamentsTournamentIdEditRoute
   AppCoursesCourseIdIndexRoute: typeof AppCoursesCourseIdIndexRoute
   AppTournamentsTournamentIdIndexRoute: typeof AppTournamentsTournamentIdIndexRoute
@@ -312,10 +372,13 @@ const AppRouteChildren: AppRouteChildren = {
   AppAccountRoute: AppAccountRoute,
   AppIndexRoute: AppIndexRoute,
   AppCoursesNewRoute: AppCoursesNewRoute,
+  AppPeopleNewRoute: AppPeopleNewRoute,
   AppTournamentsNewRoute: AppTournamentsNewRoute,
   AppCoursesIndexRoute: AppCoursesIndexRoute,
+  AppPeopleIndexRoute: AppPeopleIndexRoute,
   AppTournamentsIndexRoute: AppTournamentsIndexRoute,
   AppCoursesCourseIdEditRoute: AppCoursesCourseIdEditRoute,
+  AppPeoplePersonIdEditRoute: AppPeoplePersonIdEditRoute,
   AppTournamentsTournamentIdEditRoute: AppTournamentsTournamentIdEditRoute,
   AppCoursesCourseIdIndexRoute: AppCoursesCourseIdIndexRoute,
   AppTournamentsTournamentIdIndexRoute: AppTournamentsTournamentIdIndexRoute,

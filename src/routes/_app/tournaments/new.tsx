@@ -78,10 +78,7 @@ function NewTournamentPage() {
                   <FormItem>
                     <FormLabel>Tournament Name</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="e.g. Sunday Cup 2026"
-                        {...field}
-                      />
+                      <Input placeholder="e.g. Sunday Cup 2026" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

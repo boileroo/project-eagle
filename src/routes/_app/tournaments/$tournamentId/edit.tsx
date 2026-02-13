@@ -1,10 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  getTournamentFn,
-  updateTournamentFn,
-} from '@/lib/tournaments.server';
+import { getTournamentFn, updateTournamentFn } from '@/lib/tournaments.server';
 import {
   createTournamentSchema,
   type CreateTournamentInput,
