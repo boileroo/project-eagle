@@ -1,297 +1,99 @@
-Welcome to your new TanStack app!
+# Project Eagle 🦅
 
-# Getting Started
+A full-stack application built with:
 
-To run this application:
+- **[TanStack Start](https://tanstack.com/start)** — Full-stack React framework with SSR
+- **[TanStack Router](https://tanstack.com/router)** — Type-safe file-based routing
+- **[TanStack Query](https://tanstack.com/query)** — Async state management
+- **[TanStack DB](https://tanstack.com/db)** — Reactive client-side collections & live queries
+- **[Supabase](https://supabase.com)** — Auth, database, and storage
+- **[Drizzle ORM](https://orm.drizzle.team)** — Type-safe SQL with PostgreSQL
+- **[shadcn/ui](https://ui.shadcn.com)** — Accessible UI components
+- **[Tailwind CSS v4](https://tailwindcss.com)** — Utility-first styling
+- **[Zod](https://zod.dev)** — Runtime validation (with `drizzle-zod` integration)
+- **[ESLint](https://eslint.org) + [Prettier](https://prettier.io)** — Linting & formatting
 
-```bash
-pnpm install
-pnpm dev
-```
+## Getting Started
 
-# Building For Production
-
-To build this application for production:
-
-```bash
-pnpm build
-```
-
-## Environment Variables
-
-Create a local `.env` file (see `.env.example`) and set the following:
-
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- `SUPABASE_URL` (server-only, can match `VITE_SUPABASE_URL`)
-- `SUPABASE_SERVICE_ROLE_KEY` (server-only)
-
-Supabase clients are configured in `src/lib/supabase`:
-
-- `supabaseClient` uses the anon key for browser reads and realtime.
-- `supabaseAdmin` uses the service role key for server functions.
-
-## Testing
-
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+### 1. Install dependencies
 
 ```bash
-pnpm test
+yarn install
 ```
 
-## Styling
+### 2. Set up environment variables
 
-This project uses CSS for styling.
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add another a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from '@tanstack/react-router';
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to='/about'>About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you use the `<Outlet />` component.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { Outlet, createRootRoute } from '@tanstack/react-router';
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
-
-import { Link } from '@tanstack/react-router';
-
-export const Route = createRootRoute({
-    component: () => (
-        <>
-            <header>
-                <nav>
-                    <Link to='/'>Home</Link>
-                    <Link to='/about'>About</Link>
-                </nav>
-            </header>
-            <Outlet />
-            <TanStackRouterDevtools />
-        </>
-    )
-});
-```
-
-The `<TanStackRouterDevtools />` component is not required so you can remove it if you don't want it in your layout.
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-const peopleRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/people',
-    loader: async () => {
-        const response = await fetch('https://swapi.dev/api/people');
-        return response.json() as Promise<{
-            results: {
-                name: string;
-            }[];
-        }>;
-    },
-    component: () => {
-        const data = peopleRoute.useLoaderData();
-        return (
-            <ul>
-                {data.results.map((person) => (
-                    <li key={person.name}>{person.name}</li>
-                ))}
-            </ul>
-        );
-    }
-});
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-### React-Query
-
-React-Query is an excellent addition or alternative to route loading and integrating it into you application is a breeze.
-
-First add your dependencies:
+Copy `.env.example` to `.env` and fill in your Supabase credentials:
 
 ```bash
-pnpm add @tanstack/react-query @tanstack/react-query-devtools
+cp .env.example .env
 ```
 
-Next we'll need to create a query client and provider. We recommend putting those in `main.tsx`.
-
-```tsx
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
-// ...
-
-const queryClient = new QueryClient();
-
-// ...
-
-if (!rootElement.innerHTML) {
-    const root = ReactDOM.createRoot(rootElement);
-
-    root.render(
-        <QueryClientProvider client={queryClient}>
-            <RouterProvider router={router} />
-        </QueryClientProvider>
-    );
-}
-```
-
-You can also add TanStack Query Devtools to the root route (optional).
-
-```tsx
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-
-const rootRoute = createRootRoute({
-    component: () => (
-        <>
-            <Outlet />
-            <ReactQueryDevtools buttonPosition='top-right' />
-            <TanStackRouterDevtools />
-        </>
-    )
-});
-```
-
-Now you can use `useQuery` to fetch your data.
-
-```tsx
-import { useQuery } from '@tanstack/react-query';
-
-import './App.css';
-
-function App() {
-    const { data } = useQuery({
-        queryKey: ['people'],
-        queryFn: () =>
-            fetch('https://swapi.dev/api/people')
-                .then((res) => res.json())
-                .then((data) => data.results as { name: string }[]),
-        initialData: []
-    });
-
-    return (
-        <div>
-            <ul>
-                {data.map((person) => (
-                    <li key={person.name}>{person.name}</li>
-                ))}
-            </ul>
-        </div>
-    );
-}
-
-export default App;
-```
-
-You can find out everything you need to know on how to use React-Query in the [React-Query documentation](https://tanstack.com/query/latest/docs/framework/react/overview).
-
-## State Management
-
-Another common requirement for React applications is state management. There are many options for state management in React. TanStack Store provides a great starting point for your project.
-
-First you need to add TanStack Store as a dependency:
+### 3. Push database schema
 
 ```bash
-pnpm add @tanstack/store
+yarn db:push
 ```
 
-Now let's create a simple counter in the `src/App.tsx` file as a demonstration.
+### 4. Start development server
 
-```tsx
-import { useStore } from '@tanstack/react-store';
-import { Store } from '@tanstack/store';
-import './App.css';
-
-const countStore = new Store(0);
-
-function App() {
-    const count = useStore(countStore);
-    return (
-        <div>
-            <button onClick={() => countStore.setState((n) => n + 1)}>Increment - {count}</button>
-        </div>
-    );
-}
-
-export default App;
+```bash
+yarn dev
 ```
 
-One of the many nice features of TanStack Store is the ability to derive state from other state. That derived state will update when the base state updates.
+Open [http://localhost:3000](http://localhost:3000).
 
-Let's check this out by doubling the count using derived state.
+## Scripts
 
-```tsx
-import { useStore } from '@tanstack/react-store';
-import { Store, Derived } from '@tanstack/store';
-import './App.css';
+| Command              | Description                              |
+| -------------------- | ---------------------------------------- |
+| `yarn dev`           | Start dev server on port 3000            |
+| `yarn build`         | Production build                         |
+| `yarn preview`       | Preview production build                 |
+| `yarn db:generate`   | Generate Drizzle migrations              |
+| `yarn db:migrate`    | Run migrations                           |
+| `yarn db:push`       | Push schema directly (dev)               |
+| `yarn db:studio`     | Open Drizzle Studio                      |
+| `yarn db:seed`       | Seed the database                        |
+| `yarn lint`          | Run ESLint                               |
+| `yarn lint:fix`      | Fix ESLint errors                        |
+| `yarn format`        | Format with Prettier                     |
+| `yarn format:check`  | Check formatting                         |
+| `yarn typecheck`     | Run TypeScript type checking             |
 
-const countStore = new Store(0);
+## Project Structure
 
-const doubledStore = new Derived({
-    fn: () => countStore.state * 2,
-    deps: [countStore]
-});
-doubledStore.mount();
-
-function App() {
-    const count = useStore(countStore);
-    const doubledCount = useStore(doubledStore);
-
-    return (
-        <div>
-            <button onClick={() => countStore.setState((n) => n + 1)}>Increment - {count}</button>
-            <div>Doubled - {doubledCount}</div>
-        </div>
-    );
-}
-
-export default App;
+```
+src/
+├── components/
+│   └── ui/              # shadcn/ui components
+├── db/
+│   ├── index.ts         # Drizzle client
+│   ├── schema.ts        # Drizzle schema + drizzle-zod
+│   ├── seed.ts          # Database seeding
+│   └── migrations/      # Generated migrations
+├── hooks/               # Custom React hooks
+├── lib/
+│   ├── collections.ts   # TanStack DB collections
+│   ├── supabase.ts      # Supabase client (browser)
+│   ├── supabase.server.ts # Supabase client (SSR)
+│   ├── utils.ts         # cn() utility
+│   └── validators.ts    # Zod schemas
+├── routes/
+│   ├── __root.tsx       # Root layout
+│   └── index.tsx        # Home page
+├── styles/
+│   └── globals.css      # Tailwind + CSS variables
+├── entry-client.tsx     # Client entry
+├── entry-server.tsx     # Server entry
+└── router.tsx           # Router configuration
 ```
 
-We use the `Derived` class to create a new store that is derived from another store. The `Derived` class has a `mount` method that will start the derived store updating.
+## Adding shadcn Components
 
-Once we've created the derived store we can use it in the `App` component just like we would any other store using the `useStore` hook.
-
-You can find out everything you need to know on how to use TanStack Store in the [TanStack Store documentation](https://tanstack.com/store/latest).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
+```bash
+npx shadcn@latest add button
+npx shadcn@latest add card
+npx shadcn@latest add input
+# etc.
+```
