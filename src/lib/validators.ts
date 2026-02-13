@@ -24,3 +24,28 @@ export const signUpSchema = loginSchema
     path: ['confirmPassword'],
   })
 export type SignUpInput = z.infer<typeof signUpSchema>
+
+// ──────────────────────────────────────────────
+// Course schemas
+// ──────────────────────────────────────────────
+
+export const courseHoleSchema = z.object({
+  holeNumber: z.number().int().min(1).max(18),
+  par: z.number().int().min(3).max(6),
+  strokeIndex: z.number().int().min(1).max(18),
+  yardage: z.number().int().min(50).max(700).nullable().optional(),
+})
+export type CourseHoleInput = z.infer<typeof courseHoleSchema>
+
+export const createCourseSchema = z.object({
+  name: z.string().min(1, 'Course name is required'),
+  location: z.string().optional(),
+  numberOfHoles: z.union([z.literal(9), z.literal(18)]),
+  holes: z.array(courseHoleSchema),
+})
+export type CreateCourseInput = z.infer<typeof createCourseSchema>
+
+export const updateCourseSchema = createCourseSchema.extend({
+  id: z.string().uuid(),
+})
+export type UpdateCourseInput = z.infer<typeof updateCourseSchema>

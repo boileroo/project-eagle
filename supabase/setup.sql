@@ -92,6 +92,12 @@ create policy "Authenticated users can create courses"
 create policy "Course creator can update"
   on public.courses for update
   to authenticated
+  using (created_by_user_id = auth.uid())
+  with check (created_by_user_id = auth.uid());
+
+create policy "Course creator can delete"
+  on public.courses for delete
+  to authenticated
   using (created_by_user_id = auth.uid());
 
 create policy "Anyone can view course holes"
@@ -99,15 +105,35 @@ create policy "Anyone can view course holes"
   to authenticated
   using (true);
 
-create policy "Authenticated users can manage course holes"
+create policy "Course owner can insert holes"
   on public.course_holes for insert
   to authenticated
-  with check (true);
+  with check (
+    exists (
+      select 1 from public.courses
+      where id = course_id and created_by_user_id = auth.uid()
+    )
+  );
 
-create policy "Authenticated users can update course holes"
+create policy "Course owner can update holes"
   on public.course_holes for update
   to authenticated
-  using (true);
+  using (
+    exists (
+      select 1 from public.courses
+      where id = course_id and created_by_user_id = auth.uid()
+    )
+  );
+
+create policy "Course owner can delete holes"
+  on public.course_holes for delete
+  to authenticated
+  using (
+    exists (
+      select 1 from public.courses
+      where id = course_id and created_by_user_id = auth.uid()
+    )
+  );
 
 
 -- ── tournaments ───────────────────────────────

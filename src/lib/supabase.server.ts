@@ -1,6 +1,6 @@
 import { createServerClient, parseCookieHeader } from '@supabase/ssr'
 import type { CookieOptions } from '@supabase/ssr'
-import { getCookie, setCookie } from '@tanstack/react-start/server'
+import { setCookie } from '@tanstack/react-start/server'
 
 export function createSupabaseServerClient(request: Request) {
   const supabase = createServerClient(

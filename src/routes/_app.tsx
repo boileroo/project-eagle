@@ -19,6 +19,11 @@ export const Route = createFileRoute('/_app')({
   component: AppLayout,
 });
 
+const navLinks = [
+  { to: '/' as const, label: 'Dashboard' },
+  { to: '/courses' as const, label: 'Courses' },
+] as const;
+
 function AppLayout() {
   const { user } = Route.useRouteContext();
   const router = useRouter();
@@ -27,9 +32,23 @@ function AppLayout() {
     <div className="bg-background min-h-screen">
       <header className="border-b">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link to="/" className="text-lg font-semibold tracking-tight">
-            🦅 Project Eagle
-          </Link>
+          <div className="flex items-center gap-6">
+            <Link to="/" className="text-lg font-semibold tracking-tight">
+              🦅 Project Eagle
+            </Link>
+            <nav className="flex items-center gap-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className="text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm font-medium transition-colors [&.active]:text-foreground"
+                  activeOptions={{ exact: link.to === '/' }}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-muted-foreground text-sm">{user.email}</span>
             <Button
