@@ -269,6 +269,24 @@ Polish for real-world on-course use.
 
 ---
 
+## Design Decisions
+
+### Standalone Rounds (pre-Phase 3)
+
+**Decision:** Make `rounds.tournamentId` nullable so rounds can exist outside tournaments.
+
+**Rationale:** Users should be able to log casual rounds (e.g. weekend 18 with mates) without creating a tournament. A "My Rounds" view will show both tournament and standalone rounds in date order, with tournament rounds linking through to the tournament.
+
+**Schema changes:**
+
+- `rounds.tournamentId` — nullable (was `.notNull()`)
+- `rounds.roundNumber` — nullable (meaningless for standalone rounds)
+- `rounds.createdByUserId` — new FK to `profiles` (owner of standalone rounds)
+- `roundParticipants.tournamentParticipantId` — nullable (standalone rounds skip tournament participants)
+- `roundParticipants.personId` — new FK to `persons` (direct link, always set regardless of tournament/standalone)
+
+---
+
 ## Open Questions (Parked)
 
 | Question                                                 | Status                                                                                                                                       |

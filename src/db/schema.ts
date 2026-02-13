@@ -173,15 +173,18 @@ export const tournamentTeams = pgTable('tournament_teams', {
 
 export const rounds = pgTable('rounds', {
   id: uuid('id').primaryKey().defaultRandom(),
-  tournamentId: uuid('tournament_id')
-    .references(() => tournaments.id, { onDelete: 'cascade' })
-    .notNull(),
+  tournamentId: uuid('tournament_id').references(() => tournaments.id, {
+    onDelete: 'cascade',
+  }),
   courseId: uuid('course_id')
     .references(() => courses.id, { onDelete: 'restrict' })
     .notNull(),
-  roundNumber: integer('round_number').notNull(),
+  roundNumber: integer('round_number'),
   date: timestamp('date', { withTimezone: true }),
   status: roundStatusEnum('status').notNull().default('draft'),
+  createdByUserId: uuid('created_by_user_id').references(() => profiles.id, {
+    onDelete: 'set null',
+  }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -199,9 +202,13 @@ export const roundParticipants = pgTable('round_participants', {
   roundId: uuid('round_id')
     .references(() => rounds.id, { onDelete: 'cascade' })
     .notNull(),
-  tournamentParticipantId: uuid('tournament_participant_id')
-    .references(() => tournamentParticipants.id, { onDelete: 'cascade' })
+  personId: uuid('person_id')
+    .references(() => persons.id, { onDelete: 'cascade' })
     .notNull(),
+  tournamentParticipantId: uuid('tournament_participant_id').references(
+    () => tournamentParticipants.id,
+    { onDelete: 'cascade' },
+  ),
   handicapSnapshot: numeric('handicap_snapshot', {
     precision: 4,
     scale: 1,
@@ -369,6 +376,10 @@ export const roundsRelations = relations(rounds, ({ one, many }) => ({
     fields: [rounds.courseId],
     references: [courses.id],
   }),
+  createdBy: one(profiles, {
+    fields: [rounds.createdByUserId],
+    references: [profiles.id],
+  }),
   participants: many(roundParticipants),
   teams: many(roundTeams),
   scoreEvents: many(scoreEvents),
@@ -381,6 +392,10 @@ export const roundParticipantsRelations = relations(
     round: one(rounds, {
       fields: [roundParticipants.roundId],
       references: [rounds.id],
+    }),
+    person: one(persons, {
+      fields: [roundParticipants.personId],
+      references: [persons.id],
     }),
     tournamentParticipant: one(tournamentParticipants, {
       fields: [roundParticipants.tournamentParticipantId],
