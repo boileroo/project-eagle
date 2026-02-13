@@ -112,11 +112,15 @@ Button, input, card, table, dialog, form, label, select, toast — enough to bui
 
 The core "commissioner" workflow: create a tournament, add people, assign to rounds.
 
-### 3.1 Tournament CRUD
+### 3.1 Tournament CRUD ✅
 
-- List page at `/tournaments`
-- Create tournament form
-- Detail page at `/tournaments/$tournamentId` — the tournament "hub"
+- List page at `/tournaments` with card grid, participant/round counts
+- Create tournament form at `/tournaments/new`
+- Detail page at `/tournaments/$tournamentId` — the tournament "hub" showing players & rounds
+- Edit page at `/tournaments/$tournamentId/edit` with owner check
+- Delete with confirmation dialog (owner only)
+- Server functions: getTournamentsFn, getTournamentFn, createTournamentFn, updateTournamentFn, deleteTournamentFn
+- RLS delete policy added for tournament creator
 
 ### 3.2 Person & Account Model ✅
 

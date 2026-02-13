@@ -15,9 +15,13 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AppAccountRouteImport } from './routes/_app/account'
+import { Route as AppTournamentsIndexRouteImport } from './routes/_app/tournaments/index'
 import { Route as AppCoursesIndexRouteImport } from './routes/_app/courses/index'
+import { Route as AppTournamentsNewRouteImport } from './routes/_app/tournaments/new'
 import { Route as AppCoursesNewRouteImport } from './routes/_app/courses/new'
+import { Route as AppTournamentsTournamentIdIndexRouteImport } from './routes/_app/tournaments/$tournamentId/index'
 import { Route as AppCoursesCourseIdIndexRouteImport } from './routes/_app/courses/$courseId/index'
+import { Route as AppTournamentsTournamentIdEditRouteImport } from './routes/_app/tournaments/$tournamentId/edit'
 import { Route as AppCoursesCourseIdEditRouteImport } from './routes/_app/courses/$courseId/edit'
 
 const AuthRoute = AuthRouteImport.update({
@@ -48,9 +52,19 @@ const AppAccountRoute = AppAccountRouteImport.update({
   path: '/account',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTournamentsIndexRoute = AppTournamentsIndexRouteImport.update({
+  id: '/tournaments/',
+  path: '/tournaments/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCoursesIndexRoute = AppCoursesIndexRouteImport.update({
   id: '/courses/',
   path: '/courses/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTournamentsNewRoute = AppTournamentsNewRouteImport.update({
+  id: '/tournaments/new',
+  path: '/tournaments/new',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCoursesNewRoute = AppCoursesNewRouteImport.update({
@@ -58,11 +72,23 @@ const AppCoursesNewRoute = AppCoursesNewRouteImport.update({
   path: '/courses/new',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTournamentsTournamentIdIndexRoute =
+  AppTournamentsTournamentIdIndexRouteImport.update({
+    id: '/tournaments/$tournamentId/',
+    path: '/tournaments/$tournamentId/',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppCoursesCourseIdIndexRoute = AppCoursesCourseIdIndexRouteImport.update({
   id: '/courses/$courseId/',
   path: '/courses/$courseId/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTournamentsTournamentIdEditRoute =
+  AppTournamentsTournamentIdEditRouteImport.update({
+    id: '/tournaments/$tournamentId/edit',
+    path: '/tournaments/$tournamentId/edit',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppCoursesCourseIdEditRoute = AppCoursesCourseIdEditRouteImport.update({
   id: '/courses/$courseId/edit',
   path: '/courses/$courseId/edit',
@@ -75,9 +101,13 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
   '/courses/new': typeof AppCoursesNewRoute
+  '/tournaments/new': typeof AppTournamentsNewRoute
   '/courses/': typeof AppCoursesIndexRoute
+  '/tournaments/': typeof AppTournamentsIndexRoute
   '/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute
+  '/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
   '/courses/$courseId/': typeof AppCoursesCourseIdIndexRoute
+  '/tournaments/$tournamentId/': typeof AppTournamentsTournamentIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
@@ -85,9 +115,13 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
   '/courses/new': typeof AppCoursesNewRoute
+  '/tournaments/new': typeof AppTournamentsNewRoute
   '/courses': typeof AppCoursesIndexRoute
+  '/tournaments': typeof AppTournamentsIndexRoute
   '/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute
+  '/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
   '/courses/$courseId': typeof AppCoursesCourseIdIndexRoute
+  '/tournaments/$tournamentId': typeof AppTournamentsTournamentIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,9 +132,13 @@ export interface FileRoutesById {
   '/_auth/signup': typeof AuthSignupRoute
   '/_app/': typeof AppIndexRoute
   '/_app/courses/new': typeof AppCoursesNewRoute
+  '/_app/tournaments/new': typeof AppTournamentsNewRoute
   '/_app/courses/': typeof AppCoursesIndexRoute
+  '/_app/tournaments/': typeof AppTournamentsIndexRoute
   '/_app/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute
+  '/_app/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
   '/_app/courses/$courseId/': typeof AppCoursesCourseIdIndexRoute
+  '/_app/tournaments/$tournamentId/': typeof AppTournamentsTournamentIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -110,9 +148,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/courses/new'
+    | '/tournaments/new'
     | '/courses/'
+    | '/tournaments/'
     | '/courses/$courseId/edit'
+    | '/tournaments/$tournamentId/edit'
     | '/courses/$courseId/'
+    | '/tournaments/$tournamentId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -120,9 +162,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/courses/new'
+    | '/tournaments/new'
     | '/courses'
+    | '/tournaments'
     | '/courses/$courseId/edit'
+    | '/tournaments/$tournamentId/edit'
     | '/courses/$courseId'
+    | '/tournaments/$tournamentId'
   id:
     | '__root__'
     | '/_app'
@@ -132,9 +178,13 @@ export interface FileRouteTypes {
     | '/_auth/signup'
     | '/_app/'
     | '/_app/courses/new'
+    | '/_app/tournaments/new'
     | '/_app/courses/'
+    | '/_app/tournaments/'
     | '/_app/courses/$courseId/edit'
+    | '/_app/tournaments/$tournamentId/edit'
     | '/_app/courses/$courseId/'
+    | '/_app/tournaments/$tournamentId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -186,11 +236,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAccountRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/tournaments/': {
+      id: '/_app/tournaments/'
+      path: '/tournaments'
+      fullPath: '/tournaments/'
+      preLoaderRoute: typeof AppTournamentsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/courses/': {
       id: '/_app/courses/'
       path: '/courses'
       fullPath: '/courses/'
       preLoaderRoute: typeof AppCoursesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tournaments/new': {
+      id: '/_app/tournaments/new'
+      path: '/tournaments/new'
+      fullPath: '/tournaments/new'
+      preLoaderRoute: typeof AppTournamentsNewRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/courses/new': {
@@ -200,11 +264,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCoursesNewRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/tournaments/$tournamentId/': {
+      id: '/_app/tournaments/$tournamentId/'
+      path: '/tournaments/$tournamentId'
+      fullPath: '/tournaments/$tournamentId/'
+      preLoaderRoute: typeof AppTournamentsTournamentIdIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/courses/$courseId/': {
       id: '/_app/courses/$courseId/'
       path: '/courses/$courseId'
       fullPath: '/courses/$courseId/'
       preLoaderRoute: typeof AppCoursesCourseIdIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tournaments/$tournamentId/edit': {
+      id: '/_app/tournaments/$tournamentId/edit'
+      path: '/tournaments/$tournamentId/edit'
+      fullPath: '/tournaments/$tournamentId/edit'
+      preLoaderRoute: typeof AppTournamentsTournamentIdEditRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/courses/$courseId/edit': {
@@ -221,18 +299,26 @@ interface AppRouteChildren {
   AppAccountRoute: typeof AppAccountRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCoursesNewRoute: typeof AppCoursesNewRoute
+  AppTournamentsNewRoute: typeof AppTournamentsNewRoute
   AppCoursesIndexRoute: typeof AppCoursesIndexRoute
+  AppTournamentsIndexRoute: typeof AppTournamentsIndexRoute
   AppCoursesCourseIdEditRoute: typeof AppCoursesCourseIdEditRoute
+  AppTournamentsTournamentIdEditRoute: typeof AppTournamentsTournamentIdEditRoute
   AppCoursesCourseIdIndexRoute: typeof AppCoursesCourseIdIndexRoute
+  AppTournamentsTournamentIdIndexRoute: typeof AppTournamentsTournamentIdIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAccountRoute: AppAccountRoute,
   AppIndexRoute: AppIndexRoute,
   AppCoursesNewRoute: AppCoursesNewRoute,
+  AppTournamentsNewRoute: AppTournamentsNewRoute,
   AppCoursesIndexRoute: AppCoursesIndexRoute,
+  AppTournamentsIndexRoute: AppTournamentsIndexRoute,
   AppCoursesCourseIdEditRoute: AppCoursesCourseIdEditRoute,
+  AppTournamentsTournamentIdEditRoute: AppTournamentsTournamentIdEditRoute,
   AppCoursesCourseIdIndexRoute: AppCoursesCourseIdIndexRoute,
+  AppTournamentsTournamentIdIndexRoute: AppTournamentsTournamentIdIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

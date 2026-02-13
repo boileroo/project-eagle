@@ -26,14 +26,17 @@ function Home() {
             Browse and manage the course library
           </p>
         </Link>
-        <div className="bg-card rounded-lg border p-6 opacity-50">
-          <h2 className="text-card-foreground mb-1 font-semibold">
+        <Link
+          to="/tournaments"
+          className="group bg-card hover:border-primary/50 hover:bg-accent rounded-lg border p-6 transition-colors"
+        >
+          <h2 className="text-card-foreground group-hover:text-primary mb-1 font-semibold">
             Tournaments
           </h2>
           <p className="text-muted-foreground text-sm">
             Create and manage tournaments
           </p>
-        </div>
+        </Link>
         <div className="bg-card rounded-lg border p-6 opacity-50">
           <h2 className="text-card-foreground mb-1 font-semibold">
             Score Entry

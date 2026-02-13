@@ -79,3 +79,18 @@ export const updateAccountSchema = z.object({
     .optional(),
 });
 export type UpdateAccountInput = z.infer<typeof updateAccountSchema>;
+
+// ──────────────────────────────────────────────
+// Tournament schemas
+// ──────────────────────────────────────────────
+
+export const createTournamentSchema = z.object({
+  name: z.string().min(1, 'Tournament name is required'),
+  description: z.string().optional(),
+});
+export type CreateTournamentInput = z.infer<typeof createTournamentSchema>;
+
+export const updateTournamentSchema = createTournamentSchema.extend({
+  id: z.string().uuid(),
+});
+export type UpdateTournamentInput = z.infer<typeof updateTournamentSchema>;

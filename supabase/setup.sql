@@ -184,6 +184,11 @@ create policy "Tournament creator can update"
   to authenticated
   using (created_by_user_id = auth.uid());
 
+create policy "Tournament creator can delete"
+  on public.tournaments for delete
+  to authenticated
+  using (created_by_user_id = auth.uid());
+
 
 -- ── rounds ────────────────────────────────────
 
