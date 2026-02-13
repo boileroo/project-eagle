@@ -19,6 +19,15 @@ begin
     new.email,
     coalesce(new.raw_user_meta_data ->> 'display_name', '')
   );
+
+  -- Auto-create a person record so every user is a "player"
+  insert into public.persons (display_name, user_id, created_by_user_id)
+  values (
+    coalesce(new.raw_user_meta_data ->> 'display_name', new.email),
+    new.id,
+    new.id
+  );
+
   return new;
 end;
 $$;
@@ -66,11 +75,31 @@ create policy "Authenticated users can view persons"
   to authenticated
   using (true);
 
-create policy "Users can manage their own persons"
-  on public.persons for all
+-- Trigger inserts the user's own person; guests are inserted by their creator
+create policy "Insert own or guest persons"
+  on public.persons for insert
+  to authenticated
+  with check (true);  -- trigger runs as security definer; app-level checks for guests
+
+-- Users can update their own person record
+create policy "Users can update own person"
+  on public.persons for update
   to authenticated
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
+
+-- Creator can update guest persons they created
+create policy "Creator can update guest persons"
+  on public.persons for update
+  to authenticated
+  using (user_id is null and created_by_user_id = auth.uid())
+  with check (user_id is null and created_by_user_id = auth.uid());
+
+-- Creator can delete guest persons they created
+create policy "Creator can delete guest persons"
+  on public.persons for delete
+  to authenticated
+  using (user_id is null and created_by_user_id = auth.uid());
 
 
 -- ── courses & course_holes ────────────────────

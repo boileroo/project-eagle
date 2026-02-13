@@ -50,7 +50,12 @@ function AppLayout() {
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-muted-foreground text-sm">{user.email}</span>
+            <Link
+              to="/account"
+              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+            >
+              {user.email}
+            </Link>
             <Button
               variant="ghost"
               size="sm"

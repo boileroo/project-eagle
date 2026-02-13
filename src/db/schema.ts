@@ -68,6 +68,9 @@ export const persons = pgTable('persons', {
   userId: uuid('user_id').references(() => profiles.id, {
     onDelete: 'set null',
   }),
+  createdByUserId: uuid('created_by_user_id').references(() => profiles.id, {
+    onDelete: 'set null',
+  }),
   currentHandicap: numeric('current_handicap', {
     precision: 4,
     scale: 1,
@@ -304,15 +307,23 @@ export const competitions = pgTable('competitions', {
 // ──────────────────────────────────────────────
 
 export const profilesRelations = relations(profiles, ({ many }) => ({
-  persons: many(persons),
+  linkedPersons: many(persons, { relationName: 'personUser' }),
+  createdPersons: many(persons, { relationName: 'personCreator' }),
 }));
 
 export const personsRelations = relations(persons, ({ one, many }) => ({
   user: one(profiles, {
     fields: [persons.userId],
     references: [profiles.id],
+    relationName: 'personUser',
+  }),
+  createdBy: one(profiles, {
+    fields: [persons.createdByUserId],
+    references: [profiles.id],
+    relationName: 'personCreator',
   }),
   tournamentParticipants: many(tournamentParticipants),
+  roundParticipants: many(roundParticipants),
 }));
 
 export const coursesRelations = relations(courses, ({ one, many }) => ({

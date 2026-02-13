@@ -118,11 +118,17 @@ The core "commissioner" workflow: create a tournament, add people, assign to rou
 - Create tournament form
 - Detail page at `/tournaments/$tournamentId` — the tournament "hub"
 
-### 3.2 Person Management
+### 3.2 Person & Account Model ✅
 
-- Create/search persons (guests or linked users)
-- Display and edit `currentHandicap`
-- "Add a guest" flow — creates a `Person` without `userId`
+**Revised approach:** Users don't "add people." They *are* players by virtue of having an account. Guests are only created in tournament context.
+
+- On signup, trigger auto-creates a `person` record linked to the profile
+- Users manage their own player info (display name, handicap) via `/account`
+- `persons` table is the universal player identity for tournaments & rounds
+- Guests = persons with no `userId`, created during tournament setup (3.3)
+- `createdByUserId` on persons tracks who created guest records
+- RLS: users can update own person, creators can manage guest persons
+- Existing users backfilled with person records via migration
 
 ### 3.3 Tournament Participants
 

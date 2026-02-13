@@ -63,3 +63,19 @@ export const updateCourseSchema = courseBaseSchema
   .extend({ id: z.string().uuid() })
   .refine(uniqueStrokeIndex, uniqueSiMessage);
 export type UpdateCourseInput = z.infer<typeof updateCourseSchema>;
+
+// ──────────────────────────────────────────────
+// Account / profile schemas
+// ──────────────────────────────────────────────
+
+export const updateAccountSchema = z.object({
+  displayName: z.string().min(2, 'Name must be at least 2 characters'),
+  currentHandicap: z
+    .number()
+    .min(-10, 'Handicap cannot be below -10')
+    .max(54, 'Handicap cannot exceed 54')
+    .multipleOf(0.1, 'Handicap must be to one decimal place')
+    .nullable()
+    .optional(),
+});
+export type UpdateAccountInput = z.infer<typeof updateAccountSchema>;
