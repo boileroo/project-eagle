@@ -1,23 +1,23 @@
-import { createServerFn } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
-import { eq } from 'drizzle-orm'
-import { db } from '@/db'
-import { courses, courseHoles } from '@/db/schema'
-import { createSupabaseServerClient } from './supabase.server'
-import type { CreateCourseInput, UpdateCourseInput } from './validators'
+import { createServerFn } from '@tanstack/react-start';
+import { getRequest } from '@tanstack/react-start/server';
+import { eq } from 'drizzle-orm';
+import { db } from '@/db';
+import { courses, courseHoles } from '@/db/schema';
+import { createSupabaseServerClient } from './supabase.server';
+import type { CreateCourseInput, UpdateCourseInput } from './validators';
 
 // ──────────────────────────────────────────────
 // Helper: get authenticated user or throw
 // ──────────────────────────────────────────────
 
 async function requireAuth() {
-  const request = getRequest()
-  const { supabase } = createSupabaseServerClient(request)
+  const request = getRequest();
+  const { supabase } = createSupabaseServerClient(request);
   const {
     data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  return user
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+  return user;
 }
 
 // ──────────────────────────────────────────────
@@ -28,10 +28,10 @@ export const getCoursesFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     const allCourses = await db.query.courses.findMany({
       orderBy: (courses, { desc }) => [desc(courses.createdAt)],
-    })
-    return allCourses
+    });
+    return allCourses;
   },
-)
+);
 
 // ──────────────────────────────────────────────
 // Get a single course with its holes
@@ -47,10 +47,10 @@ export const getCourseFn = createServerFn({ method: 'GET' })
           orderBy: (holes, { asc }) => [asc(holes.holeNumber)],
         },
       },
-    })
-    if (!course) throw new Error('Course not found')
-    return course
-  })
+    });
+    if (!course) throw new Error('Course not found');
+    return course;
+  });
 
 // ──────────────────────────────────────────────
 // Create a course with holes
@@ -59,7 +59,7 @@ export const getCourseFn = createServerFn({ method: 'GET' })
 export const createCourseFn = createServerFn({ method: 'POST' })
   .inputValidator((data: CreateCourseInput) => data)
   .handler(async ({ data }) => {
-    const user = await requireAuth()
+    const user = await requireAuth();
 
     const [course] = await db
       .insert(courses)
@@ -69,7 +69,7 @@ export const createCourseFn = createServerFn({ method: 'POST' })
         numberOfHoles: data.numberOfHoles,
         createdByUserId: user.id,
       })
-      .returning()
+      .returning();
 
     if (data.holes.length > 0) {
       await db.insert(courseHoles).values(
@@ -80,11 +80,11 @@ export const createCourseFn = createServerFn({ method: 'POST' })
           strokeIndex: hole.strokeIndex,
           yardage: hole.yardage ?? null,
         })),
-      )
+      );
     }
 
-    return { courseId: course.id }
-  })
+    return { courseId: course.id };
+  });
 
 // ──────────────────────────────────────────────
 // Update a course and its holes
@@ -93,15 +93,15 @@ export const createCourseFn = createServerFn({ method: 'POST' })
 export const updateCourseFn = createServerFn({ method: 'POST' })
   .inputValidator((data: UpdateCourseInput) => data)
   .handler(async ({ data }) => {
-    const user = await requireAuth()
+    const user = await requireAuth();
 
     // Verify ownership
     const existing = await db.query.courses.findFirst({
       where: eq(courses.id, data.id),
-    })
-    if (!existing) throw new Error('Course not found')
+    });
+    if (!existing) throw new Error('Course not found');
     if (existing.createdByUserId !== user.id) {
-      throw new Error('You can only edit courses you created')
+      throw new Error('You can only edit courses you created');
     }
 
     // Update course
@@ -113,10 +113,10 @@ export const updateCourseFn = createServerFn({ method: 'POST' })
         numberOfHoles: data.numberOfHoles,
         updatedAt: new Date(),
       })
-      .where(eq(courses.id, data.id))
+      .where(eq(courses.id, data.id));
 
     // Replace holes: delete all then re-insert
-    await db.delete(courseHoles).where(eq(courseHoles.courseId, data.id))
+    await db.delete(courseHoles).where(eq(courseHoles.courseId, data.id));
 
     if (data.holes.length > 0) {
       await db.insert(courseHoles).values(
@@ -127,11 +127,11 @@ export const updateCourseFn = createServerFn({ method: 'POST' })
           strokeIndex: hole.strokeIndex,
           yardage: hole.yardage ?? null,
         })),
-      )
+      );
     }
 
-    return { courseId: data.id }
-  })
+    return { courseId: data.id };
+  });
 
 // ──────────────────────────────────────────────
 // Delete a course
@@ -140,19 +140,19 @@ export const updateCourseFn = createServerFn({ method: 'POST' })
 export const deleteCourseFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { courseId: string }) => data)
   .handler(async ({ data }) => {
-    const user = await requireAuth()
+    const user = await requireAuth();
 
     const existing = await db.query.courses.findFirst({
       where: eq(courses.id, data.courseId),
-    })
-    if (!existing) throw new Error('Course not found')
+    });
+    if (!existing) throw new Error('Course not found');
     if (existing.createdByUserId !== user.id) {
-      throw new Error('You can only delete courses you created')
+      throw new Error('You can only delete courses you created');
     }
 
     // courseHoles cascade on delete, but rounds.courseId is RESTRICT
     // so this will fail if the course is used in any round — which is correct
-    await db.delete(courses).where(eq(courses.id, data.courseId))
+    await db.delete(courses).where(eq(courses.id, data.courseId));
 
-    return { success: true }
-  })
+    return { success: true };
+  });

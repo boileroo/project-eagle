@@ -1,8 +1,8 @@
-import { useForm, useFieldArray } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { createCourseSchema, type CreateCourseInput } from '@/lib/validators'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createCourseSchema, type CreateCourseInput } from '@/lib/validators';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Form,
   FormControl,
@@ -10,8 +10,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+} from '@/components/ui/form';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -19,13 +19,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@/components/ui/table';
 
 interface CourseFormProps {
-  defaultValues?: CreateCourseInput
-  onSubmit: (data: CreateCourseInput) => Promise<void>
-  submitLabel: string
-  submitting: boolean
+  defaultValues?: CreateCourseInput;
+  onSubmit: (data: CreateCourseInput) => Promise<void>;
+  submitLabel: string;
+  submitting: boolean;
 }
 
 function generateDefaultHoles(count: number) {
@@ -34,7 +34,7 @@ function generateDefaultHoles(count: number) {
     par: 4,
     strokeIndex: i + 1,
     yardage: null as number | null,
-  }))
+  }));
 }
 
 export function CourseForm({
@@ -51,23 +51,23 @@ export function CourseForm({
       numberOfHoles: 18,
       holes: generateDefaultHoles(18),
     },
-  })
+  });
 
   const { fields, replace } = useFieldArray({
     control: form.control,
     name: 'holes',
-  })
+  });
 
-  const numberOfHoles = form.watch('numberOfHoles')
+  const numberOfHoles = form.watch('numberOfHoles');
 
   const handleHoleCountChange = (value: 9 | 18) => {
-    form.setValue('numberOfHoles', value)
+    form.setValue('numberOfHoles', value);
     // Only regenerate if current holes don't match
-    const currentHoles = form.getValues('holes')
+    const currentHoles = form.getValues('holes');
     if (currentHoles.length !== value) {
-      replace(generateDefaultHoles(value))
+      replace(generateDefaultHoles(value));
     }
-  }
+  };
 
   return (
     <Form {...form}>
@@ -98,10 +98,7 @@ export function CourseForm({
                 <FormItem>
                   <FormLabel>Location</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="e.g. Melbourne, Australia"
-                      {...field}
-                    />
+                    <Input placeholder="e.g. Melbourne, Australia" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -128,7 +125,7 @@ export function CourseForm({
                 </Button>
               </div>
               {form.formState.errors.numberOfHoles && (
-                <p className="text-sm text-destructive mt-1">
+                <p className="text-destructive mt-1 text-sm">
                   {form.formState.errors.numberOfHoles.message}
                 </p>
               )}
@@ -195,7 +192,7 @@ export function CourseForm({
               </TableBody>
             </Table>
             {form.formState.errors.holes && (
-              <p className="text-sm text-destructive mt-2">
+              <p className="text-destructive mt-2 text-sm">
                 Please check hole data for errors
               </p>
             )}
@@ -209,5 +206,5 @@ export function CourseForm({
         </div>
       </form>
     </Form>
-  )
+  );
 }

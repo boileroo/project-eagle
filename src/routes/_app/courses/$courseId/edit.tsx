@@ -1,24 +1,24 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { getCourseFn, updateCourseFn } from '@/lib/courses.server'
-import { CourseForm } from '@/components/course-form'
-import { type CreateCourseInput } from '@/lib/validators'
-import { useState } from 'react'
-import { toast } from 'sonner'
-import { useAuth } from '@/hooks'
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { getCourseFn, updateCourseFn } from '@/lib/courses.server';
+import { CourseForm } from '@/components/course-form';
+import { type CreateCourseInput } from '@/lib/validators';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks';
 
 export const Route = createFileRoute('/_app/courses/$courseId/edit')({
   loader: async ({ params }) => {
-    const course = await getCourseFn({ data: { courseId: params.courseId } })
-    return { course }
+    const course = await getCourseFn({ data: { courseId: params.courseId } });
+    return { course };
   },
   component: EditCoursePage,
-})
+});
 
 function EditCoursePage() {
-  const { course } = Route.useLoaderData()
-  const { user } = useAuth()
-  const navigate = useNavigate()
-  const [submitting, setSubmitting] = useState(false)
+  const { course } = Route.useLoaderData();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
 
   if (user?.id !== course.createdByUserId) {
     return (
@@ -27,22 +27,22 @@ function EditCoursePage() {
           You don&apos;t have permission to edit this course.
         </p>
       </div>
-    )
+    );
   }
 
   const handleSubmit = async (data: CreateCourseInput) => {
-    setSubmitting(true)
+    setSubmitting(true);
     try {
-      await updateCourseFn({ data: { ...data, id: course.id } })
-      toast.success('Course updated!')
-      navigate({ to: '/courses/$courseId', params: { courseId: course.id } })
+      await updateCourseFn({ data: { ...data, id: course.id } });
+      toast.success('Course updated!');
+      navigate({ to: '/courses/$courseId', params: { courseId: course.id } });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to update course',
-      )
-      setSubmitting(false)
+      );
+      setSubmitting(false);
     }
-  }
+  };
 
   const defaultValues: CreateCourseInput = {
     name: course.name,
@@ -56,7 +56,7 @@ function EditCoursePage() {
         strokeIndex: h.strokeIndex,
         yardage: h.yardage ?? undefined,
       })),
-  }
+  };
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -73,5 +73,5 @@ function EditCoursePage() {
         submitting={submitting}
       />
     </div>
-  )
+  );
 }

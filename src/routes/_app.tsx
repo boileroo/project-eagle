@@ -41,7 +41,7 @@ function AppLayout() {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className="text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm font-medium transition-colors [&.active]:text-foreground"
+                  className="text-muted-foreground hover:text-foreground [&.active]:text-foreground rounded-md px-3 py-2 text-sm font-medium transition-colors"
                   activeOptions={{ exact: link.to === '/' }}
                 >
                   {link.label}

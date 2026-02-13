@@ -1,8 +1,8 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { getCourseFn, deleteCourseFn } from '@/lib/courses.server'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { getCourseFn, deleteCourseFn } from '@/lib/courses.server';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -10,7 +10,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -19,57 +19,55 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { Separator } from '@/components/ui/separator'
-import { useState } from 'react'
-import { toast } from 'sonner'
-import { useAuth } from '@/hooks'
+} from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks';
 
 export const Route = createFileRoute('/_app/courses/$courseId/')({
   loader: async ({ params }) => {
-    const course = await getCourseFn({ data: { courseId: params.courseId } })
-    return { course }
+    const course = await getCourseFn({ data: { courseId: params.courseId } });
+    return { course };
   },
   component: CourseDetailPage,
-})
+});
 
 function CourseDetailPage() {
-  const { course } = Route.useLoaderData()
-  const { user } = useAuth()
-  const navigate = useNavigate()
-  const [deleting, setDeleting] = useState(false)
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const { course } = Route.useLoaderData();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [deleting, setDeleting] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const isOwner = user?.id === course.createdByUserId
+  const isOwner = user?.id === course.createdByUserId;
 
   const handleDelete = async () => {
-    setDeleting(true)
+    setDeleting(true);
     try {
-      await deleteCourseFn({ data: { courseId: course.id } })
-      toast.success('Course deleted.')
-      navigate({ to: '/courses' })
+      await deleteCourseFn({ data: { courseId: course.id } });
+      toast.success('Course deleted.');
+      navigate({ to: '/courses' });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to delete course',
-      )
-      setDeleting(false)
-      setDialogOpen(false)
+      );
+      setDeleting(false);
+      setDialogOpen(false);
     }
-  }
+  };
 
   const sortedHoles = [...(course.holes ?? [])].sort(
     (a, b) => a.holeNumber - b.holeNumber,
-  )
-  const totalPar = sortedHoles.reduce((sum, h) => sum + h.par, 0)
+  );
+  const totalPar = sortedHoles.reduce((sum, h) => sum + h.par, 0);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">
-              {course.name}
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight">{course.name}</h1>
             <Badge variant="secondary">{course.numberOfHoles} holes</Badge>
           </div>
           {course.location && (
@@ -127,7 +125,7 @@ function CourseDetailPage() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Scorecard</span>
-            <span className="text-sm font-normal text-muted-foreground">
+            <span className="text-muted-foreground text-sm font-normal">
               Par {totalPar}
             </span>
           </CardTitle>
@@ -168,5 +166,5 @@ function CourseDetailPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

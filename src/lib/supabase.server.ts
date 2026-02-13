@@ -1,6 +1,6 @@
-import { createServerClient, parseCookieHeader } from '@supabase/ssr'
-import type { CookieOptions } from '@supabase/ssr'
-import { setCookie } from '@tanstack/react-start/server'
+import { createServerClient, parseCookieHeader } from '@supabase/ssr';
+import type { CookieOptions } from '@supabase/ssr';
+import { setCookie } from '@tanstack/react-start/server';
 
 export function createSupabaseServerClient(request: Request) {
   const supabase = createServerClient(
@@ -9,13 +9,13 @@ export function createSupabaseServerClient(request: Request) {
     {
       cookies: {
         getAll() {
-          return parseCookieHeader(request.headers.get('Cookie') ?? '')
+          return parseCookieHeader(request.headers.get('Cookie') ?? '');
         },
         setAll(
           cookiesToSet: {
-            name: string
-            value: string
-            options?: CookieOptions
+            name: string;
+            value: string;
+            options?: CookieOptions;
           }[],
         ) {
           cookiesToSet.forEach(({ name, value, options }) => {
@@ -25,12 +25,12 @@ export function createSupabaseServerClient(request: Request) {
               sameSite: (options?.sameSite as 'lax') ?? 'lax',
               secure: options?.secure ?? process.env.NODE_ENV === 'production',
               maxAge: options?.maxAge,
-            })
-          })
+            });
+          });
         },
       },
     },
-  )
+  );
 
-  return { supabase }
+  return { supabase };
 }

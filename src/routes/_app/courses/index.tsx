@@ -1,19 +1,19 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { getCoursesFn } from '@/lib/courses.server'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { getCoursesFn } from '@/lib/courses.server';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 export const Route = createFileRoute('/_app/courses/')({
   loader: async () => {
-    const courses = await getCoursesFn()
-    return { courses }
+    const courses = await getCoursesFn();
+    return { courses };
   },
   component: CoursesPage,
-})
+});
 
 function CoursesPage() {
-  const { courses } = Route.useLoaderData()
+  const { courses } = Route.useLoaderData();
 
   return (
     <div className="space-y-6">
@@ -49,7 +49,7 @@ function CoursesPage() {
               params={{ courseId: course.id }}
               className="group"
             >
-              <Card className="h-full transition-colors group-hover:border-primary/50 group-hover:bg-accent">
+              <Card className="group-hover:border-primary/50 group-hover:bg-accent h-full transition-colors">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between text-lg">
                     <span className="group-hover:text-primary">
@@ -62,7 +62,7 @@ function CoursesPage() {
                 </CardHeader>
                 <CardContent>
                   {course.location && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       📍 {course.location}
                     </p>
                   )}
@@ -73,5 +73,5 @@ function CoursesPage() {
         </div>
       )}
     </div>
-  )
+  );
 }
