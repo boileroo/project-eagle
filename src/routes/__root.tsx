@@ -1,24 +1,24 @@
 /// <reference types="vite/client" />
-import type { ReactNode } from 'react'
+import type { ReactNode } from 'react';
 import {
   Outlet,
   createRootRouteWithContext,
   HeadContent,
   Scripts,
-} from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-import { Toaster } from '@/components/ui/sonner'
-import { getAuthUser } from '@/lib/auth.server'
-import appCss from '@/styles/globals.css?url'
+} from '@tanstack/react-router';
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
+import { Toaster } from '@/components/ui/sonner';
+import { getAuthUser } from '@/lib/auth.server';
+import appCss from '@/styles/globals.css?url';
 
 export interface RouterContext {
-  user: { id: string; email: string } | null
+  user: { id: string; email: string } | null;
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async () => {
-    const user = await getAuthUser()
-    return { user }
+    const user = await getAuthUser();
+    return { user };
   },
   head: () => ({
     meta: [
@@ -29,14 +29,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     links: [{ rel: 'stylesheet', href: appCss }],
   }),
   component: RootComponent,
-})
+});
 
 function RootComponent() {
   return (
     <RootDocument>
       <Outlet />
     </RootDocument>
-  )
+  );
 }
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
@@ -45,12 +45,12 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-screen bg-background font-sans antialiased">
+      <body className="bg-background min-h-screen font-sans antialiased">
         {children}
         <Toaster />
         <Scripts />
         <TanStackRouterDevtools position="bottom-right" />
       </body>
     </html>
-  )
+  );
 }

@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { useState } from 'react';
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Card,
   CardContent,
@@ -11,7 +11,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -19,18 +19,18 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form'
-import { signUpSchema, type SignUpInput } from '@/lib/validators'
-import { signUpFn } from '@/lib/auth.server'
+} from '@/components/ui/form';
+import { signUpSchema, type SignUpInput } from '@/lib/validators';
+import { signUpFn } from '@/lib/auth.server';
 
 export const Route = createFileRoute('/_auth/signup')({
   component: SignUpPage,
-})
+});
 
 function SignUpPage() {
-  const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
@@ -40,11 +40,11 @@ function SignUpPage() {
       confirmPassword: '',
       displayName: '',
     },
-  })
+  });
 
   async function onSubmit(values: SignUpInput) {
-    setError(null)
-    setLoading(true)
+    setError(null);
+    setLoading(true);
 
     const result = await signUpFn({
       data: {
@@ -52,15 +52,15 @@ function SignUpPage() {
         password: values.password,
         displayName: values.displayName,
       },
-    })
+    });
 
     if (result.error) {
-      setError(result.error)
-      setLoading(false)
-      return
+      setError(result.error);
+      setLoading(false);
+      return;
     }
 
-    await router.navigate({ to: '/', reloadDocument: true })
+    await router.navigate({ to: '/', reloadDocument: true });
   }
 
   return (
@@ -73,7 +73,7 @@ function SignUpPage() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">
                 {error}
               </div>
             )}
@@ -155,7 +155,7 @@ function SignUpPage() {
         </Form>
       </CardContent>
       <CardFooter className="justify-center">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Already have an account?{' '}
           <Link to="/login" className="text-primary underline">
             Sign in
@@ -163,5 +163,5 @@ function SignUpPage() {
         </p>
       </CardFooter>
     </Card>
-  )
+  );
 }

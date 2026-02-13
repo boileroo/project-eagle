@@ -182,8 +182,8 @@ export function CourseForm({
                         className="h-8 w-20"
                         placeholder="—"
                         {...form.register(`holes.${index}.yardage`, {
-                          setValueAs: (v: string) =>
-                            v === '' ? null : Number(v),
+                          setValueAs: (v) =>
+                            v === '' || v == null ? null : Number(v),
                         })}
                       />
                     </TableCell>

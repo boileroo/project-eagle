@@ -1,9 +1,9 @@
-import 'dotenv/config'
-import { db } from './index'
-import { courses, courseHoles } from './schema'
+import 'dotenv/config';
+import { db } from './index';
+import { courses, courseHoles } from './schema';
 
 async function seed() {
-  console.log('🌱 Seeding database...')
+  console.log('🌱 Seeding database...');
 
   // ── Sample course: Royal Melbourne West ─────
   const [royalMelbourne] = await db
@@ -13,12 +13,17 @@ async function seed() {
       location: 'Black Rock, VIC',
       numberOfHoles: 18,
     })
-    .returning()
+    .returning();
 
-  console.log(`  ✓ Course: ${royalMelbourne.name} (${royalMelbourne.id})`)
+  console.log(`  ✓ Course: ${royalMelbourne.name} (${royalMelbourne.id})`);
 
   // Holes: par, stroke index, yardage (from whites)
-  const holesData: { holeNumber: number; par: number; strokeIndex: number; yardage: number }[] = [
+  const holesData: {
+    holeNumber: number;
+    par: number;
+    strokeIndex: number;
+    yardage: number;
+  }[] = [
     { holeNumber: 1, par: 4, strokeIndex: 7, yardage: 395 },
     { holeNumber: 2, par: 5, strokeIndex: 15, yardage: 480 },
     { holeNumber: 3, par: 4, strokeIndex: 1, yardage: 333 },
@@ -37,16 +42,16 @@ async function seed() {
     { holeNumber: 16, par: 3, strokeIndex: 18, yardage: 145 },
     { holeNumber: 17, par: 4, strokeIndex: 4, yardage: 410 },
     { holeNumber: 18, par: 4, strokeIndex: 12, yardage: 378 },
-  ]
+  ];
 
   await db.insert(courseHoles).values(
     holesData.map((h) => ({
       courseId: royalMelbourne.id,
       ...h,
     })),
-  )
+  );
 
-  console.log(`  ✓ ${holesData.length} holes inserted`)
+  console.log(`  ✓ ${holesData.length} holes inserted`);
 
   // ── Sample course: St Andrews (Old Course) ──
   const [stAndrews] = await db
@@ -56,11 +61,16 @@ async function seed() {
       location: 'St Andrews, Scotland',
       numberOfHoles: 18,
     })
-    .returning()
+    .returning();
 
-  console.log(`  ✓ Course: ${stAndrews.name} (${stAndrews.id})`)
+  console.log(`  ✓ Course: ${stAndrews.name} (${stAndrews.id})`);
 
-  const stAndrewsHoles: { holeNumber: number; par: number; strokeIndex: number; yardage: number }[] = [
+  const stAndrewsHoles: {
+    holeNumber: number;
+    par: number;
+    strokeIndex: number;
+    yardage: number;
+  }[] = [
     { holeNumber: 1, par: 4, strokeIndex: 10, yardage: 376 },
     { holeNumber: 2, par: 4, strokeIndex: 14, yardage: 453 },
     { holeNumber: 3, par: 4, strokeIndex: 6, yardage: 397 },
@@ -79,22 +89,22 @@ async function seed() {
     { holeNumber: 16, par: 4, strokeIndex: 13, yardage: 423 },
     { holeNumber: 17, par: 4, strokeIndex: 7, yardage: 455 },
     { holeNumber: 18, par: 4, strokeIndex: 17, yardage: 357 },
-  ]
+  ];
 
   await db.insert(courseHoles).values(
     stAndrewsHoles.map((h) => ({
       courseId: stAndrews.id,
       ...h,
     })),
-  )
+  );
 
-  console.log(`  ✓ ${stAndrewsHoles.length} holes inserted`)
+  console.log(`  ✓ ${stAndrewsHoles.length} holes inserted`);
 
-  console.log('\n✅ Seeding complete!')
-  process.exit(0)
+  console.log('\n✅ Seeding complete!');
+  process.exit(0);
 }
 
 seed().catch((err) => {
-  console.error('❌ Seeding failed:', err)
-  process.exit(1)
-})
+  console.error('❌ Seeding failed:', err);
+  process.exit(1);
+});

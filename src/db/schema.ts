@@ -7,10 +7,10 @@ import {
   numeric,
   timestamp,
   jsonb,
-} from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
-import { z } from 'zod'
+} from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { z } from 'zod';
 
 // ──────────────────────────────────────────────
 // Enums
@@ -21,25 +21,25 @@ export const roundStatusEnum = pgEnum('round_status', [
   'open',
   'locked',
   'finalized',
-])
+]);
 
 export const competitionScopeEnum = pgEnum('competition_scope', [
   'round',
   'tournament',
-])
+]);
 
 export const recordedByRoleEnum = pgEnum('recorded_by_role', [
   'player',
   'marker',
   'commissioner',
-])
+]);
 
 export const tournamentRoleEnum = pgEnum('tournament_role', [
   'commissioner',
   'marker',
   'player',
   'spectator',
-])
+]);
 
 // ──────────────────────────────────────────────
 // Profiles (extends Supabase auth.users)
@@ -56,7 +56,7 @@ export const profiles = pgTable('profiles', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
-})
+});
 
 // ──────────────────────────────────────────────
 // Persons (human identity — guest or registered)
@@ -78,7 +78,7 @@ export const persons = pgTable('persons', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
-})
+});
 
 // ──────────────────────────────────────────────
 // Courses (shared global library)
@@ -98,7 +98,7 @@ export const courses = pgTable('courses', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
-})
+});
 
 export const courseHoles = pgTable('course_holes', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -109,7 +109,7 @@ export const courseHoles = pgTable('course_holes', {
   par: integer('par').notNull(),
   strokeIndex: integer('stroke_index').notNull(),
   yardage: integer('yardage'),
-})
+});
 
 // ──────────────────────────────────────────────
 // Tournaments
@@ -128,7 +128,7 @@ export const tournaments = pgTable('tournaments', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
-})
+});
 
 // ──────────────────────────────────────────────
 // Tournament Participants
@@ -150,7 +150,7 @@ export const tournamentParticipants = pgTable('tournament_participants', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
-})
+});
 
 // ──────────────────────────────────────────────
 // Tournament Teams (persistent identity)
@@ -165,7 +165,7 @@ export const tournamentTeams = pgTable('tournament_teams', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
-})
+});
 
 // ──────────────────────────────────────────────
 // Rounds
@@ -188,7 +188,7 @@ export const rounds = pgTable('rounds', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
-})
+});
 
 // ──────────────────────────────────────────────
 // Round Participants (with handicap snapshot)
@@ -213,7 +213,7 @@ export const roundParticipants = pgTable('round_participants', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
-})
+});
 
 // ──────────────────────────────────────────────
 // Round Teams (per-round composition)
@@ -232,7 +232,7 @@ export const roundTeams = pgTable('round_teams', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
-})
+});
 
 export const roundTeamMembers = pgTable('round_team_members', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -242,7 +242,7 @@ export const roundTeamMembers = pgTable('round_team_members', {
   roundParticipantId: uuid('round_participant_id')
     .references(() => roundParticipants.id, { onDelete: 'cascade' })
     .notNull(),
-})
+});
 
 // ──────────────────────────────────────────────
 // Score Events (immutable, append-only)
@@ -266,7 +266,7 @@ export const scoreEvents = pgTable('score_events', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
-})
+});
 
 // ──────────────────────────────────────────────
 // Competitions (configuration objects)
@@ -290,7 +290,7 @@ export const competitions = pgTable('competitions', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
-})
+});
 
 // ──────────────────────────────────────────────
 // Relations
@@ -298,7 +298,7 @@ export const competitions = pgTable('competitions', {
 
 export const profilesRelations = relations(profiles, ({ many }) => ({
   persons: many(persons),
-}))
+}));
 
 export const personsRelations = relations(persons, ({ one, many }) => ({
   user: one(profiles, {
@@ -306,7 +306,7 @@ export const personsRelations = relations(persons, ({ one, many }) => ({
     references: [profiles.id],
   }),
   tournamentParticipants: many(tournamentParticipants),
-}))
+}));
 
 export const coursesRelations = relations(courses, ({ one, many }) => ({
   createdBy: one(profiles, {
@@ -314,14 +314,14 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
     references: [profiles.id],
   }),
   holes: many(courseHoles),
-}))
+}));
 
 export const courseHolesRelations = relations(courseHoles, ({ one }) => ({
   course: one(courses, {
     fields: [courseHoles.courseId],
     references: [courses.id],
   }),
-}))
+}));
 
 export const tournamentsRelations = relations(tournaments, ({ one, many }) => ({
   createdBy: one(profiles, {
@@ -332,7 +332,7 @@ export const tournamentsRelations = relations(tournaments, ({ one, many }) => ({
   teams: many(tournamentTeams),
   rounds: many(rounds),
   competitions: many(competitions),
-}))
+}));
 
 export const tournamentParticipantsRelations = relations(
   tournamentParticipants,
@@ -347,7 +347,7 @@ export const tournamentParticipantsRelations = relations(
     }),
     roundParticipants: many(roundParticipants),
   }),
-)
+);
 
 export const tournamentTeamsRelations = relations(
   tournamentTeams,
@@ -358,7 +358,7 @@ export const tournamentTeamsRelations = relations(
     }),
     roundTeams: many(roundTeams),
   }),
-)
+);
 
 export const roundsRelations = relations(rounds, ({ one, many }) => ({
   tournament: one(tournaments, {
@@ -373,7 +373,7 @@ export const roundsRelations = relations(rounds, ({ one, many }) => ({
   teams: many(roundTeams),
   scoreEvents: many(scoreEvents),
   competitions: many(competitions),
-}))
+}));
 
 export const roundParticipantsRelations = relations(
   roundParticipants,
@@ -389,7 +389,7 @@ export const roundParticipantsRelations = relations(
     scoreEvents: many(scoreEvents),
     teamMemberships: many(roundTeamMembers),
   }),
-)
+);
 
 export const roundTeamsRelations = relations(roundTeams, ({ one, many }) => ({
   round: one(rounds, {
@@ -401,7 +401,7 @@ export const roundTeamsRelations = relations(roundTeams, ({ one, many }) => ({
     references: [tournamentTeams.id],
   }),
   members: many(roundTeamMembers),
-}))
+}));
 
 export const roundTeamMembersRelations = relations(
   roundTeamMembers,
@@ -415,7 +415,7 @@ export const roundTeamMembersRelations = relations(
       references: [roundParticipants.id],
     }),
   }),
-)
+);
 
 export const scoreEventsRelations = relations(scoreEvents, ({ one }) => ({
   round: one(rounds, {
@@ -430,7 +430,7 @@ export const scoreEventsRelations = relations(scoreEvents, ({ one }) => ({
     fields: [scoreEvents.recordedByUserId],
     references: [profiles.id],
   }),
-}))
+}));
 
 export const competitionsRelations = relations(competitions, ({ one }) => ({
   tournament: one(tournaments, {
@@ -441,112 +441,108 @@ export const competitionsRelations = relations(competitions, ({ one }) => ({
     fields: [competitions.roundId],
     references: [rounds.id],
   }),
-}))
+}));
 
 // ──────────────────────────────────────────────
 // Zod schemas (auto-generated from Drizzle)
 // ──────────────────────────────────────────────
 
 // Profiles
-export const insertProfileSchema = createInsertSchema(profiles)
-export const selectProfileSchema = createSelectSchema(profiles)
-export type InsertProfile = z.infer<typeof insertProfileSchema>
-export type SelectProfile = z.infer<typeof selectProfileSchema>
+export const insertProfileSchema = createInsertSchema(profiles);
+export const selectProfileSchema = createSelectSchema(profiles);
+export type InsertProfile = z.infer<typeof insertProfileSchema>;
+export type SelectProfile = z.infer<typeof selectProfileSchema>;
 
 // Persons
 export const insertPersonSchema = createInsertSchema(persons, {
   displayName: (schema) => schema.min(1, 'Display name is required'),
-})
-export const selectPersonSchema = createSelectSchema(persons)
-export type InsertPerson = z.infer<typeof insertPersonSchema>
-export type SelectPerson = z.infer<typeof selectPersonSchema>
+});
+export const selectPersonSchema = createSelectSchema(persons);
+export type InsertPerson = z.infer<typeof insertPersonSchema>;
+export type SelectPerson = z.infer<typeof selectPersonSchema>;
 
 // Courses
 export const insertCourseSchema = createInsertSchema(courses, {
   name: (schema) => schema.min(1, 'Course name is required'),
-})
-export const selectCourseSchema = createSelectSchema(courses)
-export type InsertCourse = z.infer<typeof insertCourseSchema>
-export type SelectCourse = z.infer<typeof selectCourseSchema>
+});
+export const selectCourseSchema = createSelectSchema(courses);
+export type InsertCourse = z.infer<typeof insertCourseSchema>;
+export type SelectCourse = z.infer<typeof selectCourseSchema>;
 
 // Course Holes
-export const insertCourseHoleSchema = createInsertSchema(courseHoles)
-export const selectCourseHoleSchema = createSelectSchema(courseHoles)
-export type InsertCourseHole = z.infer<typeof insertCourseHoleSchema>
-export type SelectCourseHole = z.infer<typeof selectCourseHoleSchema>
+export const insertCourseHoleSchema = createInsertSchema(courseHoles);
+export const selectCourseHoleSchema = createSelectSchema(courseHoles);
+export type InsertCourseHole = z.infer<typeof insertCourseHoleSchema>;
+export type SelectCourseHole = z.infer<typeof selectCourseHoleSchema>;
 
 // Tournaments
 export const insertTournamentSchema = createInsertSchema(tournaments, {
   name: (schema) => schema.min(1, 'Tournament name is required'),
-})
-export const selectTournamentSchema = createSelectSchema(tournaments)
-export type InsertTournament = z.infer<typeof insertTournamentSchema>
-export type SelectTournament = z.infer<typeof selectTournamentSchema>
+});
+export const selectTournamentSchema = createSelectSchema(tournaments);
+export type InsertTournament = z.infer<typeof insertTournamentSchema>;
+export type SelectTournament = z.infer<typeof selectTournamentSchema>;
 
 // Tournament Participants
 export const insertTournamentParticipantSchema = createInsertSchema(
   tournamentParticipants,
-)
+);
 export const selectTournamentParticipantSchema = createSelectSchema(
   tournamentParticipants,
-)
+);
 export type InsertTournamentParticipant = z.infer<
   typeof insertTournamentParticipantSchema
->
+>;
 export type SelectTournamentParticipant = z.infer<
   typeof selectTournamentParticipantSchema
->
+>;
 
 // Tournament Teams
-export const insertTournamentTeamSchema =
-  createInsertSchema(tournamentTeams)
-export const selectTournamentTeamSchema =
-  createSelectSchema(tournamentTeams)
-export type InsertTournamentTeam = z.infer<typeof insertTournamentTeamSchema>
-export type SelectTournamentTeam = z.infer<typeof selectTournamentTeamSchema>
+export const insertTournamentTeamSchema = createInsertSchema(tournamentTeams);
+export const selectTournamentTeamSchema = createSelectSchema(tournamentTeams);
+export type InsertTournamentTeam = z.infer<typeof insertTournamentTeamSchema>;
+export type SelectTournamentTeam = z.infer<typeof selectTournamentTeamSchema>;
 
 // Rounds
-export const insertRoundSchema = createInsertSchema(rounds)
-export const selectRoundSchema = createSelectSchema(rounds)
-export type InsertRound = z.infer<typeof insertRoundSchema>
-export type SelectRound = z.infer<typeof selectRoundSchema>
+export const insertRoundSchema = createInsertSchema(rounds);
+export const selectRoundSchema = createSelectSchema(rounds);
+export type InsertRound = z.infer<typeof insertRoundSchema>;
+export type SelectRound = z.infer<typeof selectRoundSchema>;
 
 // Round Participants
 export const insertRoundParticipantSchema =
-  createInsertSchema(roundParticipants)
+  createInsertSchema(roundParticipants);
 export const selectRoundParticipantSchema =
-  createSelectSchema(roundParticipants)
+  createSelectSchema(roundParticipants);
 export type InsertRoundParticipant = z.infer<
   typeof insertRoundParticipantSchema
->
+>;
 export type SelectRoundParticipant = z.infer<
   typeof selectRoundParticipantSchema
->
+>;
 
 // Round Teams
-export const insertRoundTeamSchema = createInsertSchema(roundTeams)
-export const selectRoundTeamSchema = createSelectSchema(roundTeams)
-export type InsertRoundTeam = z.infer<typeof insertRoundTeamSchema>
-export type SelectRoundTeam = z.infer<typeof selectRoundTeamSchema>
+export const insertRoundTeamSchema = createInsertSchema(roundTeams);
+export const selectRoundTeamSchema = createSelectSchema(roundTeams);
+export type InsertRoundTeam = z.infer<typeof insertRoundTeamSchema>;
+export type SelectRoundTeam = z.infer<typeof selectRoundTeamSchema>;
 
 // Round Team Members
-export const insertRoundTeamMemberSchema =
-  createInsertSchema(roundTeamMembers)
-export const selectRoundTeamMemberSchema =
-  createSelectSchema(roundTeamMembers)
-export type InsertRoundTeamMember = z.infer<typeof insertRoundTeamMemberSchema>
-export type SelectRoundTeamMember = z.infer<typeof selectRoundTeamMemberSchema>
+export const insertRoundTeamMemberSchema = createInsertSchema(roundTeamMembers);
+export const selectRoundTeamMemberSchema = createSelectSchema(roundTeamMembers);
+export type InsertRoundTeamMember = z.infer<typeof insertRoundTeamMemberSchema>;
+export type SelectRoundTeamMember = z.infer<typeof selectRoundTeamMemberSchema>;
 
 // Score Events
-export const insertScoreEventSchema = createInsertSchema(scoreEvents)
-export const selectScoreEventSchema = createSelectSchema(scoreEvents)
-export type InsertScoreEvent = z.infer<typeof insertScoreEventSchema>
-export type SelectScoreEvent = z.infer<typeof selectScoreEventSchema>
+export const insertScoreEventSchema = createInsertSchema(scoreEvents);
+export const selectScoreEventSchema = createSelectSchema(scoreEvents);
+export type InsertScoreEvent = z.infer<typeof insertScoreEventSchema>;
+export type SelectScoreEvent = z.infer<typeof selectScoreEventSchema>;
 
 // Competitions
 export const insertCompetitionSchema = createInsertSchema(competitions, {
   name: (schema) => schema.min(1, 'Competition name is required'),
-})
-export const selectCompetitionSchema = createSelectSchema(competitions)
-export type InsertCompetition = z.infer<typeof insertCompetitionSchema>
-export type SelectCompetition = z.infer<typeof selectCompetitionSchema>
+});
+export const selectCompetitionSchema = createSelectSchema(competitions);
+export type InsertCompetition = z.infer<typeof insertCompetitionSchema>;
+export type SelectCompetition = z.infer<typeof selectCompetitionSchema>;

@@ -271,12 +271,12 @@ Polish for real-world on-course use.
 
 ## Open Questions (Parked)
 
-| Question | Status |
-| --- | --- |
-| **Deployment target** — Vercel, Netlify, Node, etc. | Deferred. Spike after Phase 2 to avoid surprises. Need to understand backend story first. |
-| **Testing strategy** | Consider adding Vitest early. The pure scoring engine (Phase 5) is the most testable part — write engine tests as the first automated tests. |
-| **Auth method** — email + password vs magic link vs both | Start with email + password. Revisit after Phase 1. |
-| **PWA / native wrapper** | Test iOS PWA behaviour early. Decide after Phase 4 when on-course UX is real. |
+| Question                                                 | Status                                                                                                                                       |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Deployment target** — Vercel, Netlify, Node, etc.      | Deferred. Spike after Phase 2 to avoid surprises. Need to understand backend story first.                                                    |
+| **Testing strategy**                                     | Consider adding Vitest early. The pure scoring engine (Phase 5) is the most testable part — write engine tests as the first automated tests. |
+| **Auth method** — email + password vs magic link vs both | Start with email + password. Revisit after Phase 1.                                                                                          |
+| **PWA / native wrapper**                                 | Test iOS PWA behaviour early. Decide after Phase 4 when on-course UX is real.                                                                |
 
 ---
 

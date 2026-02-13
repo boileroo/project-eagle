@@ -54,7 +54,7 @@ function EditCoursePage() {
         holeNumber: h.holeNumber,
         par: h.par as 3 | 4 | 5 | 6,
         strokeIndex: h.strokeIndex,
-        yardage: h.yardage ?? undefined,
+        yardage: h.yardage ?? null,
       })),
   };
 
