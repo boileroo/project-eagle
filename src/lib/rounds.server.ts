@@ -36,23 +36,27 @@ async function resortRoundsByDate(tournamentId: string) {
     orderBy: [asc(rounds.roundNumber)],
   });
 
-  // Only re-sort if at least one round has a date
-  const hasAnyDate = allRounds.some((r) => r.date != null);
-  if (!hasAnyDate) return;
+  // Only re-sort if at least two rounds have dates
+  const datedRounds = allRounds.filter((r) => r.date != null);
+  if (datedRounds.length < 2) return;
 
-  // Sort: dated rounds chronologically (date + teeTime), undated at the end
-  const sorted = [...allRounds].sort((a, b) => {
-    if (a.date && b.date) {
-      const aTime = new Date(a.date).getTime();
-      const bTime = new Date(b.date).getTime();
-      if (aTime !== bTime) return aTime - bTime;
-      // Same date — sort by teeTime
-      return (a.teeTime ?? '').localeCompare(b.teeTime ?? '');
-    }
-    if (a.date && !b.date) return -1;
-    if (!a.date && b.date) return 1;
-    return (a.roundNumber ?? 0) - (b.roundNumber ?? 0);
+  // Sort only the dated rounds chronologically
+  const sortedDated = [...datedRounds].sort((a, b) => {
+    const aTime = new Date(a.date!).getTime();
+    const bTime = new Date(b.date!).getTime();
+    if (aTime !== bTime) return aTime - bTime;
+    return (a.teeTime ?? '').localeCompare(b.teeTime ?? '');
   });
+
+  // Place sorted dated rounds back into the positions currently occupied by dated rounds
+  // This preserves undated round positions
+  const sorted = [...allRounds];
+  let datedIdx = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    if (sorted[i].date != null) {
+      sorted[i] = sortedDated[datedIdx++];
+    }
+  }
 
   // Reassign round numbers
   for (let i = 0; i < sorted.length; i++) {
@@ -218,6 +222,28 @@ export const reorderRoundsFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     await requireAuth();
+
+    // Fetch the rounds to validate dated-round chronological order
+    const allRounds = await db.query.rounds.findMany({
+      where: eq(rounds.tournamentId, data.tournamentId),
+    });
+    const roundMap = new Map(allRounds.map((r) => [r.id, r]));
+
+    // Check that dated rounds remain in chronological order in the new sequence
+    let lastDatedTime = -Infinity;
+    for (const id of data.roundIds) {
+      const r = roundMap.get(id);
+      if (!r || !r.date) continue;
+      const t = new Date(r.date).getTime();
+      const teeMinutes = r.teeTime
+        ? Number(r.teeTime.split(':')[0]) * 60 + Number(r.teeTime.split(':')[1])
+        : 0;
+      const fullTime = t + teeMinutes * 60000;
+      if (fullTime < lastDatedTime) {
+        throw new Error('Dated rounds must remain in chronological order');
+      }
+      lastDatedTime = fullTime;
+    }
 
     // Update round numbers to match the provided order
     for (let i = 0; i < data.roundIds.length; i++) {

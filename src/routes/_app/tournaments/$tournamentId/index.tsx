@@ -843,27 +843,47 @@ function RoundsSection({
 }) {
   const sortedRounds = tournament.rounds;
 
-  // Check if a round can move up (only undated rounds, only swap with adjacent undated)
-  const canMoveUp = (idx: number) => {
-    if (idx <= 0) return false;
-    return sortedRounds[idx].date == null && sortedRounds[idx - 1].date == null;
+  // Helper: get a comparable timestamp for a dated round
+  const getDateTime = (r: { date: string | Date | null; teeTime: string | null }) => {
+    if (!r.date) return null;
+    const d = new Date(r.date);
+    if (r.teeTime) {
+      const [h, m] = r.teeTime.split(':').map(Number);
+      d.setHours(h, m, 0, 0);
+    }
+    return d.getTime();
   };
 
-  // Check if a round can move down
-  const canMoveDown = (idx: number) => {
-    if (idx >= sortedRounds.length - 1) return false;
-    return sortedRounds[idx].date == null && sortedRounds[idx + 1].date == null;
+  // Check if swapping two adjacent rounds would break dated-round chronological order.
+  // The constraint: dated rounds must stay in chronological order relative to each other.
+  const canSwap = (idxA: number, idxB: number) => {
+    const a = sortedRounds[idxA];
+    const b = sortedRounds[idxB];
+    // If both have dates, they can only swap if B <= A chronologically
+    // (since swapping puts B first — it must not be later than A)
+    const aTime = getDateTime(a);
+    const bTime = getDateTime(b);
+    if (aTime != null && bTime != null) {
+      // idxA < idxB: after swap, B is at idxA and A is at idxB — B must be <= A
+      return idxA < idxB ? bTime <= aTime : aTime <= bTime;
+    }
+    // If only one has a date, check that the dated round doesn't cross another dated round
+    // We need to verify all dated rounds remain in order after the swap
+    const swapped = [...sortedRounds];
+    [swapped[Math.min(idxA, idxB)], swapped[Math.max(idxA, idxB)]] = 
+      [swapped[Math.max(idxA, idxB)], swapped[Math.min(idxA, idxB)]];
+    const datedInOrder = swapped.filter((r) => r.date != null);
+    for (let i = 1; i < datedInOrder.length; i++) {
+      const prev = getDateTime(datedInOrder[i - 1])!;
+      const curr = getDateTime(datedInOrder[i])!;
+      if (prev > curr) return false;
+    }
+    return true;
   };
 
-  // Whether this round should show reorder arrows at all
-  const showArrows = (idx: number) => {
-    if (sortedRounds[idx].date != null) return false;
-    // Show if there's at least one adjacent undated round
-    return canMoveUp(idx) || canMoveDown(idx);
-  };
-
-  // Need a stable column width for arrows so links align
-  const anyArrowsVisible = sortedRounds.some((_, idx) => showArrows(idx));
+  const canMoveUp = (idx: number) => idx > 0 && canSwap(idx, idx - 1);
+  const canMoveDown = (idx: number) => idx < sortedRounds.length - 1 && canSwap(idx, idx + 1);
+  const showArrows = sortedRounds.length > 1;
 
   const handleMoveUp = async (index: number) => {
     if (index <= 0) return;
@@ -943,31 +963,27 @@ function RoundsSection({
                 key={r.id}
                 className="flex items-center gap-2"
               >
-                {/* Reorder arrows — shown for undated rounds with adjacent undated neighbours */}
-                {anyArrowsVisible && (
+                {/* Reorder arrows */}
+                {showArrows && (
                   <div className="flex w-4 flex-col items-center">
-                    {showArrows(idx) ? (
-                      <>
-                        <button
-                          type="button"
-                          className="text-muted-foreground hover:text-foreground disabled:opacity-25 px-0.5 text-xs leading-none"
-                          disabled={!canMoveUp(idx)}
-                          onClick={() => handleMoveUp(idx)}
-                          aria-label="Move up"
-                        >
-                          ▲
-                        </button>
-                        <button
-                          type="button"
-                          className="text-muted-foreground hover:text-foreground disabled:opacity-25 px-0.5 text-xs leading-none"
-                          disabled={!canMoveDown(idx)}
-                          onClick={() => handleMoveDown(idx)}
-                          aria-label="Move down"
-                        >
-                          ▼
-                        </button>
-                      </>
-                    ) : null}
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground disabled:opacity-25 px-0.5 text-xs leading-none"
+                      disabled={!canMoveUp(idx)}
+                      onClick={() => handleMoveUp(idx)}
+                      aria-label="Move up"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground disabled:opacity-25 px-0.5 text-xs leading-none"
+                      disabled={!canMoveDown(idx)}
+                      onClick={() => handleMoveDown(idx)}
+                      aria-label="Move down"
+                    >
+                      ▼
+                    </button>
                   </div>
                 )}
                 <Link
