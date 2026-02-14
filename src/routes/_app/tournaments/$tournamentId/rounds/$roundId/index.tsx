@@ -73,10 +73,7 @@ export const Route = createFileRoute(
       getCoursesFn(),
       getScorecardFn({ data: { roundId: params.roundId } }),
       getRoundCompetitionsFn({
-        data: {
-          tournamentId: params.tournamentId,
-          roundId: params.roundId,
-        },
+        data: { roundId: params.roundId },
       }),
     ]);
     return { round, courses, scorecard, competitions };
@@ -834,13 +831,11 @@ function CompetitionsSection({
                         <Badge variant="outline" className="text-xs">
                           {FORMAT_TYPE_LABELS[comp.formatType as CompetitionConfig['formatType']] ?? comp.formatType}
                         </Badge>
-                        {comp.scope === 'tournament' && (
-                          <Badge variant="secondary" className="text-xs">
-                            Tournament-wide
-                          </Badge>
-                        )}
+                        <Badge variant="secondary" className="text-xs">
+                          {comp.participantType === 'team' ? 'Team' : 'Individual'}
+                        </Badge>
                       </div>
-                      {isCommissioner && comp.scope === 'round' && (
+                      {isCommissioner && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1033,7 +1028,7 @@ function AddCompetitionDialog({
   const [name, setName] = useState('');
   const [formatType, setFormatType] =
     useState<CompetitionConfig['formatType']>('stableford');
-  const [scope, setScope] = useState<'round' | 'tournament'>('round');
+  const [participantType, setParticipantType] = useState<'individual' | 'team'>('individual');
 
   // Format-specific config state
   const [countBack, setCountBack] = useState(true);
@@ -1045,7 +1040,7 @@ function AddCompetitionDialog({
   const resetForm = () => {
     setName('');
     setFormatType('stableford');
-    setScope('round');
+    setParticipantType('individual');
     setCountBack(true);
     setScoringBasis('net_strokes');
     setHoleNumber(1);
@@ -1087,8 +1082,8 @@ function AddCompetitionDialog({
         data: {
           tournamentId,
           name: name.trim(),
-          scope,
-          roundId: scope === 'round' ? roundId : null,
+          participantType,
+          roundId,
           competitionConfig: buildConfig(),
         },
       });
@@ -1156,19 +1151,19 @@ function AddCompetitionDialog({
             </select>
           </div>
 
-          {/* Scope */}
+          {/* Participant Type */}
           <div className="space-y-2">
-            <Label htmlFor="comp-scope">Scope</Label>
+            <Label htmlFor="comp-participant-type">Participant Type</Label>
             <select
-              id="comp-scope"
+              id="comp-participant-type"
               className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-              value={scope}
+              value={participantType}
               onChange={(e) =>
-                setScope(e.target.value as 'round' | 'tournament')
+                setParticipantType(e.target.value as 'individual' | 'team')
               }
             >
-              <option value="round">This round only</option>
-              <option value="tournament">Tournament-wide</option>
+              <option value="individual">Individual</option>
+              <option value="team">Team</option>
             </select>
           </div>
 

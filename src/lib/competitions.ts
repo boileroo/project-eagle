@@ -166,3 +166,58 @@ export function isMatchFormat(formatType: CompetitionConfig['formatType']): bool
 export function isBonusFormat(formatType: CompetitionConfig['formatType']): boolean {
   return formatType === 'nearest_pin' || formatType === 'longest_drive';
 }
+
+// ──────────────────────────────────────────────
+// Participant type labels
+// ──────────────────────────────────────────────
+
+export const PARTICIPANT_TYPE_LABELS: Record<'individual' | 'team', string> = {
+  individual: 'Individual',
+  team: 'Team',
+};
+
+// ──────────────────────────────────────────────
+// Tournament Standings — Aggregation Config Types
+//
+// Defines how round-level competition results roll up
+// into tournament-wide leaderboards. Extensible via
+// discriminated union so new methods need only TS changes.
+// ──────────────────────────────────────────────
+
+export const sumStablefordAggregationSchema = z.object({
+  method: z.literal('sum_stableford'),
+});
+
+export const lowestStrokesAggregationSchema = z.object({
+  method: z.literal('lowest_strokes'),
+  config: z.object({
+    scoringBasis: z.enum(['net_strokes', 'gross_strokes']),
+  }),
+});
+
+export const matchWinsAggregationSchema = z.object({
+  method: z.literal('match_wins'),
+  config: z.object({
+    /** Points per match win (default 1) */
+    pointsPerWin: z.number().min(0).default(1),
+    /** Points per match half/draw (default 0.5) */
+    pointsPerHalf: z.number().min(0).default(0.5),
+  }),
+});
+
+export const aggregationConfigSchema = z.discriminatedUnion('method', [
+  sumStablefordAggregationSchema,
+  lowestStrokesAggregationSchema,
+  matchWinsAggregationSchema,
+]);
+export type AggregationConfig = z.infer<typeof aggregationConfigSchema>;
+
+export const AGGREGATION_METHOD_LABELS: Record<AggregationConfig['method'], string> = {
+  sum_stableford: 'Total Stableford Points',
+  lowest_strokes: 'Lowest Total Strokes',
+  match_wins: 'Match Wins',
+};
+
+export const AGGREGATION_METHODS = Object.keys(
+  AGGREGATION_METHOD_LABELS,
+) as AggregationConfig['method'][];

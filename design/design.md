@@ -172,15 +172,17 @@ CourseHole { id, courseId, holeNumber, par, strokeIndex, yardage (optional) }
 | TournamentTeam        | A persistent team identity across the tournament                   |
 | RoundTeam             | Per-round team composition (optionally linked to a TournamentTeam) |
 | ScoreEvent            | An immutable record of strokes on a hole                           |
-| Competition           | A scoring format config applied to raw data (never stores results) |
+| Competition           | A round-scoped scoring format config (individual or team)          |
 | BonusAward            | Winner of a bonus competition (NTP/LD) — single award per comp     |
+| TournamentStanding    | Tournament-wide aggregation config (rolls up round competitions)   |
 
 ### Key Relationships
 
 - Tournament → many Rounds
 - Tournament → many TournamentParticipants → Person
 - Tournament → many TournamentTeams (optional)
-- Tournament → many Competitions
+- Tournament → many Competitions (via rounds)
+- Tournament → many TournamentStandings (0, 1, or 2 — individual and/or team)
 - Round → one Course
 - Round → many RoundParticipants → TournamentParticipant
 - Round → many RoundTeams → many RoundParticipants
@@ -196,17 +198,17 @@ CourseHole { id, courseId, holeNumber, par, strokeIndex, yardage (optional) }
 
 ## Competition Model
 
-Competitions are **configuration objects**, not stored results.
+Competitions are **configuration objects**, not stored results. They are always **round-scoped** and classified as either **individual** or **team**.
 
 ```
 Competition {
   id
   tournamentId
+  roundId (NOT NULL)     // always bound to a specific round
   name
-  scope: "round" | "tournament"
-  formatType           // discriminant: "stableford" | "stroke_play" | "match_play" | "best_ball" | "nearest_pin" | "longest_drive"
-  configJson           // typed per formatType (see below)
-  roundId (nullable)   // null = tournament-wide, set = round-scoped
+  participantType        // "individual" | "team"
+  formatType             // discriminant: "stableford" | "stroke_play" | "match_play" | "best_ball" | "nearest_pin" | "longest_drive"
+  configJson             // typed per formatType (see below)
 }
 ```
 
@@ -257,13 +259,35 @@ BonusAward {
 
 Only one winner per bonus competition — awarding a new winner replaces the previous one.
 
+### Tournament Standings (Aggregation)
+
+Tournament-level leaderboards are configured separately from round competitions. A tournament can have 0, 1, or 2 standings (individual and/or team).
+
+```
+TournamentStanding {
+  id
+  tournamentId
+  name
+  participantType        // "individual" | "team"
+  aggregationConfig      // Zod discriminated union keyed on "method"
+}
+```
+
+Aggregation methods (extensible via discriminated union):
+- **sum_stableford** — sum stableford points across all rounds (individual)
+- **lowest_strokes** — sum net or gross strokes across all rounds (individual)
+- **match_wins** — count match wins across all rounds (individual or team), configurable points per win/half
+
+Results are **derived at display time** from round-level competition results — nothing is persisted.
+
 ### Examples
 
-- Round 1 Individual Stableford (round-scoped)
-- Best Ball — Team A vs Team B (round-scoped, 2pts for win)
-- Overall Net Stroke Play (tournament-wide)
-- Nearest the Pin — Hole 8 (round-scoped)
-- Singles Match Play — Tom vs James (round-scoped, 4pts for day 3 jeopardy)
+- Round 1 Individual Stableford (individual, round-scoped)
+- Best Ball — Team A vs Team B (team, round-scoped, 2pts for win)
+- Nearest the Pin — Hole 8 (individual, round-scoped)
+- Singles Match Play — Tom vs James (individual, round-scoped, 4pts for day 3 jeopardy)
+- Overall Stableford (tournament standing, sum_stableford)
+- Team Championship (tournament standing, match_wins)
 
 Multiple competitions run simultaneously over the **same raw score events**. Adding or changing a competition never requires re-entering scores.
 

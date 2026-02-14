@@ -4,7 +4,7 @@
 // This file is for app-level validation schemas (forms, API inputs, etc.)
 
 import { z } from 'zod';
-import { competitionConfigSchema } from './competitions';
+import { competitionConfigSchema, aggregationConfigSchema } from './competitions';
 
 // ──────────────────────────────────────────────
 // Auth schemas
@@ -200,10 +200,9 @@ export type SubmitScoreInput = z.infer<typeof submitScoreSchema>;
 
 export const createCompetitionSchema = z.object({
   tournamentId: z.string().uuid(),
+  roundId: z.string().uuid(),
   name: z.string().min(1, 'Competition name is required'),
-  scope: z.enum(['round', 'tournament']),
-  /** Null for tournament-scoped competitions */
-  roundId: z.string().uuid().nullable().optional(),
+  participantType: z.enum(['individual', 'team']),
   /** The full config including formatType discriminant */
   competitionConfig: competitionConfigSchema,
 });
@@ -225,3 +224,26 @@ export const awardBonusSchema = z.object({
   roundParticipantId: z.string().uuid(),
 });
 export type AwardBonusInput = z.infer<typeof awardBonusSchema>;
+
+// ──────────────────────────────────────────────
+// Tournament standings schemas
+// ──────────────────────────────────────────────
+
+export const createTournamentStandingSchema = z.object({
+  tournamentId: z.string().uuid(),
+  name: z.string().min(1, 'Standing name is required'),
+  participantType: z.enum(['individual', 'team']),
+  aggregationConfig: aggregationConfigSchema,
+});
+export type CreateTournamentStandingInput = z.infer<
+  typeof createTournamentStandingSchema
+>;
+
+export const updateTournamentStandingSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1, 'Standing name is required').optional(),
+  aggregationConfig: aggregationConfigSchema.optional(),
+});
+export type UpdateTournamentStandingInput = z.infer<
+  typeof updateTournamentStandingSchema
+>;

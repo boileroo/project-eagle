@@ -23,9 +23,9 @@ export const roundStatusEnum = pgEnum('round_status', [
   'finalized',
 ]);
 
-export const competitionScopeEnum = pgEnum('competition_scope', [
-  'round',
-  'tournament',
+export const participantTypeEnum = pgEnum('participant_type', [
+  'individual',
+  'team',
 ]);
 
 export const recordedByRoleEnum = pgEnum('recorded_by_role', [
@@ -305,14 +305,36 @@ export const competitions = pgTable('competitions', {
   tournamentId: uuid('tournament_id')
     .references(() => tournaments.id, { onDelete: 'cascade' })
     .notNull(),
+  roundId: uuid('round_id')
+    .references(() => rounds.id, { onDelete: 'cascade' })
+    .notNull(),
   name: text('name').notNull(),
-  scope: competitionScopeEnum('scope').notNull(),
+  participantType: participantTypeEnum('participant_type').notNull().default('individual'),
   formatType: text('format_type').notNull(),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   configJson: jsonb('config_json').$type<Record<string, any>>(),
-  roundId: uuid('round_id').references(() => rounds.id, {
-    onDelete: 'cascade',
-  }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// ──────────────────────────────────────────────
+// Tournament Standings (aggregation of round competitions)
+// ──────────────────────────────────────────────
+
+export const tournamentStandings = pgTable('tournament_standings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tournamentId: uuid('tournament_id')
+    .references(() => tournaments.id, { onDelete: 'cascade' })
+    .notNull(),
+  name: text('name').notNull(),
+  participantType: participantTypeEnum('participant_type').notNull(),
+  /** Aggregation method + config */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  aggregationConfig: jsonb('aggregation_config').$type<Record<string, any>>().notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -388,6 +410,7 @@ export const tournamentsRelations = relations(tournaments, ({ one, many }) => ({
   teams: many(tournamentTeams),
   rounds: many(rounds),
   competitions: many(competitions),
+  standings: many(tournamentStandings),
 }));
 
 export const tournamentParticipantsRelations = relations(
@@ -542,6 +565,16 @@ export const bonusAwardsRelations = relations(bonusAwards, ({ one }) => ({
   }),
 }));
 
+export const tournamentStandingsRelations = relations(
+  tournamentStandings,
+  ({ one }) => ({
+    tournament: one(tournaments, {
+      fields: [tournamentStandings.tournamentId],
+      references: [tournaments.id],
+    }),
+  }),
+);
+
 // ──────────────────────────────────────────────
 // Zod schemas (auto-generated from Drizzle)
 // ──────────────────────────────────────────────
@@ -663,3 +696,19 @@ export const insertBonusAwardSchema = createInsertSchema(bonusAwards);
 export const selectBonusAwardSchema = createSelectSchema(bonusAwards);
 export type InsertBonusAward = z.infer<typeof insertBonusAwardSchema>;
 export type SelectBonusAward = z.infer<typeof selectBonusAwardSchema>;
+
+// Tournament Standings
+export const insertTournamentStandingSchema = createInsertSchema(
+  tournamentStandings,
+  {
+    name: (schema) => schema.min(1, 'Standing name is required'),
+  },
+);
+export const selectTournamentStandingSchema =
+  createSelectSchema(tournamentStandings);
+export type InsertTournamentStanding = z.infer<
+  typeof insertTournamentStandingSchema
+>;
+export type SelectTournamentStanding = z.infer<
+  typeof selectTournamentStandingSchema
+>;

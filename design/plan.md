@@ -2,11 +2,11 @@
 
 ## Current State
 
-Phases 1–4 are complete. Phase 5 (Competition Engine) is in progress — the scoring engine, config types, and server CRUD are built. The leaderboard UI and competition management UI remain.
+Phases 1–5 are complete. The app has full auth, course library, tournament setup, score entry, round status guards, role-based permissions, and a complete competition engine with UI.
 
 **What exists:**
 - Full auth (email + password), protected routes, session handling
-- Complete Drizzle schema: profiles, persons, courses, courseHoles, tournaments, tournamentParticipants, tournamentTeams, tournamentTeamMembers, rounds, roundParticipants, roundTeams, roundTeamMembers, scoreEvents, competitions, bonusAwards
+- Complete Drizzle schema: profiles, persons, courses, courseHoles, tournaments, tournamentParticipants, tournamentTeams, tournamentTeamMembers, rounds, roundParticipants, roundTeams, roundTeamMembers, scoreEvents, competitions, bonusAwards, tournamentStandings
 - RLS policies across all tables
 - Course library (CRUD + list/detail pages)
 - Tournament setup: CRUD, participants, teams, round management, status workflow
@@ -14,15 +14,21 @@ Phases 1–4 are complete. Phase 5 (Competition Engine) is in progress — the s
 - Round status guards (sequential transitions, delete/mutation guards)
 - Role-based permissions: `requireCommissioner()` on all mutations, `isCommissioner` UI gating
 - Competition engine: pure scoring functions for stableford, stroke play, match play, best ball
+- Competitions are always round-scoped, with `participantType` (individual or team)
 - Competition config Zod types (discriminated union)
 - Competition CRUD server functions + bonus award mutations
 - bonusAwards table for NTP/LD
+- Competition management UI: create/delete competitions, format-specific config forms
+- Leaderboard views: live, derived results for all scored formats
+- Bonus award UI: NTP/LD dropdown on round page
+- Tournament standings: aggregation engine (sum stableford, lowest strokes, match wins) + CRUD server functions
+- `tournamentStandings` table with flexible aggregation config
 
 **Key files:**
-- `src/db/schema.ts` — full domain schema (~665 lines)
-- `src/lib/domain/` — pure scoring engine (stableford, stroke-play, match-play, best-ball, bonus)
-- `src/lib/competitions.ts` — config Zod types
-- `src/lib/competitions.server.ts` — CRUD server functions
+- `src/db/schema.ts` — full domain schema (~700 lines)
+- `src/lib/domain/` — pure scoring engine (stableford, stroke-play, match-play, best-ball, bonus, standings)
+- `src/lib/competitions.ts` — config Zod types + aggregation config types
+- `src/lib/competitions.server.ts` — CRUD server functions + tournament standings CRUD
 - `src/lib/auth.helpers.ts` — shared requireAuth + requireCommissioner
 - `src/lib/validators.ts` — all app-level Zod schemas
 
@@ -279,18 +285,22 @@ Pure domain logic + the read-side projections.
 - Validators in `src/lib/validators.ts`: `createCompetitionSchema`, `updateCompetitionSchema`, `awardBonusSchema`
 - `bonusAwards` table in schema for NTP/LD winner storage
 
-### 5.4 Competition Management UI
+### 5.4 Competition Management UI ✅
 
-- Competition CRUD UI on tournament/round detail pages
-- Add/edit/delete competitions with format-specific config forms
-- NTP/LD dropdown on scorecard for awarding bonus comps
+- `CompetitionsSection` on round detail page — full engine integration
+- `AddCompetitionDialog` with format-specific config (count-back, scoring basis, match points, hole number)
+- `BonusCompRow` for NTP/LD award management with participant dropdown
+- Delete support for round-scoped competitions
+- Commissioner-only controls
 
-### 5.5 Leaderboard Views
+### 5.5 Leaderboard Views ✅
 
-- Per-competition results page
-- Pulls raw score events → resolves handicaps → runs engine → displays results
-- All derived, nothing persisted
-- Updates when new score events arrive
+- `CompetitionResults` component — dispatcher to format-specific leaderboards
+- `StablefordLeaderboard` — rank, player, HC, holes completed, total points
+- `StrokePlayLeaderboard` — rank, player, HC, holes, gross/net, vs par
+- `MatchPlayResults` / `BestBallResults` — matchup displays with result badges
+- All derived from raw score events → engine → display (nothing persisted)
+- Updates when router invalidates after score entry
 
 ### Done when
 
