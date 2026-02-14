@@ -308,7 +308,8 @@ export const competitions = pgTable('competitions', {
   name: text('name').notNull(),
   scope: competitionScopeEnum('scope').notNull(),
   formatType: text('format_type').notNull(),
-  configJson: jsonb('config_json'),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  configJson: jsonb('config_json').$type<Record<string, any>>(),
   roundId: uuid('round_id').references(() => rounds.id, {
     onDelete: 'cascade',
   }),
@@ -316,6 +317,25 @@ export const competitions = pgTable('competitions', {
     .defaultNow()
     .notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// ──────────────────────────────────────────────
+// Bonus Awards (NTP / LD winners)
+// ──────────────────────────────────────────────
+
+export const bonusAwards = pgTable('bonus_awards', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  competitionId: uuid('competition_id')
+    .references(() => competitions.id, { onDelete: 'cascade' })
+    .notNull(),
+  roundParticipantId: uuid('round_participant_id')
+    .references(() => roundParticipants.id, { onDelete: 'cascade' })
+    .notNull(),
+  awardedByUserId: uuid('awarded_by_user_id')
+    .references(() => profiles.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
 });
@@ -492,14 +512,33 @@ export const scoreEventsRelations = relations(scoreEvents, ({ one }) => ({
   }),
 }));
 
-export const competitionsRelations = relations(competitions, ({ one }) => ({
-  tournament: one(tournaments, {
-    fields: [competitions.tournamentId],
-    references: [tournaments.id],
+export const competitionsRelations = relations(
+  competitions,
+  ({ one, many }) => ({
+    tournament: one(tournaments, {
+      fields: [competitions.tournamentId],
+      references: [tournaments.id],
+    }),
+    round: one(rounds, {
+      fields: [competitions.roundId],
+      references: [rounds.id],
+    }),
+    bonusAwards: many(bonusAwards),
   }),
-  round: one(rounds, {
-    fields: [competitions.roundId],
-    references: [rounds.id],
+);
+
+export const bonusAwardsRelations = relations(bonusAwards, ({ one }) => ({
+  competition: one(competitions, {
+    fields: [bonusAwards.competitionId],
+    references: [competitions.id],
+  }),
+  roundParticipant: one(roundParticipants, {
+    fields: [bonusAwards.roundParticipantId],
+    references: [roundParticipants.id],
+  }),
+  awardedBy: one(profiles, {
+    fields: [bonusAwards.awardedByUserId],
+    references: [profiles.id],
   }),
 }));
 
@@ -618,3 +657,9 @@ export const insertCompetitionSchema = createInsertSchema(competitions, {
 export const selectCompetitionSchema = createSelectSchema(competitions);
 export type InsertCompetition = z.infer<typeof insertCompetitionSchema>;
 export type SelectCompetition = z.infer<typeof selectCompetitionSchema>;
+
+// Bonus Awards
+export const insertBonusAwardSchema = createInsertSchema(bonusAwards);
+export const selectBonusAwardSchema = createSelectSchema(bonusAwards);
+export type InsertBonusAward = z.infer<typeof insertBonusAwardSchema>;
+export type SelectBonusAward = z.infer<typeof selectBonusAwardSchema>;

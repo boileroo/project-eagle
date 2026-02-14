@@ -4,6 +4,7 @@
 // This file is for app-level validation schemas (forms, API inputs, etc.)
 
 import { z } from 'zod';
+import { competitionConfigSchema } from './competitions';
 
 // ──────────────────────────────────────────────
 // Auth schemas
@@ -192,3 +193,35 @@ export const submitScoreSchema = z.object({
   recordedByRole: z.enum(['player', 'marker', 'commissioner']),
 });
 export type SubmitScoreInput = z.infer<typeof submitScoreSchema>;
+
+// ──────────────────────────────────────────────
+// Competition schemas
+// ──────────────────────────────────────────────
+
+export const createCompetitionSchema = z.object({
+  tournamentId: z.string().uuid(),
+  name: z.string().min(1, 'Competition name is required'),
+  scope: z.enum(['round', 'tournament']),
+  /** Null for tournament-scoped competitions */
+  roundId: z.string().uuid().nullable().optional(),
+  /** The full config including formatType discriminant */
+  competitionConfig: competitionConfigSchema,
+});
+export type CreateCompetitionInput = z.infer<typeof createCompetitionSchema>;
+
+export const updateCompetitionSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1, 'Competition name is required').optional(),
+  competitionConfig: competitionConfigSchema.optional(),
+});
+export type UpdateCompetitionInput = z.infer<typeof updateCompetitionSchema>;
+
+// ──────────────────────────────────────────────
+// Bonus award schemas
+// ──────────────────────────────────────────────
+
+export const awardBonusSchema = z.object({
+  competitionId: z.string().uuid(),
+  roundParticipantId: z.string().uuid(),
+});
+export type AwardBonusInput = z.infer<typeof awardBonusSchema>;
