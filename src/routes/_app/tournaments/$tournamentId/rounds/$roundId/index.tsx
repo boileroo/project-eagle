@@ -115,7 +115,6 @@ function RoundDetailPage() {
 
   // Determine the recording role for the current user
   const getRecordingRole = (roundParticipantId: string): 'player' | 'marker' | 'commissioner' => {
-    if (round.status === 'locked' && isCommissioner) return 'commissioner';
     const rp = round.participants.find((p) => p.id === roundParticipantId);
     if (rp?.person.userId === user.id) return 'player';
     return 'marker';
@@ -208,7 +207,7 @@ function RoundDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {round.status === 'draft' && (
+          {isCommissioner && round.status === 'draft' && (
             <EditRoundDialog
               round={round}
               courses={courses}
@@ -216,7 +215,7 @@ function RoundDetailPage() {
             />
           )}
 
-          {transitions.map((t) => (
+          {isCommissioner && transitions.map((t) => (
             <Button
               key={t.status}
               size="sm"
@@ -231,7 +230,7 @@ function RoundDetailPage() {
             </Button>
           ))}
 
-          {round.status === 'draft' && (
+          {isCommissioner && round.status === 'draft' && (
           <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="destructive" size="sm">
@@ -385,7 +384,6 @@ function RoundDetailPage() {
               participants={round.participants}
               scores={scorecard}
               roundStatus={round.status}
-              isCommissioner={isCommissioner}
               onScoreClick={(rpId, holeNumber, currentStrokes) => {
                 const rp = round.participants.find((p) => p.id === rpId);
                 const hole = round.course.holes.find(
@@ -428,8 +426,6 @@ function RoundDetailPage() {
           par={scoreTarget.par}
           currentStrokes={scoreTarget.currentStrokes}
           recordedByRole={getRecordingRole(scoreTarget.roundParticipantId)}
-          isCommissioner={isCommissioner}
-          roundStatus={round.status}
           onSaved={() => router.invalidate()}
         />
       )}

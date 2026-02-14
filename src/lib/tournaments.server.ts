@@ -1,9 +1,8 @@
 import { createServerFn } from '@tanstack/react-start';
-import { getRequest } from '@tanstack/react-start/server';
 import { and, eq, ilike } from 'drizzle-orm';
 import { db } from '@/db';
 import { persons, tournamentParticipants, tournaments } from '@/db/schema';
-import { createSupabaseServerClient } from './supabase.server';
+import { requireAuth, requireCommissioner } from './auth.helpers';
 import type {
   AddParticipantInput,
   CreateGuestInput,
@@ -11,20 +10,6 @@ import type {
   UpdateParticipantInput,
   UpdateTournamentInput,
 } from './validators';
-
-// ──────────────────────────────────────────────
-// Helper: get authenticated user or throw
-// ──────────────────────────────────────────────
-
-async function requireAuth() {
-  const request = getRequest();
-  const { supabase } = createSupabaseServerClient(request);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
-  return user;
-}
 
 // ──────────────────────────────────────────────
 // List all tournaments
@@ -123,15 +108,12 @@ export const createTournamentFn = createServerFn({ method: 'POST' })
 export const updateTournamentFn = createServerFn({ method: 'POST' })
   .inputValidator((data: UpdateTournamentInput) => data)
   .handler(async ({ data }) => {
-    const user = await requireAuth();
+    await requireCommissioner(data.id);
 
     const existing = await db.query.tournaments.findFirst({
       where: eq(tournaments.id, data.id),
     });
     if (!existing) throw new Error('Tournament not found');
-    if (existing.createdByUserId !== user.id) {
-      throw new Error('You can only edit tournaments you created');
-    }
 
     await db
       .update(tournaments)
@@ -152,15 +134,12 @@ export const updateTournamentFn = createServerFn({ method: 'POST' })
 export const deleteTournamentFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { tournamentId: string }) => data)
   .handler(async ({ data }) => {
-    const user = await requireAuth();
+    await requireCommissioner(data.tournamentId);
 
     const existing = await db.query.tournaments.findFirst({
       where: eq(tournaments.id, data.tournamentId),
     });
     if (!existing) throw new Error('Tournament not found');
-    if (existing.createdByUserId !== user.id) {
-      throw new Error('You can only delete tournaments you created');
-    }
 
     // Cascades to participants, teams, rounds, etc.
     await db.delete(tournaments).where(eq(tournaments.id, data.tournamentId));
@@ -234,7 +213,25 @@ export const createGuestPersonFn = createServerFn({ method: 'POST' })
 export const addParticipantFn = createServerFn({ method: 'POST' })
   .inputValidator((data: AddParticipantInput) => data)
   .handler(async ({ data }) => {
-    await requireAuth();
+    const user = await requireAuth();
+
+    // Look up person to check if this is a self-join
+    const person = await db.query.persons.findFirst({
+      where: eq(persons.id, data.personId),
+    });
+    if (!person) throw new Error('Person not found');
+
+    const isSelfJoin = person.userId === user.id;
+
+    if (isSelfJoin) {
+      // Self-join: anyone can add themselves as player
+      if (data.role && data.role !== 'player') {
+        throw new Error('You can only join as a player');
+      }
+    } else {
+      // Adding someone else: require commissioner
+      await requireCommissioner(data.tournamentId);
+    }
 
     // Verify tournament exists
     const tournament = await db.query.tournaments.findFirst({
@@ -252,13 +249,7 @@ export const addParticipantFn = createServerFn({ method: 'POST' })
       });
     if (existingParticipant) throw new Error('Person is already a participant');
 
-    // Look up person to check guest status
-    const person = await db.query.persons.findFirst({
-      where: eq(persons.id, data.personId),
-    });
-    if (!person) throw new Error('Person not found');
-
-    const role = data.role ?? 'player';
+    const role = isSelfJoin ? 'player' : (data.role ?? 'player');
 
     // Guests can only be player or spectator
     if (person.userId == null && (role === 'commissioner' || role === 'marker')) {
@@ -298,13 +289,13 @@ export const addParticipantFn = createServerFn({ method: 'POST' })
 export const updateParticipantFn = createServerFn({ method: 'POST' })
   .inputValidator((data: UpdateParticipantInput) => data)
   .handler(async ({ data }) => {
-    await requireAuth();
-
     const existing = await db.query.tournamentParticipants.findFirst({
       where: eq(tournamentParticipants.id, data.participantId),
       with: { person: true },
     });
     if (!existing) throw new Error('Participant not found');
+
+    await requireCommissioner(existing.tournamentId);
 
     // Guest role restriction
     if (
@@ -350,12 +341,12 @@ export const updateParticipantFn = createServerFn({ method: 'POST' })
 export const removeParticipantFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { participantId: string }) => data)
   .handler(async ({ data }) => {
-    await requireAuth();
-
     const existing = await db.query.tournamentParticipants.findFirst({
       where: eq(tournamentParticipants.id, data.participantId),
     });
     if (!existing) throw new Error('Participant not found');
+
+    await requireCommissioner(existing.tournamentId);
 
     await db
       .delete(tournamentParticipants)

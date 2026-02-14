@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start';
-import { getRequest } from '@tanstack/react-start/server';
 import { and, eq, count, asc, lt } from 'drizzle-orm';
 import { db } from '@/db';
 import {
@@ -7,22 +6,8 @@ import {
   roundParticipants,
   tournamentParticipants,
 } from '@/db/schema';
-import { createSupabaseServerClient } from './supabase.server';
+import { requireCommissioner } from './auth.helpers';
 import type { CreateRoundInput, UpdateRoundInput } from './validators';
-
-// ──────────────────────────────────────────────
-// Helper: get authenticated user or throw
-// ──────────────────────────────────────────────
-
-async function requireAuth() {
-  const request = getRequest();
-  const { supabase } = createSupabaseServerClient(request);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
-  return user;
-}
 
 // ──────────────────────────────────────────────
 // Helper: re-sort round numbers by date/teeTime
@@ -107,7 +92,7 @@ export const getRoundFn = createServerFn({ method: 'GET' })
 export const createRoundFn = createServerFn({ method: 'POST' })
   .inputValidator((data: CreateRoundInput) => data)
   .handler(async ({ data }) => {
-    const user = await requireAuth();
+    const user = await requireCommissioner(data.tournamentId);
 
     // Auto-assign roundNumber as next in sequence
     const [{ value: existingCount }] = await db
@@ -165,8 +150,6 @@ export const createRoundFn = createServerFn({ method: 'POST' })
 export const updateRoundFn = createServerFn({ method: 'POST' })
   .inputValidator((data: UpdateRoundInput) => data)
   .handler(async ({ data }) => {
-    await requireAuth();
-
     const existing = await db.query.rounds.findFirst({
       where: eq(rounds.id, data.id),
     });
@@ -174,6 +157,8 @@ export const updateRoundFn = createServerFn({ method: 'POST' })
     if (existing.status !== 'draft') {
       throw new Error('Can only edit rounds in draft status');
     }
+
+    await requireCommissioner(existing.tournamentId!);
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (data.courseId !== undefined) updates.courseId = data.courseId;
@@ -201,8 +186,6 @@ export const updateRoundFn = createServerFn({ method: 'POST' })
 export const deleteRoundFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { roundId: string }) => data)
   .handler(async ({ data }) => {
-    await requireAuth();
-
     const existing = await db.query.rounds.findFirst({
       where: eq(rounds.id, data.roundId),
     });
@@ -210,6 +193,8 @@ export const deleteRoundFn = createServerFn({ method: 'POST' })
     if (existing.status !== 'draft') {
       throw new Error('Can only delete rounds in draft status');
     }
+
+    await requireCommissioner(existing.tournamentId!);
 
     await db.delete(rounds).where(eq(rounds.id, data.roundId));
 
@@ -225,7 +210,7 @@ export const reorderRoundsFn = createServerFn({ method: 'POST' })
     (data: { tournamentId: string; roundIds: string[] }) => data,
   )
   .handler(async ({ data }) => {
-    await requireAuth();
+    await requireCommissioner(data.tournamentId);
 
     // Fetch the rounds to validate dated-round chronological order
     const allRounds = await db.query.rounds.findMany({
@@ -274,12 +259,12 @@ const validTransitions: Record<string, string[]> = {
 export const transitionRoundFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { roundId: string; newStatus: string }) => data)
   .handler(async ({ data }) => {
-    await requireAuth();
-
     const existing = await db.query.rounds.findFirst({
       where: eq(rounds.id, data.roundId),
     });
     if (!existing) throw new Error('Round not found');
+
+    await requireCommissioner(existing.tournamentId!);
 
     const allowed = validTransitions[existing.status] ?? [];
     if (!allowed.includes(data.newStatus)) {
@@ -343,8 +328,6 @@ export const addRoundParticipantFn = createServerFn({ method: 'POST' })
     }) => data,
   )
   .handler(async ({ data }) => {
-    await requireAuth();
-
     // Only allow adding participants in draft or open status
     const round = await db.query.rounds.findFirst({
       where: eq(rounds.id, data.roundId),
@@ -353,6 +336,8 @@ export const addRoundParticipantFn = createServerFn({ method: 'POST' })
     if (round.status !== 'draft' && round.status !== 'open') {
       throw new Error('Can only add participants to draft or open rounds');
     }
+
+    await requireCommissioner(round.tournamentId!);
 
     // Check for duplicates
     const existing = await db.query.roundParticipants.findFirst({
@@ -383,8 +368,6 @@ export const addRoundParticipantFn = createServerFn({ method: 'POST' })
 export const removeRoundParticipantFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { roundParticipantId: string }) => data)
   .handler(async ({ data }) => {
-    await requireAuth();
-
     // Only allow removal in draft or open status
     const rp = await db.query.roundParticipants.findFirst({
       where: eq(roundParticipants.id, data.roundParticipantId),
@@ -394,6 +377,8 @@ export const removeRoundParticipantFn = createServerFn({ method: 'POST' })
     if (rp.round.status !== 'draft' && rp.round.status !== 'open') {
       throw new Error('Can only remove participants from draft or open rounds');
     }
+
+    await requireCommissioner(rp.round.tournamentId!);
 
     await db
       .delete(roundParticipants)
@@ -412,7 +397,13 @@ export const updateRoundParticipantFn = createServerFn({ method: 'POST' })
       data,
   )
   .handler(async ({ data }) => {
-    await requireAuth();
+    const rp = await db.query.roundParticipants.findFirst({
+      where: eq(roundParticipants.id, data.roundParticipantId),
+      with: { round: true },
+    });
+    if (!rp) throw new Error('Participant not found');
+
+    await requireCommissioner(rp.round.tournamentId!);
 
     await db
       .update(roundParticipants)

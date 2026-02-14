@@ -23,8 +23,6 @@ type ScoreEntryDialogProps = {
   par: number;
   currentStrokes?: number;
   recordedByRole: 'player' | 'marker' | 'commissioner';
-  isCommissioner: boolean;
-  roundStatus: string;
   onSaved: () => void;
 };
 
@@ -38,8 +36,6 @@ export function ScoreEntryDialog({
   par,
   currentStrokes,
   recordedByRole,
-  isCommissioner,
-  roundStatus,
   onSaved,
 }: ScoreEntryDialogProps) {
   const [strokes, setStrokes] = useState<number | null>(
@@ -55,10 +51,6 @@ export function ScoreEntryDialog({
     setStrokes(currentStrokes ?? null);
   }
 
-  // Determine the effective role — commissioner override for locked rounds
-  const effectiveRole =
-    roundStatus === 'locked' && isCommissioner ? 'commissioner' : recordedByRole;
-
   const handleSave = async () => {
     if (strokes == null) return;
     setSaving(true);
@@ -69,7 +61,7 @@ export function ScoreEntryDialog({
           roundParticipantId,
           holeNumber,
           strokes,
-          recordedByRole: effectiveRole,
+          recordedByRole: recordedByRole,
         },
       });
       toast.success(
@@ -112,12 +104,6 @@ export function ScoreEntryDialog({
           </DialogTitle>
           <DialogDescription>{participantName}</DialogDescription>
         </DialogHeader>
-
-        {effectiveRole === 'commissioner' && roundStatus === 'locked' && (
-          <div className="bg-amber-50 dark:bg-amber-950/30 rounded-md border border-amber-200 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
-            Commissioner override — this round is locked
-          </div>
-        )}
 
         {/* Score display */}
         <div className="flex flex-col items-center gap-3 py-2">
@@ -187,7 +173,7 @@ export function ScoreEntryDialog({
 
           {/* Role badge */}
           <Badge variant="outline" className="text-xs">
-            Recording as {effectiveRole}
+            Recording as {recordedByRole}
           </Badge>
         </div>
 

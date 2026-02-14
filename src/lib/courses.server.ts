@@ -1,24 +1,9 @@
 import { createServerFn } from '@tanstack/react-start';
-import { getRequest } from '@tanstack/react-start/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { courses, courseHoles } from '@/db/schema';
-import { createSupabaseServerClient } from './supabase.server';
+import { requireAuth } from './auth.helpers';
 import type { CreateCourseInput, UpdateCourseInput } from './validators';
-
-// ──────────────────────────────────────────────
-// Helper: get authenticated user or throw
-// ──────────────────────────────────────────────
-
-async function requireAuth() {
-  const request = getRequest();
-  const { supabase } = createSupabaseServerClient(request);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
-  return user;
-}
 
 // ──────────────────────────────────────────────
 // List all courses

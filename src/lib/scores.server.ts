@@ -1,24 +1,9 @@
 import { createServerFn } from '@tanstack/react-start';
-import { getRequest } from '@tanstack/react-start/server';
 import { eq, and, desc } from 'drizzle-orm';
 import { db } from '@/db';
-import { scoreEvents, rounds, roundParticipants } from '@/db/schema';
-import { createSupabaseServerClient } from './supabase.server';
+import { scoreEvents, rounds, roundParticipants, persons } from '@/db/schema';
+import { requireAuth } from './auth.helpers';
 import type { SubmitScoreInput } from './validators';
-
-// ──────────────────────────────────────────────
-// Helper: get authenticated user or throw
-// ──────────────────────────────────────────────
-
-async function requireAuth() {
-  const request = getRequest();
-  const { supabase } = createSupabaseServerClient(request);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
-  return user;
-}
 
 // ──────────────────────────────────────────────
 // Submit a score event (append-only)
@@ -38,12 +23,11 @@ export const submitScoreFn = createServerFn({ method: 'POST' })
     if (round.status === 'draft') {
       throw new Error('Cannot enter scores for a draft round');
     }
+    if (round.status === 'locked') {
+      throw new Error('Cannot enter scores for a locked round');
+    }
     if (round.status === 'finalized') {
       throw new Error('Cannot enter scores for a finalized round');
-    }
-    // Locked rounds only accept commissioner entries
-    if (round.status === 'locked' && data.recordedByRole !== 'commissioner') {
-      throw new Error('Only commissioners can enter scores for a locked round');
     }
 
     // Validate participant belongs to this round
@@ -55,6 +39,20 @@ export const submitScoreFn = createServerFn({ method: 'POST' })
     });
     if (!rp) throw new Error('Participant not in this round');
 
+    // Verify recordedByRole server-side:
+    // 'player' → the authenticated user must own this participant's person
+    // 'marker' / 'commissioner' → anyone logged in can record
+    let verifiedRole = data.recordedByRole;
+    if (data.recordedByRole === 'player') {
+      const person = await db.query.persons.findFirst({
+        where: eq(persons.id, rp.personId),
+      });
+      if (!person || person.userId !== user.id) {
+        // They don't own this participant, demote to marker
+        verifiedRole = 'marker';
+      }
+    }
+
     // Append the score event (immutable, latest wins)
     const [event] = await db
       .insert(scoreEvents)
@@ -64,7 +62,7 @@ export const submitScoreFn = createServerFn({ method: 'POST' })
         holeNumber: data.holeNumber,
         strokes: data.strokes,
         recordedByUserId: user.id,
-        recordedByRole: data.recordedByRole,
+        recordedByRole: verifiedRole,
       })
       .returning();
 

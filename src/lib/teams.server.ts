@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start';
-import { getRequest } from '@tanstack/react-start/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db';
 import {
@@ -8,26 +7,12 @@ import {
   tournamentParticipants,
   tournaments,
 } from '@/db/schema';
-import { createSupabaseServerClient } from './supabase.server';
+import { requireCommissioner } from './auth.helpers';
 import type {
   CreateTeamInput,
   UpdateTeamInput,
   AddTeamMemberInput,
 } from './validators';
-
-// ──────────────────────────────────────────────
-// Helper: get authenticated user or throw
-// ──────────────────────────────────────────────
-
-async function requireAuth() {
-  const request = getRequest();
-  const { supabase } = createSupabaseServerClient(request);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
-  return user;
-}
 
 // ──────────────────────────────────────────────
 // Create a team
@@ -36,7 +21,7 @@ async function requireAuth() {
 export const createTeamFn = createServerFn({ method: 'POST' })
   .inputValidator((data: CreateTeamInput) => data)
   .handler(async ({ data }) => {
-    await requireAuth();
+    await requireCommissioner(data.tournamentId);
 
     // Verify tournament exists
     const tournament = await db.query.tournaments.findFirst({
@@ -62,12 +47,12 @@ export const createTeamFn = createServerFn({ method: 'POST' })
 export const updateTeamFn = createServerFn({ method: 'POST' })
   .inputValidator((data: UpdateTeamInput) => data)
   .handler(async ({ data }) => {
-    await requireAuth();
-
     const existing = await db.query.tournamentTeams.findFirst({
       where: eq(tournamentTeams.id, data.teamId),
     });
     if (!existing) throw new Error('Team not found');
+
+    await requireCommissioner(existing.tournamentId);
 
     await db
       .update(tournamentTeams)
@@ -84,12 +69,12 @@ export const updateTeamFn = createServerFn({ method: 'POST' })
 export const deleteTeamFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { teamId: string }) => data)
   .handler(async ({ data }) => {
-    await requireAuth();
-
     const existing = await db.query.tournamentTeams.findFirst({
       where: eq(tournamentTeams.id, data.teamId),
     });
     if (!existing) throw new Error('Team not found');
+
+    await requireCommissioner(existing.tournamentId);
 
     await db
       .delete(tournamentTeams)
@@ -105,13 +90,13 @@ export const deleteTeamFn = createServerFn({ method: 'POST' })
 export const addTeamMemberFn = createServerFn({ method: 'POST' })
   .inputValidator((data: AddTeamMemberInput) => data)
   .handler(async ({ data }) => {
-    await requireAuth();
-
     // Verify team exists
     const team = await db.query.tournamentTeams.findFirst({
       where: eq(tournamentTeams.id, data.teamId),
     });
     if (!team) throw new Error('Team not found');
+
+    await requireCommissioner(team.tournamentId);
 
     // Verify participant exists and belongs to the same tournament
     const participant = await db.query.tournamentParticipants.findFirst({
@@ -169,12 +154,18 @@ export const addTeamMemberFn = createServerFn({ method: 'POST' })
 export const removeTeamMemberFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { memberId: string }) => data)
   .handler(async ({ data }) => {
-    await requireAuth();
-
     const existing = await db.query.tournamentTeamMembers.findFirst({
       where: eq(tournamentTeamMembers.id, data.memberId),
     });
     if (!existing) throw new Error('Team member not found');
+
+    // Look up team to get tournamentId
+    const team = await db.query.tournamentTeams.findFirst({
+      where: eq(tournamentTeams.id, existing.teamId),
+    });
+    if (!team) throw new Error('Team not found');
+
+    await requireCommissioner(team.tournamentId);
 
     await db
       .delete(tournamentTeamMembers)

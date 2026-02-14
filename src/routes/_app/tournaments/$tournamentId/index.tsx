@@ -42,7 +42,6 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { useAuth } from '@/hooks';
 import { useRouter } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
@@ -59,7 +58,6 @@ export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
 
 function TournamentDetailPage() {
   const { tournament, myPerson, courses } = Route.useLoaderData();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
@@ -69,7 +67,11 @@ function TournamentDetailPage() {
     name: string;
   } | null>(null);
 
-  const isOwner = user?.id === tournament.createdByUserId;
+  const isCommissioner = myPerson
+    ? tournament.participants.some(
+        (p) => p.personId === myPerson.id && p.role === 'commissioner',
+      )
+    : false;
   const iAmParticipant = myPerson
     ? tournament.participants.some((p) => p.personId === myPerson.id)
     : false;
@@ -99,7 +101,7 @@ function TournamentDetailPage() {
         data: {
           tournamentId: tournament.id,
           personId: myPerson.id,
-          role: isOwner ? 'commissioner' : 'player',
+          role: 'player',
         },
       });
       toast.success('Added to the tournament!');
@@ -166,7 +168,7 @@ function TournamentDetailPage() {
           )}
         </div>
 
-        {isOwner && (
+        {isCommissioner && (
           <div className="flex items-center gap-2">
             <Button variant="outline" asChild>
               <Link
@@ -272,10 +274,12 @@ function TournamentDetailPage() {
                   Join
                 </Button>
               )}
-              <AddParticipantDialog
-                tournamentId={tournament.id}
-                onAdded={() => router.invalidate()}
-              />
+              {isCommissioner && (
+                <AddParticipantDialog
+                  tournamentId={tournament.id}
+                  onAdded={() => router.invalidate()}
+                />
+              )}
             </div>
           </CardTitle>
         </CardHeader>
@@ -308,6 +312,7 @@ function TournamentDetailPage() {
                         {p.handicapOverride ?? p.person.currentHandicap}
                       </Badge>
                     )}
+                    {isCommissioner && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-7 px-2">
@@ -355,6 +360,18 @@ function TournamentDetailPage() {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    )}
+                    {!isCommissioner && (
+                      <Badge
+                        variant={
+                          p.role === 'commissioner'
+                            ? 'default'
+                            : 'secondary'
+                        }
+                      >
+                        {p.role}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               ))}
@@ -366,6 +383,7 @@ function TournamentDetailPage() {
       {/* Teams section */}
       <TeamsSection
         tournament={tournament}
+        isCommissioner={isCommissioner}
         onChanged={() => router.invalidate()}
       />
 
@@ -373,6 +391,7 @@ function TournamentDetailPage() {
       <RoundsSection
         tournament={tournament}
         courses={courses}
+        isCommissioner={isCommissioner}
         onChanged={() => router.invalidate()}
       />
     </div>
@@ -825,6 +844,7 @@ function AddRoundDialog({
 function RoundsSection({
   tournament,
   courses,
+  isCommissioner,
   onChanged,
 }: {
   tournament: {
@@ -839,6 +859,7 @@ function RoundsSection({
     }[];
   };
   courses: { id: string; name: string; location: string | null; numberOfHoles: number }[];
+  isCommissioner: boolean;
   onChanged: () => void;
 }) {
   const sortedRounds = tournament.rounds;
@@ -943,11 +964,13 @@ function RoundsSection({
               {sortedRounds.length} round
               {sortedRounds.length !== 1 ? 's' : ''}
             </Badge>
-            <AddRoundDialog
-              tournamentId={tournament.id}
-              courses={courses}
-              onAdded={onChanged}
-            />
+            {isCommissioner && (
+              <AddRoundDialog
+                tournamentId={tournament.id}
+                courses={courses}
+                onAdded={onChanged}
+              />
+            )}
           </div>
         </CardTitle>
       </CardHeader>
@@ -964,7 +987,7 @@ function RoundsSection({
                 className="flex items-center gap-2"
               >
                 {/* Reorder arrows */}
-                {showArrows && (
+                {isCommissioner && showArrows && (
                   <div className="flex w-4 flex-col items-center">
                     <button
                       type="button"
@@ -1052,9 +1075,11 @@ type TournamentData = {
 
 function TeamsSection({
   tournament,
+  isCommissioner,
   onChanged,
 }: {
   tournament: TournamentData;
+  isCommissioner: boolean;
   onChanged: () => void;
 }) {
   const [creating, setCreating] = useState(false);
@@ -1163,6 +1188,7 @@ function TeamsSection({
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Create team inline */}
+          {isCommissioner && (
           <div className="flex gap-2">
             <Input
               placeholder="New team name…"
@@ -1181,6 +1207,7 @@ function TeamsSection({
               {creating ? 'Creating…' : 'Add Team'}
             </Button>
           </div>
+          )}
 
           {tournament.teams.length === 0 ? (
             <p className="text-muted-foreground text-sm">
@@ -1233,7 +1260,7 @@ function TeamsSection({
                       </div>
                     )}
 
-                    {editingTeamId !== team.id && (
+                    {isCommissioner && editingTeamId !== team.id && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-7 px-2">
@@ -1275,6 +1302,7 @@ function TeamsSection({
                           className="flex items-center justify-between rounded px-2 py-1 text-sm hover:bg-muted/50"
                         >
                           <span>{m.participant.person.displayName}</span>
+                          {isCommissioner && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1283,13 +1311,14 @@ function TeamsSection({
                           >
                             Remove
                           </Button>
+                          )}
                         </div>
                       ))}
                     </div>
                   )}
 
                   {/* Add member dropdown */}
-                  {unassigned.length > 0 && (
+                  {isCommissioner && unassigned.length > 0 && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button

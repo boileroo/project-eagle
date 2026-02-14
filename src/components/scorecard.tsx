@@ -39,7 +39,6 @@ type ScorecardProps = {
   participants: Participant[];
   scores: Scorecard;
   roundStatus: string;
-  isCommissioner: boolean;
   onScoreClick: (
     roundParticipantId: string,
     holeNumber: number,
@@ -81,12 +80,10 @@ export function Scorecard({
   participants,
   scores,
   roundStatus,
-  isCommissioner,
   onScoreClick,
   onHistoryClick,
 }: ScorecardProps) {
-  const canEdit =
-    roundStatus === 'open' || (roundStatus === 'locked' && isCommissioner);
+  const canEdit = roundStatus === 'open';
 
   const frontNine = holes.filter((h) => h.holeNumber <= 9);
   const backNine = holes.filter((h) => h.holeNumber > 9);
