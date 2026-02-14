@@ -231,6 +231,7 @@ function RoundDetailPage() {
             </Button>
           ))}
 
+          {round.status === 'draft' && (
           <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="destructive" size="sm">
@@ -263,6 +264,7 @@ function RoundDetailPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
 
@@ -332,6 +334,7 @@ function RoundDetailPage() {
                         (snap: {rp.handicapSnapshot})
                       </span>
                     )}
+                    {(round.status === 'draft' || round.status === 'open') && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -361,6 +364,7 @@ function RoundDetailPage() {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    )}
                   </div>
                 </div>
               ))}

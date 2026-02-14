@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { getRequest } from '@tanstack/react-start/server';
-import { and, eq, count, asc } from 'drizzle-orm';
+import { and, eq, count, asc, lt } from 'drizzle-orm';
 import { db } from '@/db';
 import {
   rounds,
@@ -207,6 +207,9 @@ export const deleteRoundFn = createServerFn({ method: 'POST' })
       where: eq(rounds.id, data.roundId),
     });
     if (!existing) throw new Error('Round not found');
+    if (existing.status !== 'draft') {
+      throw new Error('Can only delete rounds in draft status');
+    }
 
     await db.delete(rounds).where(eq(rounds.id, data.roundId));
 
@@ -285,6 +288,36 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
       );
     }
 
+    // Sequential guards: check earlier rounds in the same tournament
+    if (existing.tournamentId && existing.roundNumber) {
+      const earlierRounds = await db.query.rounds.findMany({
+        where: and(
+          eq(rounds.tournamentId, existing.tournamentId),
+          lt(rounds.roundNumber, existing.roundNumber),
+        ),
+      });
+
+      if (data.newStatus === 'open') {
+        // Can't open if an earlier round is still open
+        const openEarlier = earlierRounds.find((r) => r.status === 'open');
+        if (openEarlier) {
+          throw new Error(
+            `Cannot open this round while Round ${openEarlier.roundNumber} is still open`,
+          );
+        }
+      }
+
+      if (data.newStatus === 'finalized') {
+        // Can't finalize if an earlier round isn't finalized
+        const unfinalized = earlierRounds.find((r) => r.status !== 'finalized');
+        if (unfinalized) {
+          throw new Error(
+            `Cannot finalize this round while Round ${unfinalized.roundNumber} is not finalized`,
+          );
+        }
+      }
+    }
+
     await db
       .update(rounds)
       .set({
@@ -311,6 +344,15 @@ export const addRoundParticipantFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     await requireAuth();
+
+    // Only allow adding participants in draft or open status
+    const round = await db.query.rounds.findFirst({
+      where: eq(rounds.id, data.roundId),
+    });
+    if (!round) throw new Error('Round not found');
+    if (round.status !== 'draft' && round.status !== 'open') {
+      throw new Error('Can only add participants to draft or open rounds');
+    }
 
     // Check for duplicates
     const existing = await db.query.roundParticipants.findFirst({
@@ -342,6 +384,16 @@ export const removeRoundParticipantFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { roundParticipantId: string }) => data)
   .handler(async ({ data }) => {
     await requireAuth();
+
+    // Only allow removal in draft or open status
+    const rp = await db.query.roundParticipants.findFirst({
+      where: eq(roundParticipants.id, data.roundParticipantId),
+      with: { round: true },
+    });
+    if (!rp) throw new Error('Participant not found');
+    if (rp.round.status !== 'draft' && rp.round.status !== 'open') {
+      throw new Error('Can only remove participants from draft or open rounds');
+    }
 
     await db
       .delete(roundParticipants)
