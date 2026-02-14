@@ -842,7 +842,28 @@ function RoundsSection({
   onChanged: () => void;
 }) {
   const sortedRounds = tournament.rounds;
-  const hasAnyDate = sortedRounds.some((r) => r.date != null);
+
+  // Check if a round can move up (only undated rounds, only swap with adjacent undated)
+  const canMoveUp = (idx: number) => {
+    if (idx <= 0) return false;
+    return sortedRounds[idx].date == null && sortedRounds[idx - 1].date == null;
+  };
+
+  // Check if a round can move down
+  const canMoveDown = (idx: number) => {
+    if (idx >= sortedRounds.length - 1) return false;
+    return sortedRounds[idx].date == null && sortedRounds[idx + 1].date == null;
+  };
+
+  // Whether this round should show reorder arrows at all
+  const showArrows = (idx: number) => {
+    if (sortedRounds[idx].date != null) return false;
+    // Show if there's at least one adjacent undated round
+    return canMoveUp(idx) || canMoveDown(idx);
+  };
+
+  // Need a stable column width for arrows so links align
+  const anyArrowsVisible = sortedRounds.some((_, idx) => showArrows(idx));
 
   const handleMoveUp = async (index: number) => {
     if (index <= 0) return;
@@ -922,27 +943,31 @@ function RoundsSection({
                 key={r.id}
                 className="flex items-center gap-2"
               >
-                {/* Reorder arrows — only shown when no dates */}
-                {!hasAnyDate && sortedRounds.length > 1 && (
-                  <div className="flex flex-col">
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground disabled:opacity-25 px-0.5 text-xs leading-none"
-                      disabled={idx === 0}
-                      onClick={() => handleMoveUp(idx)}
-                      aria-label="Move up"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground disabled:opacity-25 px-0.5 text-xs leading-none"
-                      disabled={idx === sortedRounds.length - 1}
-                      onClick={() => handleMoveDown(idx)}
-                      aria-label="Move down"
-                    >
-                      ▼
-                    </button>
+                {/* Reorder arrows — shown for undated rounds with adjacent undated neighbours */}
+                {anyArrowsVisible && (
+                  <div className="flex w-4 flex-col items-center">
+                    {showArrows(idx) ? (
+                      <>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground disabled:opacity-25 px-0.5 text-xs leading-none"
+                          disabled={!canMoveUp(idx)}
+                          onClick={() => handleMoveUp(idx)}
+                          aria-label="Move up"
+                        >
+                          ▲
+                        </button>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground disabled:opacity-25 px-0.5 text-xs leading-none"
+                          disabled={!canMoveDown(idx)}
+                          onClick={() => handleMoveDown(idx)}
+                          aria-label="Move down"
+                        >
+                          ▼
+                        </button>
+                      </>
+                    ) : null}
                   </div>
                 )}
                 <Link
