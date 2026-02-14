@@ -148,7 +148,7 @@ function RoundDetailPage() {
     return 'marker';
   };
 
-  const tournamentId = round.tournamentId!;
+  const tournamentId = round.tournamentId;
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -734,6 +734,7 @@ function CompetitionsSection({
         displayName: rp.person.displayName,
         effectiveHandicap: effectiveHC,
         playingHandicap: getPlayingHandicap(effectiveHC),
+        roundGroupId: rp.roundGroupId ?? null,
       };
     });
 
@@ -787,7 +788,7 @@ function CompetitionsSection({
               </Badge>
               {isCommissioner && (
                 <AddCompetitionDialog
-                  tournamentId={round.tournamentId!}
+                  tournamentId={round.tournamentId}
                   roundId={round.id}
                   participants={round.participants}
                   onSaved={onChanged}
@@ -815,7 +816,12 @@ function CompetitionsSection({
                 let result;
                 try {
                   const input: CompetitionInput = {
-                    competition: { id: comp.id, name: comp.name, config },
+                    competition: {
+                      id: comp.id,
+                      name: comp.name,
+                      config,
+                      groupScope: (comp.groupScope ?? 'all') as 'all' | 'within_group',
+                    },
                     ...engineInputs,
                   };
                   result = calculateCompetitionResults(input);
@@ -1083,6 +1089,7 @@ function AddCompetitionDialog({
           tournamentId,
           name: name.trim(),
           participantType,
+          groupScope: 'all',
           roundId,
           competitionConfig: buildConfig(),
         },

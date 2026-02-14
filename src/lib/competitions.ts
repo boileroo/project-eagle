@@ -177,6 +177,19 @@ export const PARTICIPANT_TYPE_LABELS: Record<'individual' | 'team', string> = {
 };
 
 // ──────────────────────────────────────────────
+// Group scope labels
+// ──────────────────────────────────────────────
+
+export type GroupScope = 'all' | 'within_group';
+
+export const GROUP_SCOPE_LABELS: Record<GroupScope, string> = {
+  all: 'All Players',
+  within_group: 'Within Group',
+};
+
+export const GROUP_SCOPES = Object.keys(GROUP_SCOPE_LABELS) as GroupScope[];
+
+// ──────────────────────────────────────────────
 // Tournament Standings — Aggregation Config Types
 //
 // Defines how round-level competition results roll up

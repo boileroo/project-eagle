@@ -182,6 +182,31 @@ export const updateRoundSchema = z.object({
 export type UpdateRoundInput = z.infer<typeof updateRoundSchema>;
 
 // ──────────────────────────────────────────────
+// Round group schemas
+// ──────────────────────────────────────────────
+
+export const createRoundGroupSchema = z.object({
+  roundId: z.string().uuid(),
+  groupNumber: z.number().int().min(1),
+  name: z.string().optional(),
+});
+export type CreateRoundGroupInput = z.infer<typeof createRoundGroupSchema>;
+
+export const assignParticipantToGroupSchema = z.object({
+  roundParticipantId: z.string().uuid(),
+  roundGroupId: z.string().uuid().nullable(),
+});
+export type AssignParticipantToGroupInput = z.infer<
+  typeof assignParticipantToGroupSchema
+>;
+
+export const autoAssignGroupsSchema = z.object({
+  roundId: z.string().uuid(),
+  groupSize: z.number().int().min(1).max(4).default(4),
+});
+export type AutoAssignGroupsInput = z.infer<typeof autoAssignGroupsSchema>;
+
+// ──────────────────────────────────────────────
 // Score entry schemas
 // ──────────────────────────────────────────────
 
@@ -203,6 +228,7 @@ export const createCompetitionSchema = z.object({
   roundId: z.string().uuid(),
   name: z.string().min(1, 'Competition name is required'),
   participantType: z.enum(['individual', 'team']),
+  groupScope: z.enum(['all', 'within_group']).default('all'),
   /** The full config including formatType discriminant */
   competitionConfig: competitionConfigSchema,
 });

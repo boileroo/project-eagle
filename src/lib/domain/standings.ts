@@ -8,7 +8,7 @@
 // ──────────────────────────────────────────────
 
 import type { AggregationConfig } from '../competitions';
-import type { CompetitionResult, CompetitionInput } from './index';
+import type { CompetitionResult, CompetitionInput, GroupData } from './index';
 import { calculateCompetitionResults } from './index';
 
 // ──────────────────────────────────────────────
@@ -18,6 +18,8 @@ import { calculateCompetitionResults } from './index';
 export interface RoundCompetitionData {
   roundId: string;
   roundNumber: number | null;
+  /** Groups in this round (needed for within_group competitions) */
+  groups: GroupData[];
   /** Pre-built competition inputs for this round */
   competitionInputs: CompetitionInput[];
 }
@@ -77,26 +79,28 @@ function aggregateSumStableford(
 
   for (const round of rounds) {
     for (const input of round.competitionInputs) {
-      const result = safeCalculate(input);
-      if (!result || result.type !== 'stableford') continue;
+      const results = expandByGroup(input, round.groups);
+      for (const result of results) {
+        if (result.type !== 'stableford') continue;
 
-      for (const entry of result.result.leaderboard) {
-        if (participantType === 'team') continue; // stableford is individual-only for now
+        for (const entry of result.result.leaderboard) {
+          if (participantType === 'team') continue; // stableford is individual-only for now
 
-        const existing = totals.get(entry.roundParticipantId) ?? {
-          displayName: entry.displayName,
-          total: 0,
-          roundsPlayed: 0,
-          perRound: [],
-        };
-        existing.total += entry.totalPoints;
-        existing.roundsPlayed += 1;
-        existing.perRound.push({
-          roundId: round.roundId,
-          roundNumber: round.roundNumber,
-          value: entry.totalPoints,
-        });
-        totals.set(entry.roundParticipantId, existing);
+          const existing = totals.get(entry.roundParticipantId) ?? {
+            displayName: entry.displayName,
+            total: 0,
+            roundsPlayed: 0,
+            perRound: [],
+          };
+          existing.total += entry.totalPoints;
+          existing.roundsPlayed += 1;
+          existing.perRound.push({
+            roundId: round.roundId,
+            roundNumber: round.roundNumber,
+            value: entry.totalPoints,
+          });
+          totals.set(entry.roundParticipantId, existing);
+        }
       }
     }
   }
@@ -131,31 +135,33 @@ function aggregateLowestStrokes(
 
   for (const round of rounds) {
     for (const input of round.competitionInputs) {
-      const result = safeCalculate(input);
-      if (!result || result.type !== 'stroke_play') continue;
+      const results = expandByGroup(input, round.groups);
+      for (const result of results) {
+        if (result.type !== 'stroke_play') continue;
 
-      if (participantType === 'team') continue; // stroke play is individual-only
+        if (participantType === 'team') continue; // stroke play is individual-only
 
-      for (const entry of result.result.leaderboard) {
-        const value =
-          config.scoringBasis === 'net_strokes'
-            ? entry.rankingScore
-            : entry.grossTotal;
+        for (const entry of result.result.leaderboard) {
+          const value =
+            config.scoringBasis === 'net_strokes'
+              ? entry.rankingScore
+              : entry.grossTotal;
 
-        const existing = totals.get(entry.roundParticipantId) ?? {
-          displayName: entry.displayName,
-          total: 0,
-          roundsPlayed: 0,
-          perRound: [],
-        };
-        existing.total += value;
-        existing.roundsPlayed += 1;
-        existing.perRound.push({
-          roundId: round.roundId,
-          roundNumber: round.roundNumber,
-          value,
-        });
-        totals.set(entry.roundParticipantId, existing);
+          const existing = totals.get(entry.roundParticipantId) ?? {
+            displayName: entry.displayName,
+            total: 0,
+            roundsPlayed: 0,
+            perRound: [],
+          };
+          existing.total += value;
+          existing.roundsPlayed += 1;
+          existing.perRound.push({
+            roundId: round.roundId,
+            roundNumber: round.roundNumber,
+            value,
+          });
+          totals.set(entry.roundParticipantId, existing);
+        }
       }
     }
   }
@@ -191,93 +197,94 @@ function aggregateMatchWins(
 
   for (const round of rounds) {
     for (const input of round.competitionInputs) {
-      const result = safeCalculate(input);
-      if (!result) continue;
+      const results = expandByGroup(input, round.groups);
+      for (const result of results) {
+        if (!result) continue;
 
-      if (
-        result.type === 'match_play' &&
-        participantType === 'individual'
-      ) {
-        for (const match of result.result.matches) {
-          // Each match has playerA, playerB, result
-          const entries = [
-            {
-              id: match.playerA.roundParticipantId,
-              name: match.playerA.displayName,
-            },
-            {
-              id: match.playerB.roundParticipantId,
-              name: match.playerB.displayName,
-            },
-          ];
+        if (
+          result.type === 'match_play' &&
+          participantType === 'individual'
+        ) {
+          for (const match of result.result.matches) {
+            const entries = [
+              {
+                id: match.playerA.roundParticipantId,
+                name: match.playerA.displayName,
+              },
+              {
+                id: match.playerB.roundParticipantId,
+                name: match.playerB.displayName,
+              },
+            ];
 
-          for (const entry of entries) {
-            const existing = totals.get(entry.id) ?? {
-              displayName: entry.name,
-              total: 0,
-              roundsPlayed: 0,
-              perRound: [],
-            };
+            for (const entry of entries) {
+              const existing = totals.get(entry.id) ?? {
+                displayName: entry.name,
+                total: 0,
+                roundsPlayed: 0,
+                perRound: [],
+              };
 
-            let pts = 0;
-            if (match.winner === 'halved') {
-              pts = config.pointsPerHalf;
-            } else if (
-              (match.winner === 'A' &&
-                entry.id === match.playerA.roundParticipantId) ||
-              (match.winner === 'B' &&
-                entry.id === match.playerB.roundParticipantId)
-            ) {
-              pts = config.pointsPerWin;
+              let pts = 0;
+              if (match.winner === 'halved') {
+                pts = config.pointsPerHalf;
+              } else if (
+                (match.winner === 'A' &&
+                  entry.id === match.playerA.roundParticipantId) ||
+                (match.winner === 'B' &&
+                  entry.id === match.playerB.roundParticipantId)
+              ) {
+                pts = config.pointsPerWin;
+              }
+
+              existing.total += pts;
+              existing.roundsPlayed += 1;
+              existing.perRound.push({
+                roundId: round.roundId,
+                roundNumber: round.roundNumber,
+                value: pts,
+              });
+              totals.set(entry.id, existing);
             }
-
-            existing.total += pts;
-            existing.roundsPlayed += 1;
-            existing.perRound.push({
-              roundId: round.roundId,
-              roundNumber: round.roundNumber,
-              value: pts,
-            });
-            totals.set(entry.id, existing);
           }
         }
-      }
 
-      if (result.type === 'best_ball' && participantType === 'team') {
-        for (const match of result.result.matches) {
-          const entries = [
-            { id: match.teamA.roundTeamId, name: match.teamA.name },
-            { id: match.teamB.roundTeamId, name: match.teamB.name },
-          ];
+        if (result.type === 'best_ball' && participantType === 'team') {
+          for (const match of result.result.matches) {
+            const entries = [
+              { id: match.teamA.roundTeamId, name: match.teamA.name },
+              { id: match.teamB.roundTeamId, name: match.teamB.name },
+            ];
 
-          for (const entry of entries) {
-            const existing = totals.get(entry.id) ?? {
-              displayName: entry.name,
-              total: 0,
-              roundsPlayed: 0,
-              perRound: [],
-            };
+            for (const entry of entries) {
+              const existing = totals.get(entry.id) ?? {
+                displayName: entry.name,
+                total: 0,
+                roundsPlayed: 0,
+                perRound: [],
+              };
 
-            let pts = 0;
-            if (match.winner === 'halved') {
-              pts = config.pointsPerHalf;
-            } else if (
-              (match.winner === 'A' &&
-                entry.id === match.teamA.roundTeamId) ||
-              (match.winner === 'B' &&
-                entry.id === match.teamB.roundTeamId)
-            ) {
-              pts = config.pointsPerWin;
+              let pts = 0;
+              if (match.winner === 'halved') {
+                pts = config.pointsPerHalf;
+              } else if (
+                (match.winner === 'A' &&
+                  entry.id === match.teamA.roundTeamId) ||
+                (match.winner === 'B' &&
+                  entry.id === match.teamB.roundTeamId)
+              ) {
+                pts = config.pointsPerWin;
+              }
+
+              existing.total += pts;
+              existing.roundsPlayed += 1;
+              existing.perRound.push({
+                roundId: round.roundId,
+                roundNumber: round.roundNumber,
+                value: pts,
+              });
+              totals.set(entry.id, existing);
             }
-
-            existing.total += pts;
-            existing.roundsPlayed += 1;
-            existing.perRound.push({
-              roundId: round.roundId,
-              roundNumber: round.roundNumber,
-              value: pts,
-            });
-            totals.set(entry.id, existing);
           }
         }
       }
@@ -305,4 +312,40 @@ function safeCalculate(input: CompetitionInput): CompetitionResult | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * For a given competition input, return an array of results.
+ * For `all`-scope competitions, returns a single result.
+ * For `within_group` competitions, returns one result per group
+ * (filtering participants/scores to that group).
+ */
+function expandByGroup(
+  input: CompetitionInput,
+  groups: GroupData[],
+): CompetitionResult[] {
+  if (input.competition.groupScope !== 'within_group' || groups.length === 0) {
+    const r = safeCalculate(input);
+    return r ? [r] : [];
+  }
+
+  const results: CompetitionResult[] = [];
+  for (const group of groups) {
+    const memberIds = new Set(group.memberParticipantIds);
+    const groupInput: CompetitionInput = {
+      ...input,
+      participants: input.participants.filter((p) =>
+        memberIds.has(p.roundParticipantId),
+      ),
+      scores: input.scores.filter((s) =>
+        memberIds.has(s.roundParticipantId),
+      ),
+      teams: input.teams?.filter((t) =>
+        t.memberParticipantIds.some((id) => memberIds.has(id)),
+      ),
+    };
+    const r = safeCalculate(groupInput);
+    if (r) results.push(r);
+  }
+  return results;
 }

@@ -2,11 +2,14 @@
 
 ## Current State
 
-Phases 1–5 are complete. The app has full auth, course library, tournament setup, score entry, round status guards, role-based permissions, and a complete competition engine with UI.
+Phases 1–5 are complete. The app has full auth, course library, tournament setup, score entry, round status guards, role-based permissions, and a complete competition engine with UI. Groups and group-scoped competitions are scaffolded.
 
 **What exists:**
 - Full auth (email + password), protected routes, session handling
-- Complete Drizzle schema: profiles, persons, courses, courseHoles, tournaments, tournamentParticipants, tournamentTeams, tournamentTeamMembers, rounds, roundParticipants, roundTeams, roundTeamMembers, scoreEvents, competitions, bonusAwards, tournamentStandings
+- Complete Drizzle schema: profiles, persons, courses, courseHoles, tournaments, tournamentParticipants, tournamentTeams, tournamentTeamMembers, rounds, roundGroups, roundParticipants, roundTeams, roundTeamMembers, scoreEvents, competitions, bonusAwards, tournamentStandings
+- Rounds always belong to a tournament (`tournament_id` NOT NULL)
+- Round groups: playing fourballs (1–4 players), auto-assign, manual assign
+- Competitions have `groupScope` (`all` | `within_group`) and `participantType` (individual | team)
 - RLS policies across all tables
 - Course library (CRUD + list/detail pages)
 - Tournament setup: CRUD, participants, teams, round management, status workflow
@@ -14,9 +17,9 @@ Phases 1–5 are complete. The app has full auth, course library, tournament set
 - Round status guards (sequential transitions, delete/mutation guards)
 - Role-based permissions: `requireCommissioner()` on all mutations, `isCommissioner` UI gating
 - Competition engine: pure scoring functions for stableford, stroke play, match play, best ball
-- Competitions are always round-scoped, with `participantType` (individual or team)
-- Competition config Zod types (discriminated union)
+- Group-aware engine: `calculateGroupedResults()` splits by group for `within_group` competitions
 - Competition CRUD server functions + bonus award mutations
+- Group CRUD server functions (create, delete, assign, auto-assign, derive pairings)
 - bonusAwards table for NTP/LD
 - Competition management UI: create/delete competitions, format-specific config forms
 - Leaderboard views: live, derived results for all scored formats
@@ -25,10 +28,11 @@ Phases 1–5 are complete. The app has full auth, course library, tournament set
 - `tournamentStandings` table with flexible aggregation config
 
 **Key files:**
-- `src/db/schema.ts` — full domain schema (~700 lines)
+- `src/db/schema.ts` — full domain schema (~770 lines)
 - `src/lib/domain/` — pure scoring engine (stableford, stroke-play, match-play, best-ball, bonus, standings)
-- `src/lib/competitions.ts` — config Zod types + aggregation config types
+- `src/lib/competitions.ts` — config Zod types + aggregation config + GROUP_SCOPE_LABELS
 - `src/lib/competitions.server.ts` — CRUD server functions + tournament standings CRUD
+- `src/lib/groups.server.ts` — group CRUD, auto-assign, pairing derivation
 - `src/lib/auth.helpers.ts` — shared requireAuth + requireCommissioner
 - `src/lib/validators.ts` — all app-level Zod schemas
 

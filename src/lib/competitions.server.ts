@@ -110,6 +110,7 @@ export const createCompetitionFn = createServerFn({ method: 'POST' })
         roundId: data.roundId,
         name: data.name,
         participantType: data.participantType,
+        groupScope: data.groupScope ?? 'all',
         formatType: parsed.formatType,
         configJson: parsed.config,
       })

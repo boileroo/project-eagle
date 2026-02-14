@@ -129,15 +129,18 @@ This allows:
 ### Tournament Structure
 
 ```
-Tournament
+Tournament (mandatory)
   → TournamentParticipants → Person
   → TournamentTeams (optional, persistent team identities)
   → Competitions
   → Rounds
-    → RoundParticipants (with handicap snapshot)
+    → RoundGroups (playing groups / fourballs, 1–4 players each)
+    → RoundParticipants (with handicap snapshot, assigned to a group)
       → ScoreEvents
     → RoundTeams (optional, per-round composition — may reference a TournamentTeam)
 ```
+
+Every round belongs to a tournament (`tournament_id` NOT NULL). A casual round is simply a 1-round tournament.
 
 Each round stores:
 
@@ -162,13 +165,14 @@ CourseHole { id, courseId, holeNumber, par, strokeIndex, yardage (optional) }
 
 | Entity                | Purpose                                                            |
 | --------------------- | ------------------------------------------------------------------ |
-| Tournament            | Top-level container for the event                                  |
+| Tournament            | Top-level container (mandatory, even for a single round)           |
 | Round                 | A single round of golf within a tournament                         |
+| RoundGroup            | A playing group / fourball within a round (1–4 players)            |
 | Course                | A golf course (shared library)                                     |
 | CourseHole            | Hole-level data for a course (par, SI, yardage)                    |
 | Person                | A human identity (guest or registered) with handicap               |
 | TournamentParticipant | Links a Person to a Tournament (+ HC override)                     |
-| RoundParticipant      | Links a TournamentParticipant to a Round (+ HC snapshot)           |
+| RoundParticipant      | Links a TournamentParticipant to a Round + Group (+ HC snapshot)   |
 | TournamentTeam        | A persistent team identity across the tournament                   |
 | RoundTeam             | Per-round team composition (optionally linked to a TournamentTeam) |
 | ScoreEvent            | An immutable record of strokes on a hole                           |
@@ -178,19 +182,23 @@ CourseHole { id, courseId, holeNumber, par, strokeIndex, yardage (optional) }
 
 ### Key Relationships
 
-- Tournament → many Rounds
+- Tournament → many Rounds (mandatory, `tournament_id` NOT NULL)
 - Tournament → many TournamentParticipants → Person
 - Tournament → many TournamentTeams (optional)
 - Tournament → many Competitions (via rounds)
 - Tournament → many TournamentStandings (0, 1, or 2 — individual and/or team)
 - Round → one Course
+- Round → many RoundGroups (playing fourballs)
 - Round → many RoundParticipants → TournamentParticipant
+- RoundParticipant → one RoundGroup (nullable)
 - Round → many RoundTeams → many RoundParticipants
 - RoundTeam → one TournamentTeam (optional)
 - Round → many ScoreEvents
 - ScoreEvent → one RoundParticipant + one Round + one Hole
 
 > **Why RoundParticipant?** Not everyone plays every round. Handicap snapshots are per-round. This is the natural join.
+
+> **Why RoundGroup?** Groups are the operational unit on the course — who physically plays together. They are distinct from teams (a group of 4 may contain 2 players from each team). Competitions can scope their results to `within_group` or `all` players.
 
 > **Why both TournamentTeam and RoundTeam?** `TournamentTeam` is a persistent identity ("Team Europe") that a commissioner sets up once. `RoundTeam` is the actual composition for a specific round — it _may_ reference a `TournamentTeam`, or it may be a one-off grouping (e.g., a scramble). The scoring engine only sees `RoundTeam`. `TournamentTeam` is a convenience for setup and display.
 
@@ -207,6 +215,7 @@ Competition {
   roundId (NOT NULL)     // always bound to a specific round
   name
   participantType        // "individual" | "team"
+  groupScope             // "all" | "within_group"
   formatType             // discriminant: "stableford" | "stroke_play" | "match_play" | "best_ball" | "nearest_pin" | "longest_drive"
   configJson             // typed per formatType (see below)
 }
@@ -280,12 +289,29 @@ Aggregation methods (extensible via discriminated union):
 
 Results are **derived at display time** from round-level competition results — nothing is persisted.
 
+### Group Scope
+
+Competitions have a `groupScope` that determines how they relate to playing groups:
+
+| Value | Meaning | Example |
+|---|---|---|
+| `all` | One leaderboard across all players in the round | Individual stableford |
+| `within_group` | Runs independently per group, results aggregated up | Match play singles within a fourball |
+
+For `within_group` competitions:
+- The scoring engine runs once per group with filtered participants/scores
+- Per-group results aggregate to round level (e.g. "Group 1: Europe 2, USA 2")
+- Round-level results aggregate to tournament via `TournamentStandings`
+
+Pairings for match-based formats can be **auto-derived** from group + team membership, then tweaked by the commissioner. The helper generates cross-team pairings within a group (e.g. 2 Europe vs 2 USA in a group of 4).
+
 ### Examples
 
-- Round 1 Individual Stableford (individual, round-scoped)
-- Best Ball — Team A vs Team B (team, round-scoped, 2pts for win)
-- Nearest the Pin — Hole 8 (individual, round-scoped)
-- Singles Match Play — Tom vs James (individual, round-scoped, 4pts for day 3 jeopardy)
+- Round 1 Individual Stableford (individual, all, round-scoped)
+- Match Play Singles Within Groups (individual, within_group, round-scoped)
+- Best Ball — Team A vs Team B Within Groups (team, within_group, 2pts for win)
+- Nearest the Pin — Hole 8 (individual, all, round-scoped)
+- Singles Match Play — Tom vs James (individual, all, round-scoped, 4pts for day 3 jeopardy)
 - Overall Stableford (tournament standing, sum_stableford)
 - Team Championship (tournament standing, match_wins)
 

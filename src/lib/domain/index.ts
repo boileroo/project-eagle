@@ -28,6 +28,15 @@ export interface ParticipantData {
   effectiveHandicap: number;
   /** Integer playing handicap (strokes received) */
   playingHandicap: number;
+  /** Group this participant belongs to (nullable) */
+  roundGroupId: string | null;
+}
+
+export interface GroupData {
+  roundGroupId: string;
+  groupNumber: number;
+  name: string | null;
+  memberParticipantIds: string[];
 }
 
 export interface TeamData {
@@ -49,11 +58,13 @@ export interface CompetitionInput {
     id: string;
     name: string;
     config: CompetitionConfig;
+    groupScope: 'all' | 'within_group';
   };
   holes: HoleData[];
   participants: ParticipantData[];
   scores: ResolvedScore[];
   teams?: TeamData[];
+  groups?: GroupData[];
 }
 
 // ──────────────────────────────────────────────
@@ -69,9 +80,26 @@ export type CompetitionResult =
   | { type: 'longest_drive'; result: null };
 
 // ──────────────────────────────────────────────
+// Group-scoped result wrapper
+// ──────────────────────────────────────────────
+
+export interface GroupCompetitionResult {
+  groupId: string;
+  groupNumber: number;
+  groupName: string | null;
+  result: CompetitionResult;
+}
+
+// ──────────────────────────────────────────────
 // Main Dispatcher
 // ──────────────────────────────────────────────
 
+/**
+ * Calculate competition results.
+ * For `within_group` competitions, call this once per group
+ * with filtered participants/scores. Or use `calculateGroupedResults`
+ * for convenience.
+ */
 export function calculateCompetitionResults(
   input: CompetitionInput,
 ): CompetitionResult {
@@ -114,3 +142,53 @@ export type { StablefordResult } from './stableford';
 export type { StrokePlayResult } from './stroke-play';
 export type { MatchPlayResult, MatchResult } from './match-play';
 export type { BestBallResult, BestBallMatchResult } from './best-ball';
+
+// ──────────────────────────────────────────────
+// Group-aware calculation
+//
+// For `within_group` competitions, splits participants
+// and scores by group and runs the engine per group.
+// For `all` competitions, runs once over all data.
+// ──────────────────────────────────────────────
+
+export function calculateGroupedResults(
+  input: CompetitionInput,
+): { scope: 'all'; result: CompetitionResult } | { scope: 'within_group'; results: GroupCompetitionResult[] } {
+  const { competition, groups } = input;
+
+  if (competition.groupScope !== 'within_group' || !groups || groups.length === 0) {
+    return { scope: 'all', result: calculateCompetitionResults(input) };
+  }
+
+  const groupResults: GroupCompetitionResult[] = [];
+
+  for (const group of groups) {
+    const groupParticipantIds = new Set(group.memberParticipantIds);
+
+    const groupParticipants = input.participants.filter((p) =>
+      groupParticipantIds.has(p.roundParticipantId),
+    );
+    const groupScores = input.scores.filter((s) =>
+      groupParticipantIds.has(s.roundParticipantId),
+    );
+    const groupTeams = input.teams?.filter((t) =>
+      t.memberParticipantIds.some((id) => groupParticipantIds.has(id)),
+    );
+
+    const groupInput: CompetitionInput = {
+      ...input,
+      participants: groupParticipants,
+      scores: groupScores,
+      teams: groupTeams,
+    };
+
+    groupResults.push({
+      groupId: group.roundGroupId,
+      groupNumber: group.groupNumber,
+      groupName: group.name,
+      result: calculateCompetitionResults(groupInput),
+    });
+  }
+
+  return { scope: 'within_group', results: groupResults };
+}

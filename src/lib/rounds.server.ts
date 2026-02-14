@@ -72,6 +72,14 @@ export const getRoundFn = createServerFn({ method: 'GET' })
           },
         },
         tournament: true,
+        groups: {
+          orderBy: (g, { asc }) => [asc(g.groupNumber)],
+          with: {
+            participants: {
+              with: { person: true },
+            },
+          },
+        },
         participants: {
           with: {
             person: true,
@@ -158,7 +166,7 @@ export const updateRoundFn = createServerFn({ method: 'POST' })
       throw new Error('Can only edit rounds in draft status');
     }
 
-    await requireCommissioner(existing.tournamentId!);
+    await requireCommissioner(existing.tournamentId);
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (data.courseId !== undefined) updates.courseId = data.courseId;
@@ -171,9 +179,7 @@ export const updateRoundFn = createServerFn({ method: 'POST' })
 
     // Re-sort if dates changed
     if (data.date !== undefined || data.teeTime !== undefined) {
-      if (existing.tournamentId) {
-        await resortRoundsByDate(existing.tournamentId);
-      }
+      await resortRoundsByDate(existing.tournamentId);
     }
 
     return { roundId: data.id };
@@ -194,7 +200,7 @@ export const deleteRoundFn = createServerFn({ method: 'POST' })
       throw new Error('Can only delete rounds in draft status');
     }
 
-    await requireCommissioner(existing.tournamentId!);
+    await requireCommissioner(existing.tournamentId);
 
     await db.delete(rounds).where(eq(rounds.id, data.roundId));
 
@@ -264,7 +270,7 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
     });
     if (!existing) throw new Error('Round not found');
 
-    await requireCommissioner(existing.tournamentId!);
+    await requireCommissioner(existing.tournamentId);
 
     const allowed = validTransitions[existing.status] ?? [];
     if (!allowed.includes(data.newStatus)) {
@@ -274,7 +280,7 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
     }
 
     // Sequential guards: check earlier rounds in the same tournament
-    if (existing.tournamentId && existing.roundNumber) {
+    if (existing.roundNumber) {
       const earlierRounds = await db.query.rounds.findMany({
         where: and(
           eq(rounds.tournamentId, existing.tournamentId),
@@ -337,7 +343,7 @@ export const addRoundParticipantFn = createServerFn({ method: 'POST' })
       throw new Error('Can only add participants to draft or open rounds');
     }
 
-    await requireCommissioner(round.tournamentId!);
+    await requireCommissioner(round.tournamentId);
 
     // Check for duplicates
     const existing = await db.query.roundParticipants.findFirst({
@@ -378,7 +384,7 @@ export const removeRoundParticipantFn = createServerFn({ method: 'POST' })
       throw new Error('Can only remove participants from draft or open rounds');
     }
 
-    await requireCommissioner(rp.round.tournamentId!);
+    await requireCommissioner(rp.round.tournamentId);
 
     await db
       .delete(roundParticipants)
@@ -403,7 +409,7 @@ export const updateRoundParticipantFn = createServerFn({ method: 'POST' })
     });
     if (!rp) throw new Error('Participant not found');
 
-    await requireCommissioner(rp.round.tournamentId!);
+    await requireCommissioner(rp.round.tournamentId);
 
     await db
       .update(roundParticipants)

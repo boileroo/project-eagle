@@ -34,6 +34,11 @@ export const recordedByRoleEnum = pgEnum('recorded_by_role', [
   'commissioner',
 ]);
 
+export const groupScopeEnum = pgEnum('group_scope', [
+  'all',
+  'within_group',
+]);
+
 export const tournamentRoleEnum = pgEnum('tournament_role', [
   'commissioner',
   'marker',
@@ -193,9 +198,9 @@ export const tournamentTeamMembers = pgTable('tournament_team_members', {
 
 export const rounds = pgTable('rounds', {
   id: uuid('id').primaryKey().defaultRandom(),
-  tournamentId: uuid('tournament_id').references(() => tournaments.id, {
-    onDelete: 'cascade',
-  }),
+  tournamentId: uuid('tournament_id')
+    .references(() => tournaments.id, { onDelete: 'cascade' })
+    .notNull(),
   courseId: uuid('course_id')
     .references(() => courses.id, { onDelete: 'restrict' })
     .notNull(),
@@ -215,6 +220,22 @@ export const rounds = pgTable('rounds', {
 });
 
 // ──────────────────────────────────────────────
+// Round Groups (playing groups / fourballs)
+// ──────────────────────────────────────────────
+
+export const roundGroups = pgTable('round_groups', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  roundId: uuid('round_id')
+    .references(() => rounds.id, { onDelete: 'cascade' })
+    .notNull(),
+  groupNumber: integer('group_number').notNull(),
+  name: text('name'), // optional label, e.g. "Group A"
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// ──────────────────────────────────────────────
 // Round Participants (with handicap snapshot)
 // ──────────────────────────────────────────────
 
@@ -223,6 +244,9 @@ export const roundParticipants = pgTable('round_participants', {
   roundId: uuid('round_id')
     .references(() => rounds.id, { onDelete: 'cascade' })
     .notNull(),
+  roundGroupId: uuid('round_group_id').references(() => roundGroups.id, {
+    onDelete: 'set null',
+  }),
   personId: uuid('person_id')
     .references(() => persons.id, { onDelete: 'cascade' })
     .notNull(),
@@ -310,6 +334,7 @@ export const competitions = pgTable('competitions', {
     .notNull(),
   name: text('name').notNull(),
   participantType: participantTypeEnum('participant_type').notNull().default('individual'),
+  groupScope: groupScopeEnum('group_scope').notNull().default('all'),
   formatType: text('format_type').notNull(),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   configJson: jsonb('config_json').$type<Record<string, any>>(),
@@ -468,11 +493,23 @@ export const roundsRelations = relations(rounds, ({ one, many }) => ({
     fields: [rounds.createdByUserId],
     references: [profiles.id],
   }),
+  groups: many(roundGroups),
   participants: many(roundParticipants),
   teams: many(roundTeams),
   scoreEvents: many(scoreEvents),
   competitions: many(competitions),
 }));
+
+export const roundGroupsRelations = relations(
+  roundGroups,
+  ({ one, many }) => ({
+    round: one(rounds, {
+      fields: [roundGroups.roundId],
+      references: [rounds.id],
+    }),
+    participants: many(roundParticipants),
+  }),
+);
 
 export const roundParticipantsRelations = relations(
   roundParticipants,
@@ -480,6 +517,10 @@ export const roundParticipantsRelations = relations(
     round: one(rounds, {
       fields: [roundParticipants.roundId],
       references: [rounds.id],
+    }),
+    group: one(roundGroups, {
+      fields: [roundParticipants.roundGroupId],
+      references: [roundGroups.id],
     }),
     person: one(persons, {
       fields: [roundParticipants.personId],
@@ -652,6 +693,12 @@ export const insertRoundSchema = createInsertSchema(rounds);
 export const selectRoundSchema = createSelectSchema(rounds);
 export type InsertRound = z.infer<typeof insertRoundSchema>;
 export type SelectRound = z.infer<typeof selectRoundSchema>;
+
+// Round Groups
+export const insertRoundGroupSchema = createInsertSchema(roundGroups);
+export const selectRoundGroupSchema = createSelectSchema(roundGroups);
+export type InsertRoundGroup = z.infer<typeof insertRoundGroupSchema>;
+export type SelectRoundGroup = z.infer<typeof selectRoundGroupSchema>;
 
 // Round Participants
 export const insertRoundParticipantSchema =
