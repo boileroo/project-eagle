@@ -172,7 +172,8 @@ CourseHole { id, courseId, holeNumber, par, strokeIndex, yardage (optional) }
 | TournamentTeam        | A persistent team identity across the tournament                   |
 | RoundTeam             | Per-round team composition (optionally linked to a TournamentTeam) |
 | ScoreEvent            | An immutable record of strokes on a hole                           |
-| Competition           | A scoring format applied to raw data                               |
+| Competition           | A scoring format config applied to raw data (never stores results) |
+| BonusAward            | Winner of a bonus competition (NTP/LD) — single award per comp     |
 
 ### Key Relationships
 
@@ -203,36 +204,66 @@ Competition {
   tournamentId
   name
   scope: "round" | "tournament"
-  formatType           // discriminant: "stableford" | "strokePlay" | "matchPlay" | "scramble" | "nearestPin" | ...
+  formatType           // discriminant: "stableford" | "stroke_play" | "match_play" | "best_ball" | "nearest_pin" | "longest_drive"
   configJson           // typed per formatType (see below)
   roundId (nullable)   // null = tournament-wide, set = round-scoped
 }
 ```
 
-The `configJson` field is validated using a **Zod discriminated union** keyed on `formatType`:
+The `configJson` field is validated using a **Zod discriminated union** keyed on `formatType` (defined in `src/lib/competitions.ts`):
 
 ```ts
-const StablefordConfig = z.object({ ... })
-const MatchPlayConfig = z.object({ ... })
-const NearestPinConfig = z.object({ holeNumber: z.number(), ... })
-
-const CompetitionConfig = z.discriminatedUnion("formatType", [
-  z.object({ formatType: z.literal("stableford"), config: StablefordConfig }),
-  z.object({ formatType: z.literal("matchPlay"), config: MatchPlayConfig }),
-  z.object({ formatType: z.literal("nearestPin"), config: NearestPinConfig }),
-  // ...
+const competitionConfigSchema = z.discriminatedUnion("formatType", [
+  z.object({ formatType: z.literal("stableford"), config: z.object({ countBack: z.boolean() }) }),
+  z.object({ formatType: z.literal("stroke_play"), config: z.object({ scoringBasis: z.enum(["net_strokes", "gross_strokes"]) }) }),
+  z.object({ formatType: z.literal("match_play"), config: z.object({
+    pointsPerWin: z.number(),
+    pointsPerHalf: z.number(),
+    pairings: z.array(z.object({ playerA: z.string().uuid(), playerB: z.string().uuid() })),
+  }) }),
+  z.object({ formatType: z.literal("best_ball"), config: z.object({
+    pointsPerWin: z.number(),
+    pointsPerHalf: z.number(),
+    pairings: z.array(z.object({ teamA: z.string().uuid(), teamB: z.string().uuid() })),
+  }) }),
+  z.object({ formatType: z.literal("nearest_pin"), config: z.object({ holeNumber: z.number() }) }),
+  z.object({ formatType: z.literal("longest_drive"), config: z.object({ holeNumber: z.number() }) }),
 ])
 ```
 
 This keeps the database schema flexible (`jsonb`) while giving us **full type safety** at the application layer. Adding a new format means adding a new union member — no schema migration required.
 
-Examples:
+### Scoring Rules
 
-- Round 1 Stableford
-- Team Match Play (full tournament)
-- Overall Gross Stroke Play
-- Nearest the Pin — R2 Hole 8
-- Singles Stableford
+- **All match-based formats use stableford points** — a halved hole (0-0) stays halved, lowest strokes is NOT a tiebreaker
+- **Match play declared at point of winning** (e.g. "3&2") but scores continue beyond that for individual competitions and bonuses
+- **Variable match points** — `pointsPerWin` is configurable per competition, enabling increasing jeopardy across tournament days (e.g. day 1 = 1pt, day 2 = 2pts, day 3 = 4pts)
+- **Teams derived from tournament-level teams** with filtering to ensure valid formats (e.g. best ball needs 2v2)
+- **Rounds can exist without competitions** — casual scorecard is fine
+
+### Bonus Competitions (NTP/LD)
+
+Bonus competitions are **award-based**, not score-derived. They are configured during round setup (which hole + type) and awarded by a commissioner or marker during the round via a dropdown on the scoring UI for that hole.
+
+```
+BonusAward {
+  id
+  competitionId
+  roundParticipantId
+  awardedByUserId
+  createdAt
+}
+```
+
+Only one winner per bonus competition — awarding a new winner replaces the previous one.
+
+### Examples
+
+- Round 1 Individual Stableford (round-scoped)
+- Best Ball — Team A vs Team B (round-scoped, 2pts for win)
+- Overall Net Stroke Play (tournament-wide)
+- Nearest the Pin — Hole 8 (round-scoped)
+- Singles Match Play — Tom vs James (round-scoped, 4pts for day 3 jeopardy)
 
 Multiple competitions run simultaneously over the **same raw score events**. Adding or changing a competition never requires re-entering scores.
 
@@ -244,15 +275,36 @@ All scoring logic lives in `src/lib/domain/`.
 
 **Pure TypeScript. No DB access. No framework coupling.**
 
+### Dispatcher
+
 ```ts
+// src/lib/domain/index.ts
 calculateCompetitionResults({
-  competition,        // Competition config (with typed configJson)
-  scoreEvents,        // Raw ScoreEvents for the relevant round(s)
-  roundParticipants,  // With effective handicaps already resolved
-  courseData,         // Course + CourseHoles
-  roundTeams?,        // Optional, for team-based formats
+  competition,        // { id, name, config: CompetitionConfig }
+  holes,              // HoleData[] (holeNumber, par, strokeIndex)
+  participants,       // ParticipantData[] (with effective handicaps + playing handicaps pre-resolved)
+  scores,             // ResolvedScore[] (latest event per participant+hole)
+  teams?,             // TeamData[] (for team-based formats)
 }): CompetitionResult
 ```
+
+### Format Engines
+
+| Format | File | Mechanism |
+| --- | --- | --- |
+| **Stableford** | `stableford.ts` | Net points per hole (0-5 scale), count-back tiebreaker (last 9/6/3/1 holes) |
+| **Stroke Play** | `stroke-play.ts` | Gross or net total, ranked ascending |
+| **Match Play** | `match-play.ts` | 1v1 using stableford points per hole. Declared at point (e.g. "3&2"). Halved holes stay halved (0-0 = no tiebreaker) |
+| **Best Ball** | `best-ball.ts` | 2v2 team. Best stableford from each pair compared per hole. Same match logic as match play |
+| **NTP / LD** | `bonus.ts` | Award-based, not score-derived. Helpers for UI dropdowns |
+
+### Key Design Decisions
+
+- **All match formats use stableford** — not raw strokes. A hole where both players score 0 stableford points is halved, period
+- **Matches are declared but scoring continues** — the engine tracks when a match is mathematically decided (e.g. "3&2") but doesn't stop score entry. Other competitions (individual stableford, bonuses) depend on all holes being scored
+- **Variable match points** — `pointsPerWin` / `pointsPerHalf` per competition allows increasing jeopardy across days
+
+### Pre-Resolution
 
 The caller resolves effective handicaps _before_ passing data to the engine:
 
@@ -263,38 +315,27 @@ effectiveHandicap =
   roundParticipant.handicapSnapshot
 ```
 
+Playing handicap is then derived: `Math.round(effectiveHandicap)`, clamped 0–54.
+
 The engine never touches the database or knows about override precedence. It receives pre-resolved inputs and returns deterministic outputs.
-
-This enables:
-
-- Recalculation at any time
-- Format changes mid-tournament
-- Deterministic, testable outputs
-- Full unit testing with no infrastructure dependencies
 
 ---
 
 ## Roles & Permissions
 
-### Global
-
-| Role  | Capabilities                                  |
-| ----- | --------------------------------------------- |
-| Admin | App-wide config, course management, user mgmt |
-
 ### Tournament-Scoped
 
 | Role         | Capabilities                                                              |
 | ------------ | ------------------------------------------------------------------------- |
-| Commissioner | Configure tournament, assign groups/markers, lock rounds, override scores |
-| Marker       | Enter/edit scores for assigned group                                      |
-| Player       | Enter/edit own score (if format allows)                                   |
+| Commissioner | Configure tournament, manage teams, lock rounds, override scores, manage competitions |
+| Marker       | Enter/edit scores for their group, award bonus comps                       |
+| Player       | Enter/edit own score, self-join tournaments                                |
 | Spectator    | Read-only access                                                          |
 
 Permissions are enforced at **both** layers:
 
-- **Client-side** — UI gating (hide/disable controls)
-- **Server-side** — Supabase RLS + API validation
+- **Client-side** — UI gating via `isCommissioner` check (hide/disable admin controls)
+- **Server-side** — `requireCommissioner(tournamentId)` in `src/lib/auth.helpers.ts` on all mutations (tournaments, rounds, teams, competitions). Score entry uses `requireAuth()` with role verification.
 
 ---
 

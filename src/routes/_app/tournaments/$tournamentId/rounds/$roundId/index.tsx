@@ -9,9 +9,17 @@ import {
 } from '@/lib/rounds.server';
 import { getCoursesFn } from '@/lib/courses.server';
 import { getScorecardFn } from '@/lib/scores.server';
+import {
+  getRoundCompetitionsFn,
+  createCompetitionFn,
+  deleteCompetitionFn,
+  awardBonusFn,
+  removeBonusAwardFn,
+} from '@/lib/competitions.server';
 import { Scorecard } from '@/components/scorecard';
 import { ScoreEntryDialog } from '@/components/score-entry-dialog';
 import { ScoreHistoryDialog } from '@/components/score-history-dialog';
+import { CompetitionResults } from '@/components/competition-results';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,20 +43,43 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from '@tanstack/react-router';
+import {
+  FORMAT_TYPE_LABELS,
+  FORMAT_TYPES,
+  isBonusFormat,
+} from '@/lib/competitions';
+import type { CompetitionConfig } from '@/lib/competitions';
+import {
+  calculateCompetitionResults,
+  type CompetitionInput,
+  type HoleData,
+  type ParticipantData,
+  type ResolvedScore,
+} from '@/lib/domain';
+import {
+  resolveEffectiveHandicap,
+  getPlayingHandicap,
+} from '@/lib/handicaps';
 
 export const Route = createFileRoute(
   '/_app/tournaments/$tournamentId/rounds/$roundId/',
 )({
   loader: async ({ params }) => {
-    const [round, courses, scorecard] = await Promise.all([
+    const [round, courses, scorecard, competitions] = await Promise.all([
       getRoundFn({ data: { roundId: params.roundId } }),
       getCoursesFn(),
       getScorecardFn({ data: { roundId: params.roundId } }),
+      getRoundCompetitionsFn({
+        data: {
+          tournamentId: params.tournamentId,
+          roundId: params.roundId,
+        },
+      }),
     ]);
-    return { round, courses, scorecard };
+    return { round, courses, scorecard, competitions };
   },
   component: RoundDetailPage,
 });
@@ -81,7 +112,7 @@ const nextTransitions: Record<string, { label: string; status: string }[]> = {
 };
 
 function RoundDetailPage() {
-  const { round, courses, scorecard } = Route.useLoaderData();
+  const { round, courses, scorecard, competitions } = Route.useLoaderData();
   const navigate = useNavigate();
   const router = useRouter();
   const { user } = useAuth();
@@ -440,6 +471,15 @@ function RoundDetailPage() {
           participantName={historyTarget.participantName}
         />
       )}
+
+      {/* Competitions */}
+      <CompetitionsSection
+        round={round}
+        scorecard={scorecard}
+        competitions={competitions}
+        isCommissioner={isCommissioner}
+        onChanged={() => router.invalidate()}
+      />
     </div>
   );
 }
@@ -645,6 +685,580 @@ function EditRoundHandicapDialog({
           </Button>
           <Button onClick={handleSave} disabled={saving}>
             {saving ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Competitions Section
+// ──────────────────────────────────────────────
+
+type RoundData = Awaited<ReturnType<typeof getRoundFn>>;
+type ScorecardData = Awaited<ReturnType<typeof getScorecardFn>>;
+type CompetitionsData = Awaited<ReturnType<typeof getRoundCompetitionsFn>>;
+
+function CompetitionsSection({
+  round,
+  scorecard,
+  competitions,
+  isCommissioner,
+  onChanged,
+}: {
+  round: RoundData;
+  scorecard: ScorecardData;
+  competitions: CompetitionsData;
+  isCommissioner: boolean;
+  onChanged: () => void;
+}) {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Build engine inputs once
+  const engineInputs = useMemo(() => {
+    const holes: HoleData[] = round.course.holes.map((h) => ({
+      holeNumber: h.holeNumber,
+      par: h.par,
+      strokeIndex: h.strokeIndex,
+    }));
+
+    const participants: ParticipantData[] = round.participants.map((rp) => {
+      const effectiveHC = resolveEffectiveHandicap({
+        handicapOverride: rp.handicapOverride,
+        handicapSnapshot: rp.handicapSnapshot,
+        tournamentParticipant: rp.tournamentParticipant
+          ? { handicapOverride: rp.tournamentParticipant.handicapOverride }
+          : null,
+      });
+      return {
+        roundParticipantId: rp.id,
+        personId: rp.person.id,
+        displayName: rp.person.displayName,
+        effectiveHandicap: effectiveHC,
+        playingHandicap: getPlayingHandicap(effectiveHC),
+      };
+    });
+
+    // Convert scorecard record into flat ResolvedScore[]
+    const scores: ResolvedScore[] = [];
+    for (const [rpId, holeScores] of Object.entries(scorecard)) {
+      for (const [holeStr, data] of Object.entries(holeScores)) {
+        scores.push({
+          roundParticipantId: rpId,
+          holeNumber: parseInt(holeStr),
+          strokes: data.strokes,
+        });
+      }
+    }
+
+    return { holes, participants, scores };
+  }, [round, scorecard]);
+
+  const handleDelete = async (compId: string) => {
+    setDeletingId(compId);
+    try {
+      await deleteCompetitionFn({ data: { competitionId: compId } });
+      toast.success('Competition deleted.');
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to delete competition',
+      );
+    }
+    setDeletingId(null);
+  };
+
+  // Separate bonus comps from scored comps
+  const scoredComps = competitions.filter(
+    (c) => !isBonusFormat(c.formatType as CompetitionConfig['formatType']),
+  );
+  const bonusComps = competitions.filter(
+    (c) => isBonusFormat(c.formatType as CompetitionConfig['formatType']),
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Scored competitions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between text-lg">
+            <span>Competitions</span>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
+                {competitions.length}
+              </Badge>
+              {isCommissioner && (
+                <AddCompetitionDialog
+                  tournamentId={round.tournamentId!}
+                  roundId={round.id}
+                  participants={round.participants}
+                  onSaved={onChanged}
+                />
+              )}
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {competitions.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No competitions set up for this round.
+              {isCommissioner && ' Click + to add one.'}
+            </p>
+          ) : (
+            <div className="space-y-6">
+              {/* Scored competitions with leaderboards */}
+              {scoredComps.map((comp) => {
+                // Build competition config for the engine
+                const config: CompetitionConfig = {
+                  formatType: comp.formatType as CompetitionConfig['formatType'],
+                  config: (comp.configJson ?? {}) as Record<string, any>,
+                } as CompetitionConfig;
+
+                let result;
+                try {
+                  const input: CompetitionInput = {
+                    competition: { id: comp.id, name: comp.name, config },
+                    ...engineInputs,
+                  };
+                  result = calculateCompetitionResults(input);
+                } catch {
+                  result = null;
+                }
+
+                return (
+                  <div key={comp.id}>
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">{comp.name}</h3>
+                        <Badge variant="outline" className="text-xs">
+                          {FORMAT_TYPE_LABELS[comp.formatType as CompetitionConfig['formatType']] ?? comp.formatType}
+                        </Badge>
+                        {comp.scope === 'tournament' && (
+                          <Badge variant="secondary" className="text-xs">
+                            Tournament-wide
+                          </Badge>
+                        )}
+                      </div>
+                      {isCommissioner && comp.scope === 'round' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-destructive"
+                          disabled={deletingId === comp.id}
+                          onClick={() => handleDelete(comp.id)}
+                        >
+                          {deletingId === comp.id ? '…' : '✕'}
+                        </Button>
+                      )}
+                    </div>
+                    {result ? (
+                      <CompetitionResults result={result} />
+                    ) : (
+                      <p className="text-muted-foreground text-sm">
+                        Unable to calculate results.
+                      </p>
+                    )}
+                    <Separator className="mt-4" />
+                  </div>
+                );
+              })}
+
+              {/* Bonus competitions */}
+              {bonusComps.length > 0 && (
+                <div>
+                  <h3 className="mb-3 font-medium">Bonus Prizes</h3>
+                  <div className="space-y-2">
+                    {bonusComps.map((comp) => {
+                      const config = comp.configJson as { holeNumber?: number } | null;
+                      const holeNumber = config?.holeNumber ?? 0;
+                      const award = comp.bonusAwards?.[0];
+
+                      return (
+                        <BonusCompRow
+                          key={comp.id}
+                          comp={comp}
+                          holeNumber={holeNumber}
+                          award={award}
+                          participants={round.participants}
+                          isCommissioner={isCommissioner}
+                          roundStatus={round.status}
+                          onChanged={onChanged}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Bonus Comp Row (NTP / LD with award dropdown)
+// ──────────────────────────────────────────────
+
+function BonusCompRow({
+  comp,
+  holeNumber,
+  award,
+  participants,
+  isCommissioner,
+  roundStatus,
+  onChanged,
+}: {
+  comp: CompetitionsData[number];
+  holeNumber: number;
+  award: CompetitionsData[number]['bonusAwards'][number] | undefined;
+  participants: RoundData['participants'];
+  isCommissioner: boolean;
+  roundStatus: string;
+  onChanged: () => void;
+}) {
+  const [awarding, setAwarding] = useState(false);
+
+  const handleAward = async (roundParticipantId: string) => {
+    setAwarding(true);
+    try {
+      await awardBonusFn({
+        data: {
+          competitionId: comp.id,
+          roundParticipantId,
+        },
+      });
+      toast.success('Award saved.');
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to save award',
+      );
+    }
+    setAwarding(false);
+  };
+
+  const handleRemoveAward = async () => {
+    setAwarding(true);
+    try {
+      await removeBonusAwardFn({ data: { competitionId: comp.id } });
+      toast.success('Award removed.');
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to remove award',
+      );
+    }
+    setAwarding(false);
+  };
+
+  const typeLabel =
+    comp.formatType === 'nearest_pin' ? 'NTP' : 'LD';
+  const canEdit = roundStatus === 'open' || roundStatus === 'locked';
+
+  return (
+    <div className="flex items-center justify-between rounded-md border px-3 py-2">
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="text-xs">
+          {typeLabel}
+        </Badge>
+        <span className="text-sm">
+          {comp.name}{' '}
+          <span className="text-muted-foreground">
+            (Hole {holeNumber})
+          </span>
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        {award ? (
+          <>
+            <Badge variant="default">
+              🏆 {award.roundParticipant?.person?.displayName ?? 'Unknown'}
+            </Badge>
+            {isCommissioner && canEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs text-destructive"
+                disabled={awarding}
+                onClick={handleRemoveAward}
+              >
+                ✕
+              </Button>
+            )}
+          </>
+        ) : canEdit ? (
+          <select
+            className="border-input bg-background h-8 rounded-md border px-2 text-sm"
+            value=""
+            onChange={(e) => {
+              if (e.target.value) handleAward(e.target.value);
+            }}
+            disabled={awarding}
+          >
+            <option value="">Award to…</option>
+            {participants.map((rp) => (
+              <option key={rp.id} value={rp.id}>
+                {rp.person.displayName}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="text-muted-foreground text-sm">—</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Add Competition Dialog
+// ──────────────────────────────────────────────
+
+function AddCompetitionDialog({
+  tournamentId,
+  roundId,
+  participants: _participants,
+  onSaved,
+}: {
+  tournamentId: string;
+  roundId: string;
+  participants: RoundData['participants'];
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [name, setName] = useState('');
+  const [formatType, setFormatType] =
+    useState<CompetitionConfig['formatType']>('stableford');
+  const [scope, setScope] = useState<'round' | 'tournament'>('round');
+
+  // Format-specific config state
+  const [countBack, setCountBack] = useState(true);
+  const [scoringBasis, setScoringBasis] = useState<'net_strokes' | 'gross_strokes'>('net_strokes');
+  const [holeNumber, setHoleNumber] = useState(1);
+  const [pointsPerWin, setPointsPerWin] = useState(1);
+  const [pointsPerHalf, setPointsPerHalf] = useState(0.5);
+
+  const resetForm = () => {
+    setName('');
+    setFormatType('stableford');
+    setScope('round');
+    setCountBack(true);
+    setScoringBasis('net_strokes');
+    setHoleNumber(1);
+    setPointsPerWin(1);
+    setPointsPerHalf(0.5);
+  };
+
+  const buildConfig = (): CompetitionConfig => {
+    switch (formatType) {
+      case 'stableford':
+        return { formatType: 'stableford', config: { countBack } };
+      case 'stroke_play':
+        return { formatType: 'stroke_play', config: { scoringBasis } };
+      case 'match_play':
+        return {
+          formatType: 'match_play',
+          config: { pointsPerWin, pointsPerHalf, pairings: [] },
+        };
+      case 'best_ball':
+        return {
+          formatType: 'best_ball',
+          config: { pointsPerWin, pointsPerHalf, pairings: [] },
+        };
+      case 'nearest_pin':
+        return { formatType: 'nearest_pin', config: { holeNumber } };
+      case 'longest_drive':
+        return { formatType: 'longest_drive', config: { holeNumber } };
+    }
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast.error('Competition name is required.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await createCompetitionFn({
+        data: {
+          tournamentId,
+          name: name.trim(),
+          scope,
+          roundId: scope === 'round' ? roundId : null,
+          competitionConfig: buildConfig(),
+        },
+      });
+      toast.success('Competition created.');
+      setOpen(false);
+      resetForm();
+      onSaved();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create competition',
+      );
+    }
+    setSaving(false);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) resetForm();
+        setOpen(next);
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          + Add
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Competition</DialogTitle>
+          <DialogDescription>
+            Create a new competition for this round.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {/* Name */}
+          <div className="space-y-2">
+            <Label htmlFor="comp-name">Name</Label>
+            <Input
+              id="comp-name"
+              placeholder="e.g. Day 1 Stableford"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+            />
+          </div>
+
+          {/* Format */}
+          <div className="space-y-2">
+            <Label htmlFor="comp-format">Format</Label>
+            <select
+              id="comp-format"
+              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              value={formatType}
+              onChange={(e) =>
+                setFormatType(e.target.value as CompetitionConfig['formatType'])
+              }
+            >
+              {FORMAT_TYPES.map((ft) => (
+                <option key={ft} value={ft}>
+                  {FORMAT_TYPE_LABELS[ft]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Scope */}
+          <div className="space-y-2">
+            <Label htmlFor="comp-scope">Scope</Label>
+            <select
+              id="comp-scope"
+              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              value={scope}
+              onChange={(e) =>
+                setScope(e.target.value as 'round' | 'tournament')
+              }
+            >
+              <option value="round">This round only</option>
+              <option value="tournament">Tournament-wide</option>
+            </select>
+          </div>
+
+          {/* Format-specific config */}
+          {formatType === 'stableford' && (
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="comp-countback"
+                checked={countBack}
+                onChange={(e) => setCountBack(e.target.checked)}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="comp-countback">
+                Count-back tiebreaker
+              </Label>
+            </div>
+          )}
+
+          {formatType === 'stroke_play' && (
+            <div className="space-y-2">
+              <Label>Scoring Basis</Label>
+              <select
+                className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                value={scoringBasis}
+                onChange={(e) =>
+                  setScoringBasis(e.target.value as 'net_strokes' | 'gross_strokes')
+                }
+              >
+                <option value="net_strokes">Net Strokes</option>
+                <option value="gross_strokes">Gross Strokes</option>
+              </select>
+            </div>
+          )}
+
+          {(formatType === 'match_play' || formatType === 'best_ball') && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Points per Win</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={pointsPerWin}
+                    onChange={(e) =>
+                      setPointsPerWin(parseFloat(e.target.value) || 0)
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Points per Half</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={pointsPerHalf}
+                    onChange={(e) =>
+                      setPointsPerHalf(parseFloat(e.target.value) || 0)
+                    }
+                  />
+                </div>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Pairings can be configured after creation.
+              </p>
+            </div>
+          )}
+
+          {(formatType === 'nearest_pin' || formatType === 'longest_drive') && (
+            <div className="space-y-2">
+              <Label>Hole Number</Label>
+              <Input
+                type="number"
+                min={1}
+                max={18}
+                value={holeNumber}
+                onChange={(e) =>
+                  setHoleNumber(parseInt(e.target.value) || 1)
+                }
+              />
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saving || !name.trim()}>
+            {saving ? 'Creating…' : 'Create'}
           </Button>
         </DialogFooter>
       </DialogContent>

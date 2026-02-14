@@ -2,13 +2,33 @@
 
 ## Current State
 
-The project has a working TanStack Start boilerplate: Vite, React 19, TanStack Router (file-based routing with only `/`), Drizzle ORM wired to Supabase Postgres, Supabase clients (browser + SSR), Tailwind v4 + shadcn/ui configured (but zero components installed), auth Zod schemas, and TanStack DB + Query dependencies.
+Phases 1–4 are complete. Phase 5 (Competition Engine) is in progress — the scoring engine, config types, and server CRUD are built. The leaderboard UI and competition management UI remain.
 
-None of the domain has been built. The schema has only `profiles` and a placeholder `todos` table. No routes, no domain logic, no auth flows, no UI components.
+**What exists:**
+- Full auth (email + password), protected routes, session handling
+- Complete Drizzle schema: profiles, persons, courses, courseHoles, tournaments, tournamentParticipants, tournamentTeams, tournamentTeamMembers, rounds, roundParticipants, roundTeams, roundTeamMembers, scoreEvents, competitions, bonusAwards
+- RLS policies across all tables
+- Course library (CRUD + list/detail pages)
+- Tournament setup: CRUD, participants, teams, round management, status workflow
+- Score entry: mobile scorecard, append-only events, audit trail, handicap resolver
+- Round status guards (sequential transitions, delete/mutation guards)
+- Role-based permissions: `requireCommissioner()` on all mutations, `isCommissioner` UI gating
+- Competition engine: pure scoring functions for stableford, stroke play, match play, best ball
+- Competition config Zod types (discriminated union)
+- Competition CRUD server functions + bonus award mutations
+- bonusAwards table for NTP/LD
+
+**Key files:**
+- `src/db/schema.ts` — full domain schema (~665 lines)
+- `src/lib/domain/` — pure scoring engine (stableford, stroke-play, match-play, best-ball, bonus)
+- `src/lib/competitions.ts` — config Zod types
+- `src/lib/competitions.server.ts` — CRUD server functions
+- `src/lib/auth.helpers.ts` — shared requireAuth + requireCommissioner
+- `src/lib/validators.ts` — all app-level Zod schemas
 
 ---
 
-## Phase 1 — Auth & Schema Foundation
+## Phase 1 — Auth & Schema Foundation ✅
 
 Everything depends on authenticated users and the core data model. Auth and schema are built together because RLS policies require both.
 
@@ -74,7 +94,7 @@ This becomes the test harness for everything that follows.
 
 ---
 
-## Phase 2 — Course Library
+## Phase 2 — Course Library ✅
 
 The simplest real feature. No tournament logic, no scoring. A good place to establish patterns for CRUD, data fetching, UI components, and form handling that the rest of the app will follow.
 
@@ -108,7 +128,7 @@ Button, input, card, table, dialog, form, label, select, toast — enough to bui
 
 ---
 
-## Phase 3 — Tournament Setup & Participant Management
+## Phase 3 — Tournament Setup & Participant Management ✅
 
 The core "commissioner" workflow: create a tournament, add people, assign to rounds.
 
@@ -158,16 +178,20 @@ The core "commissioner" workflow: create a tournament, add people, assign to rou
 - Server functions: createRoundFn, getRoundFn, updateRoundFn, deleteRoundFn, transitionRoundFn, addRoundParticipantFn, removeRoundParticipantFn, updateRoundParticipantFn
 - Validators: createRoundSchema, updateRoundSchema
 
-### 3.5 Team Setup
+### 3.5 Team Setup ✅
 
 - Create `TournamentTeam` (persistent identity: "Team Europe")
 - Create `RoundTeam` per round (may reference a `TournamentTeam` or be a one-off)
 - Assign `RoundParticipant` members to `RoundTeam`
+- Server functions: createTeamFn, updateTeamFn, deleteTeamFn, addTeamMemberFn, removeTeamMemberFn, setupRoundTeamsFn
+- Auto-setup round teams from tournament teams
 
-### 3.6 Tournament Roles
+### 3.6 Tournament Roles ✅
 
 - Assign Commissioner / Marker / Player / Spectator to participants
-- Enforce in UI (show/hide controls) and API (RLS / server validation)
+- Enforce in UI (show/hide controls) and API (server-side `requireCommissioner()` validation)
+- `isCommissioner` check gates admin UI on tournament and round detail pages
+- Self-join (Add Myself) allowed for any authenticated user as player
 
 ### Done when
 
@@ -176,7 +200,7 @@ The core "commissioner" workflow: create a tournament, add people, assign to rou
 
 ---
 
-## Phase 4 — Score Entry & Event Model
+## Phase 4 — Score Entry & Event Model ✅
 
 The core on-course experience. Mobile-first.
 
@@ -218,40 +242,59 @@ The core on-course experience. Mobile-first.
 
 Pure domain logic + the read-side projections.
 
-### 5.1 Scoring Engine
+### 5.1 Scoring Engine ✅
 
-- Implement `calculateCompetitionResults()` in `src/lib/domain/` as pure functions
-- Start with **Stableford** (most common format for the use case)
-- Add **Stroke Play** (gross and net)
-- Add **Nearest the Pin**
+- `calculateCompetitionResults()` dispatcher in `src/lib/domain/index.ts`
+- **Stableford** (`src/lib/domain/stableford.ts`) — net points per hole, count-back tiebreaker (last 9/6/3/1), standard 0-5 point scale
+- **Stroke Play** (`src/lib/domain/stroke-play.ts`) — gross and net, ranked ascending
+- **Match Play** (`src/lib/domain/match-play.ts`) — 1v1 head-to-head using stableford points. Halved hole (0-0) stays halved, no stroke tiebreaker. Match declared at point of winning (e.g. "3&2") but scores continue for individual comps
+- **Best Ball** (`src/lib/domain/best-ball.ts`) — 2v2 team, best stableford from each pair per hole, head-to-head
+- **Bonus** (`src/lib/domain/bonus.ts`) — NTP/LD types and helpers (award-based, not score-derived)
+- Shared types: `CompetitionInput`, `ParticipantData`, `HoleData`, `ResolvedScore`, `TeamData`
 
-### 5.2 Competition Config Types
+### 5.2 Competition Config Types ✅
 
-- Define Zod discriminated union: `StablefordConfig`, `StrokePlayConfig`, `NearestPinConfig`, etc.
-- Validate `configJson` at the application boundary (on create/update)
+- Zod discriminated union in `src/lib/competitions.ts` covering 6 formats:
+  - `stableford` — countBack tiebreaker option
+  - `stroke_play` — scoringBasis (gross or net)
+  - `match_play` — pairings, variable pointsPerWin/pointsPerHalf
+  - `best_ball` — team pairings, variable pointsPerWin/pointsPerHalf
+  - `nearest_pin` — holeNumber
+  - `longest_drive` — holeNumber
+- `pointsPerWin` configurable per competition for increasing jeopardy (e.g. day 1 = 1pt, day 2 = 2pts, day 3 = 4pts)
+- Helper functions: `isTeamFormat()`, `isMatchFormat()`, `isBonusFormat()`
+- Format type labels for UI display
 
-### 5.3 Competition CRUD
+### 5.3 Competition CRUD ✅
 
-- Commissioner creates/edits competitions within a tournament
-- Scoped to a round or tournament-wide
-- Links to a `formatType` with typed config
+- Server functions in `src/lib/competitions.server.ts`:
+  - `getCompetitionsFn` — list by tournament
+  - `getRoundCompetitionsFn` — round-scoped + tournament-wide
+  - `getCompetitionFn` — single with bonus awards
+  - `createCompetitionFn` — commissioner-gated, validates config via Zod union
+  - `updateCompetitionFn` — commissioner-gated
+  - `deleteCompetitionFn` — commissioner-gated
+  - `awardBonusFn` — set NTP/LD winner (replaces any existing award)
+  - `removeBonusAwardFn` — commissioner-gated
+- Validators in `src/lib/validators.ts`: `createCompetitionSchema`, `updateCompetitionSchema`, `awardBonusSchema`
+- `bonusAwards` table in schema for NTP/LD winner storage
 
-### 5.4 Leaderboard Views
+### 5.4 Competition Management UI
+
+- Competition CRUD UI on tournament/round detail pages
+- Add/edit/delete competitions with format-specific config forms
+- NTP/LD dropdown on scorecard for awarding bonus comps
+
+### 5.5 Leaderboard Views
 
 - Per-competition results page
 - Pulls raw score events → resolves handicaps → runs engine → displays results
 - All derived, nothing persisted
 - Updates when new score events arrive
 
-### 5.5 Additional Formats
-
-- Match play, scramble, etc.
-- Each is a new engine function + Zod union member
-- No schema migration required
-
 ### Done when
 
-- Stableford, stroke play, and nearest-the-pin competitions can be created and scored
+- All 6 formats can be created, configured, and scored
 - Leaderboards display live, derived results
 - Adding a new format requires only TypeScript — no DB changes
 
