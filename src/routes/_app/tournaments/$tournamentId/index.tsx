@@ -17,7 +17,7 @@ import {
   removeTeamMemberFn,
 } from '@/lib/teams.server';
 import { getCoursesFn } from '@/lib/courses.server';
-import { createRoundFn } from '@/lib/rounds.server';
+import { createRoundFn, reorderRoundsFn } from '@/lib/rounds.server';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -370,62 +370,11 @@ function TournamentDetailPage() {
       />
 
       {/* Rounds section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Rounds</span>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">
-                {tournament.rounds.length} round
-                {tournament.rounds.length !== 1 ? 's' : ''}
-              </Badge>
-              <AddRoundDialog
-                tournamentId={tournament.id}
-                courses={courses}
-                nextRoundNumber={tournament.rounds.length + 1}
-                onAdded={() => router.invalidate()}
-              />
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {tournament.rounds.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No rounds yet. Add a round to get started.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {tournament.rounds.map((r) => (
-                <Link
-                  key={r.id}
-                  to="/tournaments/$tournamentId/rounds/$roundId"
-                  params={{
-                    tournamentId: tournament.id,
-                    roundId: r.id,
-                  }}
-                  className="group flex items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-accent"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium group-hover:text-primary">
-                      Round {r.roundNumber ?? '—'}
-                    </span>
-                    {r.course && (
-                      <span className="text-muted-foreground text-sm">
-                        @ {r.course.name}
-                      </span>
-                    )}
-                  </div>
-                  <Badge
-                    variant={r.status === 'finalized' ? 'default' : 'outline'}
-                  >
-                    {r.status}
-                  </Badge>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <RoundsSection
+        tournament={tournament}
+        courses={courses}
+        onChanged={() => router.invalidate()}
+      />
     </div>
   );
 }
@@ -744,18 +693,16 @@ function EditHandicapDialog({
 function AddRoundDialog({
   tournamentId,
   courses,
-  nextRoundNumber,
   onAdded,
 }: {
   tournamentId: string;
   courses: { id: string; name: string; location: string | null; numberOfHoles: number }[];
-  nextRoundNumber: number;
   onAdded: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [courseId, setCourseId] = useState('');
-  const [roundNumber, setRoundNumber] = useState(nextRoundNumber.toString());
   const [date, setDate] = useState('');
+  const [teeTime, setTeeTime] = useState('');
   const [adding, setAdding] = useState(false);
 
   const handleAdd = async () => {
@@ -769,15 +716,15 @@ function AddRoundDialog({
         data: {
           tournamentId,
           courseId,
-          roundNumber: roundNumber ? parseInt(roundNumber, 10) : null,
           date: date || undefined,
+          teeTime: teeTime || undefined,
         },
       });
       toast.success('Round created! All tournament players have been added.');
       setOpen(false);
       setCourseId('');
-      setRoundNumber((nextRoundNumber + 1).toString());
       setDate('');
+      setTeeTime('');
       onAdded();
     } catch (error) {
       toast.error(
@@ -794,8 +741,8 @@ function AddRoundDialog({
         setOpen(v);
         if (!v) {
           setCourseId('');
-          setRoundNumber(nextRoundNumber.toString());
           setDate('');
+          setTeeTime('');
         }
       }}
     >
@@ -806,8 +753,8 @@ function AddRoundDialog({
         <DialogHeader>
           <DialogTitle>Add Round</DialogTitle>
           <DialogDescription>
-            Select a course and set round details. All current tournament
-            players will be automatically added to the round.
+            Select a course and optionally set a date and tee time. All
+            current tournament players will be automatically added.
           </DialogDescription>
         </DialogHeader>
 
@@ -839,25 +786,25 @@ function AddRoundDialog({
             )}
           </div>
 
-          <div>
-            <Label htmlFor="roundNumber">Round Number</Label>
-            <Input
-              id="roundNumber"
-              type="number"
-              min={1}
-              value={roundNumber}
-              onChange={(e) => setRoundNumber(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="roundDate">Date (optional)</Label>
-            <Input
-              id="roundDate"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="roundDate">Date (optional)</Label>
+              <Input
+                id="roundDate"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="roundTeeTime">Tee Time (optional)</Label>
+              <Input
+                id="roundTeeTime"
+                type="time"
+                value={teeTime}
+                onChange={(e) => setTeeTime(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
@@ -868,6 +815,171 @@ function AddRoundDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Rounds Section (with reorder)
+// ──────────────────────────────────────────────
+
+function RoundsSection({
+  tournament,
+  courses,
+  onChanged,
+}: {
+  tournament: {
+    id: string;
+    rounds: {
+      id: string;
+      roundNumber: number | null;
+      date: string | Date | null;
+      teeTime: string | null;
+      status: string;
+      course: { id: string; name: string } | null;
+    }[];
+  };
+  courses: { id: string; name: string; location: string | null; numberOfHoles: number }[];
+  onChanged: () => void;
+}) {
+  const sortedRounds = tournament.rounds;
+  const hasAnyDate = sortedRounds.some((r) => r.date != null);
+
+  const handleMoveUp = async (index: number) => {
+    if (index <= 0) return;
+    const ids = sortedRounds.map((r) => r.id);
+    [ids[index - 1], ids[index]] = [ids[index], ids[index - 1]];
+    try {
+      await reorderRoundsFn({
+        data: { tournamentId: tournament.id, roundIds: ids },
+      });
+      toast.success('Round order updated.');
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to reorder',
+      );
+    }
+  };
+
+  const handleMoveDown = async (index: number) => {
+    if (index >= sortedRounds.length - 1) return;
+    const ids = sortedRounds.map((r) => r.id);
+    [ids[index], ids[index + 1]] = [ids[index + 1], ids[index]];
+    try {
+      await reorderRoundsFn({
+        data: { tournamentId: tournament.id, roundIds: ids },
+      });
+      toast.success('Round order updated.');
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to reorder',
+      );
+    }
+  };
+
+  const formatDateTime = (r: { date: string | Date | null; teeTime: string | null }) => {
+    if (!r.date) return null;
+    const d = new Date(r.date);
+    const datePart = d.toLocaleDateString('en-AU', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    if (r.teeTime) {
+      return `${datePart} · ${r.teeTime}`;
+    }
+    return datePart;
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>Rounds</span>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">
+              {sortedRounds.length} round
+              {sortedRounds.length !== 1 ? 's' : ''}
+            </Badge>
+            <AddRoundDialog
+              tournamentId={tournament.id}
+              courses={courses}
+              onAdded={onChanged}
+            />
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {sortedRounds.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No rounds yet. Add a round to get started.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {sortedRounds.map((r, idx) => (
+              <div
+                key={r.id}
+                className="flex items-center gap-2"
+              >
+                {/* Reorder arrows — only shown when no dates */}
+                {!hasAnyDate && sortedRounds.length > 1 && (
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground disabled:opacity-25 px-0.5 text-xs leading-none"
+                      disabled={idx === 0}
+                      onClick={() => handleMoveUp(idx)}
+                      aria-label="Move up"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground disabled:opacity-25 px-0.5 text-xs leading-none"
+                      disabled={idx === sortedRounds.length - 1}
+                      onClick={() => handleMoveDown(idx)}
+                      aria-label="Move down"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                )}
+                <Link
+                  to="/tournaments/$tournamentId/rounds/$roundId"
+                  params={{
+                    tournamentId: tournament.id,
+                    roundId: r.id,
+                  }}
+                  className="group flex flex-1 items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-accent"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium group-hover:text-primary">
+                      Round {idx + 1}
+                    </span>
+                    {r.course && (
+                      <span className="text-muted-foreground text-sm">
+                        @ {r.course.name}
+                      </span>
+                    )}
+                    {formatDateTime(r) && (
+                      <span className="text-muted-foreground text-xs">
+                        · {formatDateTime(r)}
+                      </span>
+                    )}
+                  </div>
+                  <Badge
+                    variant={r.status === 'finalized' ? 'default' : 'outline'}
+                  >
+                    {r.status}
+                  </Badge>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

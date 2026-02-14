@@ -150,6 +150,9 @@ function RoundDetailPage() {
                   month: 'short',
                   year: 'numeric',
                 })}
+                {(round as { teeTime?: string | null }).teeTime && (
+                  <> · {(round as { teeTime?: string | null }).teeTime}</>
+                )}
               </span>
             )}
             <Badge variant={statusColors[round.status]}>

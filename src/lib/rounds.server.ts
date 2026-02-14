@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { getRequest } from '@tanstack/react-start/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, count, asc } from 'drizzle-orm';
 import { db } from '@/db';
 import {
   rounds,
@@ -22,6 +22,47 @@ async function requireAuth() {
   } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
   return user;
+}
+
+// ──────────────────────────────────────────────
+// Helper: re-sort round numbers by date/teeTime
+// when any rounds have dates, sort chronologically
+// and reassign roundNumber values
+// ──────────────────────────────────────────────
+
+async function resortRoundsByDate(tournamentId: string) {
+  const allRounds = await db.query.rounds.findMany({
+    where: eq(rounds.tournamentId, tournamentId),
+    orderBy: [asc(rounds.roundNumber)],
+  });
+
+  // Only re-sort if at least one round has a date
+  const hasAnyDate = allRounds.some((r) => r.date != null);
+  if (!hasAnyDate) return;
+
+  // Sort: dated rounds chronologically (date + teeTime), undated at the end
+  const sorted = [...allRounds].sort((a, b) => {
+    if (a.date && b.date) {
+      const aTime = new Date(a.date).getTime();
+      const bTime = new Date(b.date).getTime();
+      if (aTime !== bTime) return aTime - bTime;
+      // Same date — sort by teeTime
+      return (a.teeTime ?? '').localeCompare(b.teeTime ?? '');
+    }
+    if (a.date && !b.date) return -1;
+    if (!a.date && b.date) return 1;
+    return (a.roundNumber ?? 0) - (b.roundNumber ?? 0);
+  });
+
+  // Reassign round numbers
+  for (let i = 0; i < sorted.length; i++) {
+    if (sorted[i].roundNumber !== i + 1) {
+      await db
+        .update(rounds)
+        .set({ roundNumber: i + 1 })
+        .where(eq(rounds.id, sorted[i].id));
+    }
+  }
 }
 
 // ──────────────────────────────────────────────
@@ -63,13 +104,20 @@ export const createRoundFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const user = await requireAuth();
 
+    // Auto-assign roundNumber as next in sequence
+    const [{ value: existingCount }] = await db
+      .select({ value: count() })
+      .from(rounds)
+      .where(eq(rounds.tournamentId, data.tournamentId));
+
     const [round] = await db
       .insert(rounds)
       .values({
         tournamentId: data.tournamentId,
         courseId: data.courseId,
-        roundNumber: data.roundNumber ?? null,
+        roundNumber: existingCount + 1,
         date: data.date ? new Date(data.date) : null,
+        teeTime: data.teeTime || null,
         createdByUserId: user.id,
       })
       .returning();
@@ -99,11 +147,14 @@ export const createRoundFn = createServerFn({ method: 'POST' })
       );
     }
 
+    // Re-sort if dates are present
+    await resortRoundsByDate(data.tournamentId);
+
     return { roundId: round.id };
   });
 
 // ──────────────────────────────────────────────
-// Update a round (course, number, date)
+// Update a round (course, date, tee time)
 // ──────────────────────────────────────────────
 
 export const updateRoundFn = createServerFn({ method: 'POST' })
@@ -121,12 +172,19 @@ export const updateRoundFn = createServerFn({ method: 'POST' })
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (data.courseId !== undefined) updates.courseId = data.courseId;
-    if (data.roundNumber !== undefined)
-      updates.roundNumber = data.roundNumber ?? null;
     if (data.date !== undefined)
       updates.date = data.date ? new Date(data.date) : null;
+    if (data.teeTime !== undefined)
+      updates.teeTime = data.teeTime || null;
 
     await db.update(rounds).set(updates).where(eq(rounds.id, data.id));
+
+    // Re-sort if dates changed
+    if (data.date !== undefined || data.teeTime !== undefined) {
+      if (existing.tournamentId) {
+        await resortRoundsByDate(existing.tournamentId);
+      }
+    }
 
     return { roundId: data.id };
   });
@@ -146,6 +204,28 @@ export const deleteRoundFn = createServerFn({ method: 'POST' })
     if (!existing) throw new Error('Round not found');
 
     await db.delete(rounds).where(eq(rounds.id, data.roundId));
+
+    return { success: true };
+  });
+
+// ──────────────────────────────────────────────
+// Reorder rounds (swap two round numbers)
+// ──────────────────────────────────────────────
+
+export const reorderRoundsFn = createServerFn({ method: 'POST' })
+  .inputValidator(
+    (data: { tournamentId: string; roundIds: string[] }) => data,
+  )
+  .handler(async ({ data }) => {
+    await requireAuth();
+
+    // Update round numbers to match the provided order
+    for (let i = 0; i < data.roundIds.length; i++) {
+      await db
+        .update(rounds)
+        .set({ roundNumber: i + 1 })
+        .where(eq(rounds.id, data.roundIds[i]));
+    }
 
     return { success: true };
   });

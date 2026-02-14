@@ -167,15 +167,15 @@ export type AddTeamMemberInput = z.infer<typeof addTeamMemberSchema>;
 export const createRoundSchema = z.object({
   tournamentId: z.string().uuid(),
   courseId: z.string().uuid('Please select a course'),
-  roundNumber: z.number().int().min(1).nullable().optional(),
   date: z.string().optional(), // ISO date string from input[type=date]
+  teeTime: z.string().optional(), // HH:mm string from input[type=time]
 });
 export type CreateRoundInput = z.infer<typeof createRoundSchema>;
 
 export const updateRoundSchema = z.object({
   id: z.string().uuid(),
   courseId: z.string().uuid('Please select a course').optional(),
-  roundNumber: z.number().int().min(1).nullable().optional(),
   date: z.string().optional(),
+  teeTime: z.string().optional(), // HH:mm string from input[type=time]
 });
 export type UpdateRoundInput = z.infer<typeof updateRoundSchema>;

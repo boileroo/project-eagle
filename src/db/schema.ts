@@ -201,6 +201,7 @@ export const rounds = pgTable('rounds', {
     .notNull(),
   roundNumber: integer('round_number'),
   date: timestamp('date', { withTimezone: true }),
+  teeTime: text('tee_time'), // HH:mm format
   status: roundStatusEnum('status').notNull().default('draft'),
   createdByUserId: uuid('created_by_user_id').references(() => profiles.id, {
     onDelete: 'set null',
