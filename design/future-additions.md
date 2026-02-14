@@ -54,9 +54,9 @@ The current model requires `rounds.tournamentId` NOT NULL. Standalone rounds wer
 
 ---
 
-## PWA / Native Wrapper
+## Native Wrapper (Capacitor etc.)
 
-Test iOS PWA behaviour. If push notifications or background sync are limited, consider a native wrapper (Capacitor, etc.).
+PWA and offline-first are **not deferred** — they are Phase 6 (IndexedDB persistence, offline mutation queue, Supabase Realtime). The open question is whether a **native wrapper** (Capacitor, etc.) is needed on top of the PWA if iOS imposes limitations on push notifications, background sync, or storage quotas. Test iOS PWA behaviour after Phase 6 and decide then.
 
 ---
 
