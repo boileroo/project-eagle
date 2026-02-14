@@ -197,14 +197,14 @@ The commissioner chooses the mode when setting up the bonus. Both modes can coex
 
 ### Conceptual gaps / new work needed
 
-1. **Round-level format label** — Scenarios describe the round itself having a format name (irish rumble, fourball, singles). Currently we don't have a round-level format field — the format lives on individual competitions. Add an optional `format` text field to `rounds` for display/organisation (e.g. "Round 1: Irish Rumble"), while keeping the actual scoring logic on competitions.
+1. ~~**Round-level format label**~~ ✅ Done — Added optional `format` text field to `rounds` table for display/organisation (e.g. "Round 1: Irish Rumble"). Scoring logic stays on competitions.
 
-2. **Per-round competition constraints** — Each round should allow at most 1 team competition, at most 1 individual competition, and any number of bonus competitions. This needs validation at creation time.
+2. ~~**Per-round competition constraints**~~ ✅ Done — `createCompetitionFn` enforces max 1 team + max 1 individual competition per round. Bonuses unlimited.
 
 3. **New match formats** — Irish Rumble (group vs group aggregate) is not yet implemented as a competition format type. (Foursomes is deferred — see `future-additions.md`.)
 
-4. **Group vs group scope** — Irish Rumble is "group 1 vs group 2" — an inter-group competition. We currently have `all` and `within_group` scopes. Need a `between_groups` scope (or handle it as an `all`-scope team competition where teams map to groups).
+4. **Group vs group scope** — Irish Rumble is "group 1 vs group 2" — an inter-group competition. We currently have `all` and `within_group` scopes. See `future-additions.md` for options.
 
-5. **Bonus dual-mode (standalone vs contributor)** — Currently NTP/LD are standalone awards (`bonusAwards`). The scenarios describe them as "+1 stableford point added to individual aggregate." Bonuses need a mode flag: `standalone` (current behaviour — just records a winner) or `contributor` (adds points to the individual tournament standing). The aggregation engine must incorporate contributor-mode bonus awards into individual standing totals.
+5. ~~**Bonus dual-mode (standalone vs contributor)**~~ ✅ Done — NTP/LD configs now have `bonusMode` (`standalone` | `contributor`) and `bonusPoints`. The `sum_stableford` aggregation engine incorporates contributor-mode bonus awards into individual standing totals.
 
-6. **Variable points per round** — The scenarios show different `pointsPerWin` values across rounds within the same tournament (Round 1: 2pts, Round 2: 2pts, Round 3: 1pt). This already works ✅ — `pointsPerWin` is per competition, and each round has its own competitions.
+6. **Variable points per round** — Already works ✅ — `pointsPerWin` is per competition, and each round has its own competitions.

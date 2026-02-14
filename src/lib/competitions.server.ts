@@ -8,7 +8,7 @@ import {
   tournamentStandings,
 } from '@/db/schema';
 import { requireAuth, requireCommissioner } from './auth.helpers';
-import { competitionConfigSchema, aggregationConfigSchema } from './competitions';
+import { competitionConfigSchema, aggregationConfigSchema, isBonusFormat } from './competitions';
 import type {
   CreateCompetitionInput,
   UpdateCompetitionInput,
@@ -102,6 +102,23 @@ export const createCompetitionFn = createServerFn({ method: 'POST' })
       ),
     });
     if (!round) throw new Error('Round not found in this tournament');
+
+    // Enforce per-round competition limits:
+    // max 1 team comp + max 1 individual comp (bonuses unlimited)
+    if (!isBonusFormat(parsed.formatType)) {
+      const existingComps = await db.query.competitions.findMany({
+        where: eq(competitions.roundId, data.roundId),
+      });
+      const sameTypeComps = existingComps.filter(
+        (c) => c.participantType === data.participantType && !isBonusFormat(c.formatType as any),
+      );
+      if (sameTypeComps.length > 0) {
+        const label = data.participantType === 'team' ? 'team' : 'individual';
+        throw new Error(
+          `This round already has a ${label} competition. Each round allows at most one team and one individual competition.`,
+        );
+      }
+    }
 
     const [comp] = await db
       .insert(competitions)

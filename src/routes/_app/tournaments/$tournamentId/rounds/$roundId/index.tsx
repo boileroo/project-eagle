@@ -957,6 +957,8 @@ function BonusCompRow({
 
   const typeLabel =
     comp.formatType === 'nearest_pin' ? 'NTP' : 'LD';
+  const config = comp.configJson as { holeNumber?: number; bonusMode?: string; bonusPoints?: number } | null;
+  const isContributor = config?.bonusMode === 'contributor';
   const canEdit = roundStatus === 'open' || roundStatus === 'locked';
 
   return (
@@ -965,6 +967,11 @@ function BonusCompRow({
         <Badge variant="outline" className="text-xs">
           {typeLabel}
         </Badge>
+        {isContributor && (
+          <Badge variant="secondary" className="text-xs">
+            +{config?.bonusPoints ?? 1} pts
+          </Badge>
+        )}
         <span className="text-sm">
           {comp.name}{' '}
           <span className="text-muted-foreground">
@@ -1042,6 +1049,8 @@ function AddCompetitionDialog({
   const [holeNumber, setHoleNumber] = useState(1);
   const [pointsPerWin, setPointsPerWin] = useState(1);
   const [pointsPerHalf, setPointsPerHalf] = useState(0.5);
+  const [bonusMode, setBonusMode] = useState<'standalone' | 'contributor'>('standalone');
+  const [bonusPoints, setBonusPoints] = useState(1);
 
   const resetForm = () => {
     setName('');
@@ -1052,6 +1061,8 @@ function AddCompetitionDialog({
     setHoleNumber(1);
     setPointsPerWin(1);
     setPointsPerHalf(0.5);
+    setBonusMode('standalone');
+    setBonusPoints(1);
   };
 
   const buildConfig = (): CompetitionConfig => {
@@ -1071,9 +1082,9 @@ function AddCompetitionDialog({
           config: { pointsPerWin, pointsPerHalf, pairings: [] },
         };
       case 'nearest_pin':
-        return { formatType: 'nearest_pin', config: { holeNumber } };
+        return { formatType: 'nearest_pin', config: { holeNumber, bonusMode, bonusPoints } };
       case 'longest_drive':
-        return { formatType: 'longest_drive', config: { holeNumber } };
+        return { formatType: 'longest_drive', config: { holeNumber, bonusMode, bonusPoints } };
     }
   };
 
@@ -1241,17 +1252,49 @@ function AddCompetitionDialog({
           )}
 
           {(formatType === 'nearest_pin' || formatType === 'longest_drive') && (
-            <div className="space-y-2">
-              <Label>Hole Number</Label>
-              <Input
-                type="number"
-                min={1}
-                max={18}
-                value={holeNumber}
-                onChange={(e) =>
-                  setHoleNumber(parseInt(e.target.value) || 1)
-                }
-              />
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>Hole Number</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={18}
+                  value={holeNumber}
+                  onChange={(e) =>
+                    setHoleNumber(parseInt(e.target.value) || 1)
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Bonus Mode</Label>
+                <select
+                  className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                  value={bonusMode}
+                  onChange={(e) =>
+                    setBonusMode(e.target.value as 'standalone' | 'contributor')
+                  }
+                >
+                  <option value="standalone">Standalone (award only)</option>
+                  <option value="contributor">Contributor (adds to individual standings)</option>
+                </select>
+              </div>
+              {bonusMode === 'contributor' && (
+                <div className="space-y-2">
+                  <Label>Bonus Points</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.5"
+                    value={bonusPoints}
+                    onChange={(e) =>
+                      setBonusPoints(parseFloat(e.target.value) || 1)
+                    }
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Points added to the winner's individual tournament standing.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

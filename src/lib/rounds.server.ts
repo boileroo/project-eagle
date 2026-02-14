@@ -116,6 +116,7 @@ export const createRoundFn = createServerFn({ method: 'POST' })
         roundNumber: existingCount + 1,
         date: data.date ? new Date(data.date) : null,
         teeTime: data.teeTime || null,
+        format: data.format || null,
         createdByUserId: user.id,
       })
       .returning();
@@ -174,6 +175,8 @@ export const updateRoundFn = createServerFn({ method: 'POST' })
       updates.date = data.date ? new Date(data.date) : null;
     if (data.teeTime !== undefined)
       updates.teeTime = data.teeTime || null;
+    if (data.format !== undefined)
+      updates.format = data.format || null;
 
     await db.update(rounds).set(updates).where(eq(rounds.id, data.id));
 

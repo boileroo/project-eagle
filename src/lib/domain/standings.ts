@@ -15,6 +15,16 @@ import { calculateCompetitionResults } from './index';
 // Input Types
 // ──────────────────────────────────────────────
 
+/** A bonus award that contributes points to individual standings */
+export interface ContributorBonusAward {
+  roundId: string;
+  roundNumber: number | null;
+  /** The round participant who won the bonus */
+  roundParticipantId: string;
+  /** Points to add (e.g. 1 stableford point) */
+  bonusPoints: number;
+}
+
 export interface RoundCompetitionData {
   roundId: string;
   roundNumber: number | null;
@@ -34,6 +44,8 @@ export interface StandingEntry {
   roundsPlayed: number;
   /** Per-round breakdown */
   perRound: { roundId: string; roundNumber: number | null; value: number }[];
+  /** Bonus points included in total (contributor mode bonuses) */
+  bonusTotal: number;
 }
 
 export interface StandingsResult {
@@ -50,10 +62,11 @@ export function calculateStandings(
   config: AggregationConfig,
   rounds: RoundCompetitionData[],
   participantType: 'individual' | 'team',
+  contributorBonuses?: ContributorBonusAward[],
 ): StandingsResult {
   switch (config.method) {
     case 'sum_stableford':
-      return aggregateSumStableford(rounds, participantType);
+      return aggregateSumStableford(rounds, participantType, contributorBonuses ?? []);
     case 'lowest_strokes':
       return aggregateLowestStrokes(rounds, participantType, config.config);
     case 'match_wins':
@@ -71,10 +84,11 @@ export function calculateStandings(
 function aggregateSumStableford(
   rounds: RoundCompetitionData[],
   participantType: 'individual' | 'team',
+  contributorBonuses: ContributorBonusAward[],
 ): StandingsResult {
   const totals = new Map<
     string,
-    { displayName: string; total: number; roundsPlayed: number; perRound: StandingEntry['perRound'] }
+    { displayName: string; total: number; roundsPlayed: number; perRound: StandingEntry['perRound']; bonusTotal: number }
   >();
 
   for (const round of rounds) {
@@ -91,6 +105,7 @@ function aggregateSumStableford(
             total: 0,
             roundsPlayed: 0,
             perRound: [],
+            bonusTotal: 0,
           };
           existing.total += entry.totalPoints;
           existing.roundsPlayed += 1;
@@ -101,6 +116,17 @@ function aggregateSumStableford(
           });
           totals.set(entry.roundParticipantId, existing);
         }
+      }
+    }
+  }
+
+  // Add contributor bonus points to individual totals
+  if (participantType === 'individual') {
+    for (const bonus of contributorBonuses) {
+      const existing = totals.get(bonus.roundParticipantId);
+      if (existing) {
+        existing.total += bonus.bonusPoints;
+        existing.bonusTotal += bonus.bonusPoints;
       }
     }
   }
@@ -130,7 +156,7 @@ function aggregateLowestStrokes(
 ): StandingsResult {
   const totals = new Map<
     string,
-    { displayName: string; total: number; roundsPlayed: number; perRound: StandingEntry['perRound'] }
+    { displayName: string; total: number; roundsPlayed: number; perRound: StandingEntry['perRound']; bonusTotal: number }
   >();
 
   for (const round of rounds) {
@@ -152,6 +178,7 @@ function aggregateLowestStrokes(
             total: 0,
             roundsPlayed: 0,
             perRound: [],
+            bonusTotal: 0,
           };
           existing.total += value;
           existing.roundsPlayed += 1;
@@ -192,7 +219,7 @@ function aggregateMatchWins(
 ): StandingsResult {
   const totals = new Map<
     string,
-    { displayName: string; total: number; roundsPlayed: number; perRound: StandingEntry['perRound'] }
+    { displayName: string; total: number; roundsPlayed: number; perRound: StandingEntry['perRound']; bonusTotal: number }
   >();
 
   for (const round of rounds) {
@@ -223,6 +250,7 @@ function aggregateMatchWins(
                 total: 0,
                 roundsPlayed: 0,
                 perRound: [],
+                bonusTotal: 0,
               };
 
               let pts = 0;
@@ -262,6 +290,7 @@ function aggregateMatchWins(
                 total: 0,
                 roundsPlayed: 0,
                 perRound: [],
+                bonusTotal: 0,
               };
 
               let pts = 0;

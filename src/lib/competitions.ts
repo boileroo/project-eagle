@@ -91,6 +91,10 @@ export const nearestPinConfigSchema = z.object({
   config: z.object({
     /** Which hole the NTP is on */
     holeNumber: z.number().int().min(1).max(18),
+    /** standalone = separate award only; contributor = adds bonusPoints to individual standings */
+    bonusMode: z.enum(['standalone', 'contributor']).default('standalone'),
+    /** Points added to individual aggregate when mode is contributor */
+    bonusPoints: z.number().min(0).default(1),
   }),
 });
 
@@ -103,6 +107,10 @@ export const longestDriveConfigSchema = z.object({
   config: z.object({
     /** Which hole the LD is on */
     holeNumber: z.number().int().min(1).max(18),
+    /** standalone = separate award only; contributor = adds bonusPoints to individual standings */
+    bonusMode: z.enum(['standalone', 'contributor']).default('standalone'),
+    /** Points added to individual aggregate when mode is contributor */
+    bonusPoints: z.number().min(0).default(1),
   }),
 });
 

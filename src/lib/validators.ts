@@ -170,6 +170,7 @@ export const createRoundSchema = z.object({
   courseId: z.string().uuid('Please select a course'),
   date: z.string().optional(), // ISO date string from input[type=date]
   teeTime: z.string().optional(), // HH:mm string from input[type=time]
+  format: z.string().optional(), // display label e.g. "Irish Rumble", "Singles"
 });
 export type CreateRoundInput = z.infer<typeof createRoundSchema>;
 
@@ -178,6 +179,7 @@ export const updateRoundSchema = z.object({
   courseId: z.string().uuid('Please select a course').optional(),
   date: z.string().optional(),
   teeTime: z.string().optional(), // HH:mm string from input[type=time]
+  format: z.string().optional(), // display label e.g. "Irish Rumble", "Singles"
 });
 export type UpdateRoundInput = z.infer<typeof updateRoundSchema>;
 

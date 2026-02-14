@@ -34,6 +34,44 @@ Foursomes fundamentally changes the scoring input model. Currently every player 
 
 ---
 
+## Irish Rumble (Group vs Group)
+
+A team format where entire groups play against each other. Group 1 (all Team A) vs Group 2 (all Team B), with the commissioner deciding the winning team and awarding points.
+
+### Why deferred
+
+Irish Rumble requires a new competition format engine and potentially a `between_groups` group scope. The current system has `all` and `within_group` scopes, but Irish Rumble is inter-group — two groups compete against each other as units.
+
+### Possible approach
+
+**Option A — `between_groups` scope:**
+- Add a `between_groups` value to `groupScopeEnum`
+- New `irish_rumble` format type with its own config (e.g. which groups are paired, points per win)
+- Engine compares aggregate scores across paired groups
+
+**Option B — `all`-scope team competition:**
+- Irish Rumble maps naturally to a team competition with `all` scope where the commissioner simply awards the result
+- No new scope needed — the existing team match play model can represent it if groups happen to align with teams
+- May need a "commissioner-decided" match result mode (winner picked manually, not derived from scores)
+
+**Option B is simpler** and may be sufficient if the commissioner is already deciding the winner. The key question is whether results should be auto-derived from aggregate scores or manually awarded.
+
+### Impact
+
+- Schema: minor (new enum value if Option A)
+- Engine: moderate (new format engine for aggregate group-vs-group scoring)
+- UI: minor (group pairing selection in competition config)
+
+---
+
+## `between_groups` Group Scope
+
+A third scope option where competitions run between groups rather than within them. Currently only needed for Irish Rumble (see above). Could also support other inter-group formats in future.
+
+If Irish Rumble is handled via Option B (all-scope team competition), this may not be needed at all.
+
+---
+
 ## Standalone Rounds
 
 Allow rounds to exist outside tournaments for casual play (weekend 18 with mates).

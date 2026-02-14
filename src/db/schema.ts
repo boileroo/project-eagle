@@ -207,6 +207,7 @@ export const rounds = pgTable('rounds', {
   roundNumber: integer('round_number'),
   date: timestamp('date', { withTimezone: true }),
   teeTime: text('tee_time'), // HH:mm format
+  format: text('format'), // display label e.g. "Irish Rumble", "Singles"
   status: roundStatusEnum('status').notNull().default('draft'),
   createdByUserId: uuid('created_by_user_id').references(() => profiles.id, {
     onDelete: 'set null',
