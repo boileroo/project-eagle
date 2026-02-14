@@ -8,6 +8,11 @@ import {
   updateRoundFn,
 } from '@/lib/rounds.server';
 import { getCoursesFn } from '@/lib/courses.server';
+import { getScorecardFn } from '@/lib/scores.server';
+import { Scorecard } from '@/components/scorecard';
+import { ScoreEntryDialog } from '@/components/score-entry-dialog';
+import { ScoreHistoryDialog } from '@/components/score-history-dialog';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,11 +43,12 @@ export const Route = createFileRoute(
   '/_app/tournaments/$tournamentId/rounds/$roundId/',
 )({
   loader: async ({ params }) => {
-    const [round, courses] = await Promise.all([
+    const [round, courses, scorecard] = await Promise.all([
       getRoundFn({ data: { roundId: params.roundId } }),
       getCoursesFn(),
+      getScorecardFn({ data: { roundId: params.roundId } }),
     ]);
-    return { round, courses };
+    return { round, courses, scorecard };
   },
   component: RoundDetailPage,
 });
@@ -75,11 +81,45 @@ const nextTransitions: Record<string, { label: string; status: string }[]> = {
 };
 
 function RoundDetailPage() {
-  const { round, courses } = Route.useLoaderData();
+  const { round, courses, scorecard } = Route.useLoaderData();
   const navigate = useNavigate();
   const router = useRouter();
+  const { user } = useAuth();
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Score entry dialog state
+  const [scoreDialogOpen, setScoreDialogOpen] = useState(false);
+  const [scoreTarget, setScoreTarget] = useState<{
+    roundParticipantId: string;
+    holeNumber: number;
+    currentStrokes?: number;
+    participantName: string;
+    par: number;
+  } | null>(null);
+
+  // Score history dialog state
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [historyTarget, setHistoryTarget] = useState<{
+    roundParticipantId: string;
+    holeNumber: number;
+    participantName: string;
+  } | null>(null);
+
+  // Determine if current user is commissioner of this tournament
+  const isCommissioner = round.participants.some(
+    (rp) =>
+      rp.person.userId === user.id &&
+      rp.tournamentParticipant?.role === 'commissioner',
+  );
+
+  // Determine the recording role for the current user
+  const getRecordingRole = (roundParticipantId: string): 'player' | 'marker' | 'commissioner' => {
+    if (round.status === 'locked' && isCommissioner) return 'commissioner';
+    const rp = round.participants.find((p) => p.id === roundParticipantId);
+    if (rp?.person.userId === user.id) return 'player';
+    return 'marker';
+  };
 
   const tournamentId = round.tournamentId!;
 
@@ -328,6 +368,78 @@ function RoundDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Scorecard — visible when round is not draft */}
+      {round.status !== 'draft' && round.participants.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Scorecard</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 sm:p-6 sm:pt-0">
+            <Scorecard
+              holes={round.course.holes}
+              participants={round.participants}
+              scores={scorecard}
+              roundStatus={round.status}
+              isCommissioner={isCommissioner}
+              onScoreClick={(rpId, holeNumber, currentStrokes) => {
+                const rp = round.participants.find((p) => p.id === rpId);
+                const hole = round.course.holes.find(
+                  (h) => h.holeNumber === holeNumber,
+                );
+                if (!rp || !hole) return;
+                setScoreTarget({
+                  roundParticipantId: rpId,
+                  holeNumber,
+                  currentStrokes,
+                  participantName: rp.person.displayName,
+                  par: hole.par,
+                });
+                setScoreDialogOpen(true);
+              }}
+              onHistoryClick={(rpId, holeNumber) => {
+                const rp = round.participants.find((p) => p.id === rpId);
+                if (!rp) return;
+                setHistoryTarget({
+                  roundParticipantId: rpId,
+                  holeNumber,
+                  participantName: rp.person.displayName,
+                });
+                setHistoryDialogOpen(true);
+              }}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Score entry dialog */}
+      {scoreTarget && (
+        <ScoreEntryDialog
+          open={scoreDialogOpen}
+          onOpenChange={setScoreDialogOpen}
+          roundId={round.id}
+          roundParticipantId={scoreTarget.roundParticipantId}
+          participantName={scoreTarget.participantName}
+          holeNumber={scoreTarget.holeNumber}
+          par={scoreTarget.par}
+          currentStrokes={scoreTarget.currentStrokes}
+          recordedByRole={getRecordingRole(scoreTarget.roundParticipantId)}
+          isCommissioner={isCommissioner}
+          roundStatus={round.status}
+          onSaved={() => router.invalidate()}
+        />
+      )}
+
+      {/* Score history dialog */}
+      {historyTarget && (
+        <ScoreHistoryDialog
+          open={historyDialogOpen}
+          onOpenChange={setHistoryDialogOpen}
+          roundParticipantId={historyTarget.roundParticipantId}
+          holeNumber={historyTarget.holeNumber}
+          participantName={historyTarget.participantName}
+        />
+      )}
     </div>
   );
 }
