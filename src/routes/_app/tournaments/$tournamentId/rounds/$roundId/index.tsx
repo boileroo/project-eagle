@@ -5,7 +5,9 @@ import {
   transitionRoundFn,
   removeRoundParticipantFn,
   updateRoundParticipantFn,
+  updateRoundFn,
 } from '@/lib/rounds.server';
+import { getCoursesFn } from '@/lib/courses.server';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from '@tanstack/react-router';
@@ -35,8 +38,11 @@ export const Route = createFileRoute(
   '/_app/tournaments/$tournamentId/rounds/$roundId/',
 )({
   loader: async ({ params }) => {
-    const round = await getRoundFn({ data: { roundId: params.roundId } });
-    return { round };
+    const [round, courses] = await Promise.all([
+      getRoundFn({ data: { roundId: params.roundId } }),
+      getCoursesFn(),
+    ]);
+    return { round, courses };
   },
   component: RoundDetailPage,
 });
@@ -69,7 +75,7 @@ const nextTransitions: Record<string, { label: string; status: string }[]> = {
 };
 
 function RoundDetailPage() {
-  const { round } = Route.useLoaderData();
+  const { round, courses } = Route.useLoaderData();
   const navigate = useNavigate();
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
@@ -162,6 +168,14 @@ function RoundDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {round.status === 'draft' && (
+            <EditRoundDialog
+              round={round}
+              courses={courses}
+              onSaved={() => router.invalidate()}
+            />
+          )}
+
           {transitions.map((t) => (
             <Button
               key={t.status}
@@ -315,6 +329,139 @@ function RoundDetailPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Edit Round Details Dialog (course, date, tee time)
+// ──────────────────────────────────────────────
+
+function EditRoundDialog({
+  round,
+  courses,
+  onSaved,
+}: {
+  round: {
+    id: string;
+    courseId: string | null;
+    date: string | Date | null;
+    teeTime?: string | null;
+  };
+  courses: { id: string; name: string; location: string | null; numberOfHoles: number }[];
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [courseId, setCourseId] = useState(round.courseId ?? '');
+  const [date, setDate] = useState(() => {
+    if (!round.date) return '';
+    const d = new Date(round.date);
+    return d.toISOString().split('T')[0];
+  });
+  const [teeTime, setTeeTime] = useState(
+    (round as { teeTime?: string | null }).teeTime ?? '',
+  );
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateRoundFn({
+        data: {
+          id: round.id,
+          courseId: courseId || undefined,
+          date: date || undefined,
+          teeTime: teeTime || undefined,
+        },
+      });
+      toast.success('Round updated.');
+      setOpen(false);
+      onSaved();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update round',
+      );
+    }
+    setSaving(false);
+  };
+
+  // Reset form when dialog opens
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      setCourseId(round.courseId ?? '');
+      setDate(() => {
+        if (!round.date) return '';
+        const d = new Date(round.date);
+        return d.toISOString().split('T')[0];
+      });
+      setTeeTime((round as { teeTime?: string | null }).teeTime ?? '');
+    }
+    setOpen(next);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          Edit
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Round</DialogTitle>
+          <DialogDescription>
+            Change the course, date, or tee time for this round.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-round-course">Course</Label>
+            <select
+              id="edit-round-course"
+              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              value={courseId}
+              onChange={(e) => setCourseId(e.target.value)}
+            >
+              <option value="" disabled>
+                Select a course
+              </option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.numberOfHoles}h)
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-round-date">Date</Label>
+              <Input
+                id="edit-round-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-round-tee-time">Tee Time</Label>
+              <Input
+                id="edit-round-tee-time"
+                type="time"
+                value={teeTime}
+                onChange={(e) => setTeeTime(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saving || !courseId}>
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
