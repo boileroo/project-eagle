@@ -176,7 +176,7 @@ CourseHole { id, courseId, holeNumber, par, strokeIndex, yardage (optional) }
 | TournamentTeam        | A persistent team identity across the tournament                   |
 | RoundTeam             | Per-round team composition (optionally linked to a TournamentTeam) |
 | ScoreEvent            | An immutable record of strokes on a hole                           |
-| Competition           | A round-scoped scoring format config (individual or team)          |
+| Competition           | A round-scoped scoring format config (up to 1 team + 1 individual per round) |
 | BonusAward            | Winner of a bonus competition (NTP/LD) — single award per comp     |
 | TournamentStanding    | Tournament-wide aggregation config (rolls up round competitions)   |
 
@@ -223,6 +223,8 @@ Competition {
 
 The `configJson` field is validated using a **Zod discriminated union** keyed on `formatType` (defined in `src/lib/competitions.ts`):
 
+**Per-round constraints:** Each round allows at most **1 team competition**, at most **1 individual competition**, and **any number of bonus competitions** (NTP/LD). This is validated at competition creation time.
+
 ```ts
 const competitionConfigSchema = z.discriminatedUnion("formatType", [
   z.object({ formatType: z.literal("stableford"), config: z.object({ countBack: z.boolean() }) }),
@@ -267,6 +269,15 @@ BonusAward {
 ```
 
 Only one winner per bonus competition — awarding a new winner replaces the previous one.
+
+**Bonus modes:**
+
+| Mode | Behaviour |
+|---|---|
+| `standalone` | Records a winner. Displayed as a separate award. No impact on standings. |
+| `contributor` | Records a winner AND adds bonus points (e.g. +1 stableford) to the winner's individual tournament standing aggregate. |
+
+The commissioner selects the mode when creating the bonus competition. Both modes can coexist in the same round (e.g. NTP as standalone, LD as contributor).
 
 ### Tournament Standings (Aggregation)
 

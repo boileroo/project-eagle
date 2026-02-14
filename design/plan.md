@@ -4,6 +4,12 @@
 
 Phases 1–5 are complete. The app has full auth, course library, tournament setup, score entry, round status guards, role-based permissions, and a complete competition engine with UI. Groups and group-scoped competitions are scaffolded.
 
+**Key design decisions confirmed:**
+- Each round: up to 1 team comp + 1 individual comp + any bonuses
+- Bonuses can be standalone or contribute to individual standings
+- Foursomes (alternate shot) deferred — see `future-additions.md`
+- Tournaments are mandatory (no standalone rounds)
+
 **What exists:**
 - Full auth (email + password), protected routes, session handling
 - Complete Drizzle schema: profiles, persons, courses, courseHoles, tournaments, tournamentParticipants, tournamentTeams, tournamentTeamMembers, rounds, roundGroups, roundParticipants, roundTeams, roundTeamMembers, scoreEvents, competitions, bonusAwards, tournamentStandings
@@ -349,19 +355,21 @@ Polish for real-world on-course use.
 
 ## Design Decisions
 
-### Standalone Rounds (pre-Phase 3)
+### Competition Structure Per Round
 
-**Decision:** Make `rounds.tournamentId` nullable so rounds can exist outside tournaments.
+**Decision:** Each round allows at most **1 team competition**, at most **1 individual competition**, and **any number of bonus competitions**. Validated at creation time.
 
-**Rationale:** Users should be able to log casual rounds (e.g. weekend 18 with mates) without creating a tournament. A "My Rounds" view will show both tournament and standalone rounds in date order, with tournament rounds linking through to the tournament.
+**Rationale:** This matches how golf tournaments actually work — one day has one team format and one individual format running over the same scores. Bonuses (NTP/LD) are supplementary.
 
-**Schema changes:**
+### Bonus Modes
 
-- `rounds.tournamentId` — nullable (was `.notNull()`)
-- `rounds.roundNumber` — nullable (meaningless for standalone rounds)
-- `rounds.createdByUserId` — new FK to `profiles` (owner of standalone rounds)
-- `roundParticipants.tournamentParticipantId` — nullable (standalone rounds skip tournament participants)
-- `roundParticipants.personId` — new FK to `persons` (direct link, always set regardless of tournament/standalone)
+**Decision:** Bonus competitions (NTP/LD) can be either **standalone** (just records a winner) or **contributor** (adds bonus points to the winner's individual tournament standing).
+
+**Rationale:** Some tournaments use NTP/LD as tie-breakers or stableford additions. Others just want to recognise a winner. Both are valid.
+
+### Standalone Rounds
+
+**Decision:** Deferred. See `future-additions.md`. Tournaments are mandatory — every round belongs to a tournament.
 
 ---
 
