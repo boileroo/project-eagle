@@ -139,6 +139,28 @@ export const createGuestSchema = z.object({
 export type CreateGuestInput = z.infer<typeof createGuestSchema>;
 
 // ──────────────────────────────────────────────
+// Tournament team schemas
+// ──────────────────────────────────────────────
+
+export const createTeamSchema = z.object({
+  tournamentId: z.string().uuid(),
+  name: z.string().min(1, 'Team name is required'),
+});
+export type CreateTeamInput = z.infer<typeof createTeamSchema>;
+
+export const updateTeamSchema = z.object({
+  teamId: z.string().uuid(),
+  name: z.string().min(1, 'Team name is required'),
+});
+export type UpdateTeamInput = z.infer<typeof updateTeamSchema>;
+
+export const addTeamMemberSchema = z.object({
+  teamId: z.string().uuid(),
+  participantId: z.string().uuid(),
+});
+export type AddTeamMemberInput = z.infer<typeof addTeamMemberSchema>;
+
+// ──────────────────────────────────────────────
 // Round schemas
 // ──────────────────────────────────────────────
 

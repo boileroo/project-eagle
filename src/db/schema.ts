@@ -171,6 +171,23 @@ export const tournamentTeams = pgTable('tournament_teams', {
 });
 
 // ──────────────────────────────────────────────
+// Tournament Team Members
+// ──────────────────────────────────────────────
+
+export const tournamentTeamMembers = pgTable('tournament_team_members', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  teamId: uuid('team_id')
+    .references(() => tournamentTeams.id, { onDelete: 'cascade' })
+    .notNull(),
+  participantId: uuid('participant_id')
+    .references(() => tournamentParticipants.id, { onDelete: 'cascade' })
+    .notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// ──────────────────────────────────────────────
 // Rounds
 // ──────────────────────────────────────────────
 
@@ -364,6 +381,7 @@ export const tournamentParticipantsRelations = relations(
       references: [persons.id],
     }),
     roundParticipants: many(roundParticipants),
+    teamMemberships: many(tournamentTeamMembers),
   }),
 );
 
@@ -374,7 +392,22 @@ export const tournamentTeamsRelations = relations(
       fields: [tournamentTeams.tournamentId],
       references: [tournaments.id],
     }),
+    members: many(tournamentTeamMembers),
     roundTeams: many(roundTeams),
+  }),
+);
+
+export const tournamentTeamMembersRelations = relations(
+  tournamentTeamMembers,
+  ({ one }) => ({
+    team: one(tournamentTeams, {
+      fields: [tournamentTeamMembers.teamId],
+      references: [tournamentTeams.id],
+    }),
+    participant: one(tournamentParticipants, {
+      fields: [tournamentTeamMembers.participantId],
+      references: [tournamentParticipants.id],
+    }),
   }),
 );
 
@@ -528,6 +561,18 @@ export const insertTournamentTeamSchema = createInsertSchema(tournamentTeams);
 export const selectTournamentTeamSchema = createSelectSchema(tournamentTeams);
 export type InsertTournamentTeam = z.infer<typeof insertTournamentTeamSchema>;
 export type SelectTournamentTeam = z.infer<typeof selectTournamentTeamSchema>;
+
+// Tournament Team Members
+export const insertTournamentTeamMemberSchema =
+  createInsertSchema(tournamentTeamMembers);
+export const selectTournamentTeamMemberSchema =
+  createSelectSchema(tournamentTeamMembers);
+export type InsertTournamentTeamMember = z.infer<
+  typeof insertTournamentTeamMemberSchema
+>;
+export type SelectTournamentTeamMember = z.infer<
+  typeof selectTournamentTeamMemberSchema
+>;
 
 // Rounds
 export const insertRoundSchema = createInsertSchema(rounds);

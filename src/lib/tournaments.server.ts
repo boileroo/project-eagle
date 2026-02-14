@@ -58,6 +58,19 @@ export const getTournamentFn = createServerFn({ method: 'GET' })
             person: true,
           },
         },
+        teams: {
+          with: {
+            members: {
+              with: {
+                participant: {
+                  with: {
+                    person: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         rounds: {
           orderBy: (rounds, { asc }) => [asc(rounds.roundNumber)],
           with: {
@@ -87,6 +100,18 @@ export const createTournamentFn = createServerFn({ method: 'POST' })
         createdByUserId: user.id,
       })
       .returning();
+
+    // Auto-add the creator as commissioner
+    const person = await db.query.persons.findFirst({
+      where: eq(persons.userId, user.id),
+    });
+    if (person) {
+      await db.insert(tournamentParticipants).values({
+        tournamentId: tournament.id,
+        personId: person.id,
+        role: 'commissioner',
+      });
+    }
 
     return { tournamentId: tournament.id };
   });
@@ -227,12 +252,38 @@ export const addParticipantFn = createServerFn({ method: 'POST' })
       });
     if (existingParticipant) throw new Error('Person is already a participant');
 
+    // Look up person to check guest status
+    const person = await db.query.persons.findFirst({
+      where: eq(persons.id, data.personId),
+    });
+    if (!person) throw new Error('Person not found');
+
+    const role = data.role ?? 'player';
+
+    // Guests can only be player or spectator
+    if (person.userId == null && (role === 'commissioner' || role === 'marker')) {
+      throw new Error('Guests can only be assigned player or spectator roles');
+    }
+
+    // If adding as commissioner, demote any existing commissioner to player
+    if (role === 'commissioner') {
+      await db
+        .update(tournamentParticipants)
+        .set({ role: 'player' })
+        .where(
+          and(
+            eq(tournamentParticipants.tournamentId, data.tournamentId),
+            eq(tournamentParticipants.role, 'commissioner'),
+          ),
+        );
+    }
+
     const [participant] = await db
       .insert(tournamentParticipants)
       .values({
         tournamentId: data.tournamentId,
         personId: data.personId,
-        role: data.role ?? 'player',
+        role,
         handicapOverride: data.handicapOverride?.toString() ?? null,
       })
       .returning();
@@ -251,8 +302,31 @@ export const updateParticipantFn = createServerFn({ method: 'POST' })
 
     const existing = await db.query.tournamentParticipants.findFirst({
       where: eq(tournamentParticipants.id, data.participantId),
+      with: { person: true },
     });
     if (!existing) throw new Error('Participant not found');
+
+    // Guest role restriction
+    if (
+      data.role !== undefined &&
+      existing.person.userId == null &&
+      (data.role === 'commissioner' || data.role === 'marker')
+    ) {
+      throw new Error('Guests can only be assigned player or spectator roles');
+    }
+
+    // If promoting to commissioner, demote existing commissioner to player
+    if (data.role === 'commissioner' && existing.role !== 'commissioner') {
+      await db
+        .update(tournamentParticipants)
+        .set({ role: 'player' })
+        .where(
+          and(
+            eq(tournamentParticipants.tournamentId, existing.tournamentId),
+            eq(tournamentParticipants.role, 'commissioner'),
+          ),
+        );
+    }
 
     const updates: Record<string, unknown> = {};
     if (data.role !== undefined) updates.role = data.role;
