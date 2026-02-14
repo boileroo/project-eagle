@@ -47,6 +47,14 @@ export function ScoreEntryDialog({
   );
   const [saving, setSaving] = useState(false);
 
+  // Sync strokes state when the target hole/participant changes
+  const targetKey = `${roundParticipantId}:${holeNumber}`;
+  const [prevTargetKey, setPrevTargetKey] = useState(targetKey);
+  if (targetKey !== prevTargetKey) {
+    setPrevTargetKey(targetKey);
+    setStrokes(currentStrokes ?? null);
+  }
+
   // Determine the effective role — commissioner override for locked rounds
   const effectiveRole =
     roundStatus === 'locked' && isCommissioner ? 'commissioner' : recordedByRole;
