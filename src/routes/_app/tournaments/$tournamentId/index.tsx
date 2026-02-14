@@ -9,6 +9,8 @@ import {
   createGuestPersonFn,
   getMyPersonFn,
 } from '@/lib/tournaments.server';
+import { getCoursesFn } from '@/lib/courses.server';
+import { createRoundFn } from '@/lib/rounds.server';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,17 +40,18 @@ import { useRouter } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
   loader: async ({ params }) => {
-    const [tournament, myPerson] = await Promise.all([
+    const [tournament, myPerson, courses] = await Promise.all([
       getTournamentFn({ data: { tournamentId: params.tournamentId } }),
       getMyPersonFn(),
+      getCoursesFn(),
     ]);
-    return { tournament, myPerson };
+    return { tournament, myPerson, courses };
   },
   component: TournamentDetailPage,
 });
 
 function TournamentDetailPage() {
-  const { tournament, myPerson } = Route.useLoaderData();
+  const { tournament, myPerson, courses } = Route.useLoaderData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const router = useRouter();
@@ -294,26 +297,39 @@ function TournamentDetailPage() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Rounds</span>
-            <Badge variant="secondary">
-              {tournament.rounds.length} round
-              {tournament.rounds.length !== 1 ? 's' : ''}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
+                {tournament.rounds.length} round
+                {tournament.rounds.length !== 1 ? 's' : ''}
+              </Badge>
+              <AddRoundDialog
+                tournamentId={tournament.id}
+                courses={courses}
+                nextRoundNumber={tournament.rounds.length + 1}
+                onAdded={() => router.invalidate()}
+              />
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {tournament.rounds.length === 0 ? (
             <p className="text-muted-foreground text-sm">
-              No rounds yet. Create rounds once players are added.
+              No rounds yet. Add a round to get started.
             </p>
           ) : (
             <div className="space-y-2">
               {tournament.rounds.map((r) => (
-                <div
+                <Link
                   key={r.id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2"
+                  to="/tournaments/$tournamentId/rounds/$roundId"
+                  params={{
+                    tournamentId: tournament.id,
+                    roundId: r.id,
+                  }}
+                  className="group flex items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-accent"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-medium group-hover:text-primary">
                       Round {r.roundNumber ?? '—'}
                     </span>
                     {r.course && (
@@ -327,7 +343,7 @@ function TournamentDetailPage() {
                   >
                     {r.status}
                   </Badge>
-                </div>
+                </Link>
               ))}
             </div>
           )}
@@ -637,6 +653,140 @@ function EditHandicapDialog({
           </Button>
           <Button onClick={handleSave} disabled={saving}>
             {saving ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Add Round Dialog
+// ──────────────────────────────────────────────
+
+function AddRoundDialog({
+  tournamentId,
+  courses,
+  nextRoundNumber,
+  onAdded,
+}: {
+  tournamentId: string;
+  courses: { id: string; name: string; location: string | null; numberOfHoles: number }[];
+  nextRoundNumber: number;
+  onAdded: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [courseId, setCourseId] = useState('');
+  const [roundNumber, setRoundNumber] = useState(nextRoundNumber.toString());
+  const [date, setDate] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const handleAdd = async () => {
+    if (!courseId) {
+      toast.error('Please select a course');
+      return;
+    }
+    setAdding(true);
+    try {
+      await createRoundFn({
+        data: {
+          tournamentId,
+          courseId,
+          roundNumber: roundNumber ? parseInt(roundNumber, 10) : null,
+          date: date || undefined,
+        },
+      });
+      toast.success('Round created! All tournament players have been added.');
+      setOpen(false);
+      setCourseId('');
+      setRoundNumber((nextRoundNumber + 1).toString());
+      setDate('');
+      onAdded();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create round',
+      );
+    }
+    setAdding(false);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) {
+          setCourseId('');
+          setRoundNumber(nextRoundNumber.toString());
+          setDate('');
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button size="sm">Add Round</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Round</DialogTitle>
+          <DialogDescription>
+            Select a course and set round details. All current tournament
+            players will be automatically added to the round.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="courseSelect">Course</Label>
+            <select
+              id="courseSelect"
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              value={courseId}
+              onChange={(e) => setCourseId(e.target.value)}
+            >
+              <option value="">Select a course…</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.numberOfHoles} holes)
+                  {c.location ? ` — ${c.location}` : ''}
+                </option>
+              ))}
+            </select>
+            {courses.length === 0 && (
+              <p className="text-muted-foreground mt-1 text-xs">
+                No courses yet.{' '}
+                <Link to="/courses/new" className="text-primary underline">
+                  Create one first
+                </Link>
+                .
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="roundNumber">Round Number</Label>
+            <Input
+              id="roundNumber"
+              type="number"
+              min={1}
+              value={roundNumber}
+              onChange={(e) => setRoundNumber(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="roundDate">Date (optional)</Label>
+            <Input
+              id="roundDate"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button onClick={handleAdd} disabled={adding || !courseId}>
+            {adding ? 'Creating…' : 'Create Round'}
           </Button>
         </DialogFooter>
       </DialogContent>

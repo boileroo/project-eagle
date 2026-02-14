@@ -137,3 +137,23 @@ export const createGuestSchema = z.object({
     .optional(),
 });
 export type CreateGuestInput = z.infer<typeof createGuestSchema>;
+
+// ──────────────────────────────────────────────
+// Round schemas
+// ──────────────────────────────────────────────
+
+export const createRoundSchema = z.object({
+  tournamentId: z.string().uuid(),
+  courseId: z.string().uuid('Please select a course'),
+  roundNumber: z.number().int().min(1).nullable().optional(),
+  date: z.string().optional(), // ISO date string from input[type=date]
+});
+export type CreateRoundInput = z.infer<typeof createRoundSchema>;
+
+export const updateRoundSchema = z.object({
+  id: z.string().uuid(),
+  courseId: z.string().uuid('Please select a course').optional(),
+  roundNumber: z.number().int().min(1).nullable().optional(),
+  date: z.string().optional(),
+});
+export type UpdateRoundInput = z.infer<typeof updateRoundSchema>;

@@ -145,12 +145,18 @@ The core "commissioner" workflow: create a tournament, add people, assign to rou
 - Server functions: searchPersonsFn, addParticipantFn, removeParticipantFn, updateParticipantFn, createGuestPersonFn, getMyPersonFn
 - Validators: addParticipantSchema, updateParticipantSchema, createGuestSchema
 
-### 3.4 Round Management
+### 3.4 Round Management ✅
 
-- Create rounds within a tournament, assign a course, set round number/date
-- Round status workflow: `draft` → `open` → `locked` → `finalized`
-- Create `RoundParticipant` records with handicap snapshots (auto-captured from `Person.currentHandicap`)
-- Commissioner can set per-round handicap overrides
+- "Add Round" dialog on tournament hub: select course, set round number/date
+- Auto-adds all tournament participants as round participants with handicap snapshots
+- Round detail page at `/tournaments/$tournamentId/rounds/$roundId`
+- Round status workflow with transition buttons: `draft` → `open` → `locked` → `finalized` (and back for corrections)
+- Round participant list with per-round handicap override dialog
+- Remove participant from round
+- Delete round with confirmation
+- Clickable round rows in tournament hub link to round detail
+- Server functions: createRoundFn, getRoundFn, updateRoundFn, deleteRoundFn, transitionRoundFn, addRoundParticipantFn, removeRoundParticipantFn, updateRoundParticipantFn
+- Validators: createRoundSchema, updateRoundSchema
 
 ### 3.5 Team Setup
 
