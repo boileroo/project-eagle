@@ -749,6 +749,11 @@ function PlayersAndGroupsSection({
             Guest
           </Badge>
         )}
+        {rp.tournamentParticipant?.teamMemberships?.[0]?.team && (
+          <Badge variant="secondary" className="text-xs">
+            {rp.tournamentParticipant.teamMemberships[0].team.name}
+          </Badge>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <Badge variant="outline">

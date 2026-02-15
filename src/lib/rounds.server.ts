@@ -83,7 +83,13 @@ export const getRoundFn = createServerFn({ method: 'GET' })
         participants: {
           with: {
             person: true,
-            tournamentParticipant: true,
+            tournamentParticipant: {
+              with: {
+                teamMemberships: {
+                  with: { team: true },
+                },
+              },
+            },
           },
           orderBy: (rp, { asc }) => [asc(rp.createdAt)],
         },
