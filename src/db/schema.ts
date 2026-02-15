@@ -70,7 +70,7 @@ export const profiles = pgTable('profiles', {
 export const persons = pgTable('persons', {
   id: uuid('id').primaryKey().defaultRandom(),
   displayName: text('display_name').notNull(),
-  userId: uuid('user_id').references(() => profiles.id, {
+  userId: uuid('user_id').unique().references(() => profiles.id, {
     onDelete: 'set null',
   }),
   createdByUserId: uuid('created_by_user_id').references(() => profiles.id, {
