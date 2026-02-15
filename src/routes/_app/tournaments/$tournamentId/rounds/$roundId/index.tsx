@@ -1385,6 +1385,11 @@ function ConfigureMatchesDialog({
     return rp?.tournamentParticipant?.teamMemberships?.[0]?.team?.name ?? null;
   };
 
+  const getPlayerTeamId = (rpId: string) => {
+    const rp = participants.find((p) => p.id === rpId);
+    return rp?.tournamentParticipant?.teamMemberships?.[0]?.team?.id ?? null;
+  };
+
   // Get pairings that belong to a specific group
   const getPairingsForGroup = (groupId: string) => {
     const groupMemberIds = new Set(
@@ -1551,7 +1556,16 @@ function ConfigureMatchesDialog({
                         >
                           <option value="">Player A</option>
                           {available
-                            .filter((rp) => rp.id !== playerB)
+                            .filter((rp) => {
+                              if (rp.id === playerB) return false;
+                              // If Player B is selected, hide same-team players
+                              if (playerB) {
+                                const selectedTeamId = getPlayerTeamId(playerB);
+                                const rpTeamId = rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id ?? null;
+                                if (selectedTeamId && rpTeamId && selectedTeamId === rpTeamId) return false;
+                              }
+                              return true;
+                            })
                             .map((rp) => {
                               const team =
                                 rp.tournamentParticipant?.teamMemberships?.[0]?.team?.name;
@@ -1573,7 +1587,16 @@ function ConfigureMatchesDialog({
                         >
                           <option value="">Player B</option>
                           {available
-                            .filter((rp) => rp.id !== playerA)
+                            .filter((rp) => {
+                              if (rp.id === playerA) return false;
+                              // If Player A is selected, hide same-team players
+                              if (playerA) {
+                                const selectedTeamId = getPlayerTeamId(playerA);
+                                const rpTeamId = rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id ?? null;
+                                if (selectedTeamId && rpTeamId && selectedTeamId === rpTeamId) return false;
+                              }
+                              return true;
+                            })
                             .map((rp) => {
                               const team =
                                 rp.tournamentParticipant?.teamMemberships?.[0]?.team?.name;
