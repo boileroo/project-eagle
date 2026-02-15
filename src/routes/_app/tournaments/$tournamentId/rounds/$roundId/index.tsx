@@ -1090,6 +1090,11 @@ function CompetitionsSection({
                     roundId={round.id}
                     onSaved={onChanged}
                   />
+                  <AddBonusCompDialog
+                    tournamentId={round.tournamentId}
+                    roundId={round.id}
+                    onSaved={onChanged}
+                  />
                 </>
               )}
             </div>
@@ -1964,6 +1969,9 @@ const INDIVIDUAL_FORMATS: { value: CompetitionConfig['formatType']; label: strin
   { value: 'stableford', label: 'Stableford' },
   { value: 'stroke_play', label: 'Stroke Play' },
   { value: 'match_play', label: 'Match Play' },
+];
+
+const BONUS_FORMATS: { value: CompetitionConfig['formatType']; label: string }[] = [
   { value: 'nearest_pin', label: 'Nearest the Pin' },
   { value: 'longest_drive', label: 'Longest Drive' },
 ];
@@ -1986,22 +1994,16 @@ function AddIndividualCompDialog({
   // Format-specific config state
   const [countBack, setCountBack] = useState(true);
   const [scoringBasis, setScoringBasis] = useState<'net_strokes' | 'gross_strokes'>('net_strokes');
-  const [holeNumber, setHoleNumber] = useState(1);
   const [pointsPerWin, setPointsPerWin] = useState(1);
   const [pointsPerHalf, setPointsPerHalf] = useState(0.5);
-  const [bonusMode, setBonusMode] = useState<'standalone' | 'contributor'>('standalone');
-  const [bonusPoints, setBonusPoints] = useState(1);
 
   const resetForm = () => {
     setName('');
     setFormatType('stableford');
     setCountBack(true);
     setScoringBasis('net_strokes');
-    setHoleNumber(1);
     setPointsPerWin(1);
     setPointsPerHalf(0.5);
-    setBonusMode('standalone');
-    setBonusPoints(1);
   };
 
   const buildConfig = (): CompetitionConfig => {
@@ -2015,10 +2017,6 @@ function AddIndividualCompDialog({
           formatType: 'match_play',
           config: { pointsPerWin, pointsPerHalf, pairings: [] },
         };
-      case 'nearest_pin':
-        return { formatType: 'nearest_pin', config: { holeNumber, bonusMode, bonusPoints } };
-      case 'longest_drive':
-        return { formatType: 'longest_drive', config: { holeNumber, bonusMode, bonusPoints } };
       default:
         return { formatType: 'stableford', config: { countBack } };
     }
@@ -2165,53 +2163,6 @@ function AddIndividualCompDialog({
               <p className="text-muted-foreground text-xs">
                 Pairings can be configured after creation.
               </p>
-            </div>
-          )}
-
-          {(formatType === 'nearest_pin' || formatType === 'longest_drive') && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Hole Number</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={18}
-                  value={holeNumber}
-                  onChange={(e) =>
-                    setHoleNumber(parseInt(e.target.value) || 1)
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Bonus Mode</Label>
-                <select
-                  className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                  value={bonusMode}
-                  onChange={(e) =>
-                    setBonusMode(e.target.value as 'standalone' | 'contributor')
-                  }
-                >
-                  <option value="standalone">Standalone (award only)</option>
-                  <option value="contributor">Contributor (adds to individual standings)</option>
-                </select>
-              </div>
-              {bonusMode === 'contributor' && (
-                <div className="space-y-2">
-                  <Label>Bonus Points</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.5"
-                    value={bonusPoints}
-                    onChange={(e) =>
-                      setBonusPoints(parseFloat(e.target.value) || 1)
-                    }
-                  />
-                  <p className="text-muted-foreground text-xs">
-                    Points added to the winner's individual tournament standing.
-                  </p>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -2392,6 +2343,184 @@ function AddTeamCompDialog({
               Pairings can be configured after creation.
             </p>
           </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saving || !name.trim()}>
+            {saving ? 'Creating…' : 'Create'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Add Bonus Competition Dialog (NTP / LD)
+// ──────────────────────────────────────────────
+
+function AddBonusCompDialog({
+  tournamentId,
+  roundId,
+  onSaved,
+}: {
+  tournamentId: string;
+  roundId: string;
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [name, setName] = useState('');
+  const [formatType, setFormatType] =
+    useState<CompetitionConfig['formatType']>('nearest_pin');
+  const [holeNumber, setHoleNumber] = useState(1);
+  const [bonusMode, setBonusMode] = useState<'standalone' | 'contributor'>('standalone');
+  const [bonusPoints, setBonusPoints] = useState(1);
+
+  const resetForm = () => {
+    setName('');
+    setFormatType('nearest_pin');
+    setHoleNumber(1);
+    setBonusMode('standalone');
+    setBonusPoints(1);
+  };
+
+  const buildConfig = (): CompetitionConfig => {
+    switch (formatType) {
+      case 'nearest_pin':
+        return { formatType: 'nearest_pin', config: { holeNumber, bonusMode, bonusPoints } };
+      case 'longest_drive':
+        return { formatType: 'longest_drive', config: { holeNumber, bonusMode, bonusPoints } };
+      default:
+        return { formatType: 'nearest_pin', config: { holeNumber, bonusMode, bonusPoints } };
+    }
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast.error('Competition name is required.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await createCompetitionFn({
+        data: {
+          tournamentId,
+          name: name.trim(),
+          participantType: 'individual',
+          groupScope: 'all',
+          roundId,
+          competitionConfig: buildConfig(),
+        },
+      });
+      toast.success('Bonus competition created.');
+      setOpen(false);
+      resetForm();
+      onSaved();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create competition',
+      );
+    }
+    setSaving(false);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) resetForm();
+        setOpen(next);
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          + Bonus
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Bonus Prize</DialogTitle>
+          <DialogDescription>
+            Add a nearest-the-pin or longest-drive prize.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="bonus-comp-name">Name</Label>
+            <Input
+              id="bonus-comp-name"
+              placeholder="e.g. NTP Hole 7"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bonus-comp-format">Type</Label>
+            <select
+              id="bonus-comp-format"
+              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              value={formatType}
+              onChange={(e) =>
+                setFormatType(e.target.value as CompetitionConfig['formatType'])
+              }
+            >
+              {BONUS_FORMATS.map((ft) => (
+                <option key={ft.value} value={ft.value}>
+                  {ft.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Hole Number</Label>
+            <Input
+              type="number"
+              min={1}
+              max={18}
+              value={holeNumber}
+              onChange={(e) =>
+                setHoleNumber(parseInt(e.target.value) || 1)
+              }
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Bonus Mode</Label>
+            <select
+              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              value={bonusMode}
+              onChange={(e) =>
+                setBonusMode(e.target.value as 'standalone' | 'contributor')
+              }
+            >
+              <option value="standalone">Standalone (award only)</option>
+              <option value="contributor">Contributor (adds to individual standings)</option>
+            </select>
+          </div>
+
+          {bonusMode === 'contributor' && (
+            <div className="space-y-2">
+              <Label>Bonus Points</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.5"
+                value={bonusPoints}
+                onChange={(e) =>
+                  setBonusPoints(parseFloat(e.target.value) || 1)
+                }
+              />
+              <p className="text-muted-foreground text-xs">
+                Points added to the winner's individual tournament standing.
+              </p>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
