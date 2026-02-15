@@ -159,6 +159,7 @@ export const updateCompetitionFn = createServerFn({ method: 'POST' })
 
     const updates: Record<string, unknown> = {};
     if (data.name !== undefined) updates.name = data.name;
+    if (data.groupScope !== undefined) updates.groupScope = data.groupScope;
     if (data.competitionConfig !== undefined) {
       const parsed = competitionConfigSchema.parse(data.competitionConfig);
       updates.formatType = parsed.formatType;
