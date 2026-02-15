@@ -55,7 +55,6 @@ import { toast } from 'sonner';
 import { useRouter } from '@tanstack/react-router';
 import {
   FORMAT_TYPE_LABELS,
-  FORMAT_TYPES,
   isBonusFormat,
   isMatchFormat,
 } from '@/lib/competitions';
@@ -1080,12 +1079,18 @@ function CompetitionsSection({
                 {competitions.length}
               </Badge>
               {isCommissioner && (
-                <AddCompetitionDialog
-                  tournamentId={round.tournamentId}
-                  roundId={round.id}
-                  participants={round.participants}
-                  onSaved={onChanged}
-                />
+                <>
+                  <AddIndividualCompDialog
+                    tournamentId={round.tournamentId}
+                    roundId={round.id}
+                    onSaved={onChanged}
+                  />
+                  <AddTeamCompDialog
+                    tournamentId={round.tournamentId}
+                    roundId={round.id}
+                    onSaved={onChanged}
+                  />
+                </>
               )}
             </div>
           </CardTitle>
@@ -1569,18 +1574,24 @@ function ConfigureMatchesDialog({
 }
 
 // ──────────────────────────────────────────────
-// Add Competition Dialog
+// Add Individual Competition Dialog
 // ──────────────────────────────────────────────
 
-function AddCompetitionDialog({
+const INDIVIDUAL_FORMATS: { value: CompetitionConfig['formatType']; label: string }[] = [
+  { value: 'stableford', label: 'Stableford' },
+  { value: 'stroke_play', label: 'Stroke Play' },
+  { value: 'match_play', label: 'Match Play' },
+  { value: 'nearest_pin', label: 'Nearest the Pin' },
+  { value: 'longest_drive', label: 'Longest Drive' },
+];
+
+function AddIndividualCompDialog({
   tournamentId,
   roundId,
-  participants: _participants,
   onSaved,
 }: {
   tournamentId: string;
   roundId: string;
-  participants: RoundData['participants'];
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -1588,7 +1599,6 @@ function AddCompetitionDialog({
   const [name, setName] = useState('');
   const [formatType, setFormatType] =
     useState<CompetitionConfig['formatType']>('stableford');
-  const [participantType, setParticipantType] = useState<'individual' | 'team'>('individual');
 
   // Format-specific config state
   const [countBack, setCountBack] = useState(true);
@@ -1602,7 +1612,6 @@ function AddCompetitionDialog({
   const resetForm = () => {
     setName('');
     setFormatType('stableford');
-    setParticipantType('individual');
     setCountBack(true);
     setScoringBasis('net_strokes');
     setHoleNumber(1);
@@ -1623,15 +1632,12 @@ function AddCompetitionDialog({
           formatType: 'match_play',
           config: { pointsPerWin, pointsPerHalf, pairings: [] },
         };
-      case 'best_ball':
-        return {
-          formatType: 'best_ball',
-          config: { pointsPerWin, pointsPerHalf, pairings: [] },
-        };
       case 'nearest_pin':
         return { formatType: 'nearest_pin', config: { holeNumber, bonusMode, bonusPoints } };
       case 'longest_drive':
         return { formatType: 'longest_drive', config: { holeNumber, bonusMode, bonusPoints } };
+      default:
+        return { formatType: 'stableford', config: { countBack } };
     }
   };
 
@@ -1646,7 +1652,7 @@ function AddCompetitionDialog({
         data: {
           tournamentId,
           name: name.trim(),
-          participantType,
+          participantType: 'individual',
           groupScope: 'all',
           roundId,
           competitionConfig: buildConfig(),
@@ -1674,22 +1680,21 @@ function AddCompetitionDialog({
     >
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          + Add
+          + Individual
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Competition</DialogTitle>
+          <DialogTitle>Add Individual Competition</DialogTitle>
           <DialogDescription>
-            Create a new competition for this round.
+            Create a competition scored per player.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="comp-name">Name</Label>
+            <Label htmlFor="indiv-comp-name">Name</Label>
             <Input
-              id="comp-name"
+              id="indiv-comp-name"
               placeholder="e.g. Day 1 Stableford"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -1697,52 +1702,34 @@ function AddCompetitionDialog({
             />
           </div>
 
-          {/* Format */}
           <div className="space-y-2">
-            <Label htmlFor="comp-format">Format</Label>
+            <Label htmlFor="indiv-comp-format">Format</Label>
             <select
-              id="comp-format"
+              id="indiv-comp-format"
               className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               value={formatType}
               onChange={(e) =>
                 setFormatType(e.target.value as CompetitionConfig['formatType'])
               }
             >
-              {FORMAT_TYPES.map((ft) => (
-                <option key={ft} value={ft}>
-                  {FORMAT_TYPE_LABELS[ft]}
+              {INDIVIDUAL_FORMATS.map((ft) => (
+                <option key={ft.value} value={ft.value}>
+                  {ft.label}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Participant Type */}
-          <div className="space-y-2">
-            <Label htmlFor="comp-participant-type">Participant Type</Label>
-            <select
-              id="comp-participant-type"
-              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-              value={participantType}
-              onChange={(e) =>
-                setParticipantType(e.target.value as 'individual' | 'team')
-              }
-            >
-              <option value="individual">Individual</option>
-              <option value="team">Team</option>
-            </select>
-          </div>
-
-          {/* Format-specific config */}
           {formatType === 'stableford' && (
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                id="comp-countback"
+                id="indiv-countback"
                 checked={countBack}
                 onChange={(e) => setCountBack(e.target.checked)}
                 className="h-4 w-4"
               />
-              <Label htmlFor="comp-countback">
+              <Label htmlFor="indiv-countback">
                 Count-back tiebreaker
               </Label>
             </div>
@@ -1764,7 +1751,7 @@ function AddCompetitionDialog({
             </div>
           )}
 
-          {(formatType === 'match_play' || formatType === 'best_ball') && (
+          {formatType === 'match_play' && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
@@ -1844,6 +1831,184 @@ function AddCompetitionDialog({
               )}
             </div>
           )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saving || !name.trim()}>
+            {saving ? 'Creating…' : 'Create'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Add Team Competition Dialog
+// ──────────────────────────────────────────────
+
+const TEAM_FORMATS: { value: CompetitionConfig['formatType']; label: string }[] = [
+  { value: 'match_play', label: 'Match Play' },
+  { value: 'best_ball', label: 'Best Ball' },
+];
+
+function AddTeamCompDialog({
+  tournamentId,
+  roundId,
+  onSaved,
+}: {
+  tournamentId: string;
+  roundId: string;
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [name, setName] = useState('');
+  const [formatType, setFormatType] =
+    useState<CompetitionConfig['formatType']>('match_play');
+
+  const [pointsPerWin, setPointsPerWin] = useState(1);
+  const [pointsPerHalf, setPointsPerHalf] = useState(0.5);
+
+  const resetForm = () => {
+    setName('');
+    setFormatType('match_play');
+    setPointsPerWin(1);
+    setPointsPerHalf(0.5);
+  };
+
+  const buildConfig = (): CompetitionConfig => {
+    switch (formatType) {
+      case 'match_play':
+        return {
+          formatType: 'match_play',
+          config: { pointsPerWin, pointsPerHalf, pairings: [] },
+        };
+      case 'best_ball':
+        return {
+          formatType: 'best_ball',
+          config: { pointsPerWin, pointsPerHalf, pairings: [] },
+        };
+      default:
+        return {
+          formatType: 'match_play',
+          config: { pointsPerWin, pointsPerHalf, pairings: [] },
+        };
+    }
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast.error('Competition name is required.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await createCompetitionFn({
+        data: {
+          tournamentId,
+          name: name.trim(),
+          participantType: 'team',
+          groupScope: 'all',
+          roundId,
+          competitionConfig: buildConfig(),
+        },
+      });
+      toast.success('Competition created.');
+      setOpen(false);
+      resetForm();
+      onSaved();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create competition',
+      );
+    }
+    setSaving(false);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) resetForm();
+        setOpen(next);
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          + Team
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Team Competition</DialogTitle>
+          <DialogDescription>
+            Create a competition scored between teams.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="team-comp-name">Name</Label>
+            <Input
+              id="team-comp-name"
+              placeholder="e.g. Day 1 Match Play"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="team-comp-format">Format</Label>
+            <select
+              id="team-comp-format"
+              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              value={formatType}
+              onChange={(e) =>
+                setFormatType(e.target.value as CompetitionConfig['formatType'])
+              }
+            >
+              {TEAM_FORMATS.map((ft) => (
+                <option key={ft.value} value={ft.value}>
+                  {ft.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Points per Win</Label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={pointsPerWin}
+                  onChange={(e) =>
+                    setPointsPerWin(parseFloat(e.target.value) || 0)
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Points per Half</Label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={pointsPerHalf}
+                  onChange={(e) =>
+                    setPointsPerHalf(parseFloat(e.target.value) || 0)
+                  }
+                />
+              </div>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Pairings can be configured after creation.
+            </p>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
