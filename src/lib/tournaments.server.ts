@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { and, eq, ilike } from 'drizzle-orm';
 import { db } from '@/db';
-import { persons, tournamentParticipants, tournaments } from '@/db/schema';
+import { persons, profiles, tournamentParticipants, tournaments } from '@/db/schema';
 import { requireAuth, requireCommissioner } from './auth.helpers';
 import type {
   AddParticipantInput,
@@ -223,21 +223,25 @@ export const addParticipantFn = createServerFn({ method: 'POST' })
 
     const isSelfJoin = person.userId === user.id;
 
-    if (isSelfJoin) {
-      // Self-join: anyone can add themselves as player
-      if (data.role && data.role !== 'player') {
-        throw new Error('You can only join as a player');
-      }
-    } else {
-      // Adding someone else: require commissioner
-      await requireCommissioner(data.tournamentId);
-    }
-
     // Verify tournament exists
     const tournament = await db.query.tournaments.findFirst({
       where: eq(tournaments.id, data.tournamentId),
     });
     if (!tournament) throw new Error('Tournament not found');
+
+    const isCreator = tournament.createdByUserId === user.id;
+
+    if (isSelfJoin) {
+      // Creator can join as commissioner; others self-join as player only
+      if (data.role && data.role !== 'player' && !(data.role === 'commissioner' && isCreator)) {
+        throw new Error('You can only join as a player');
+      }
+    } else {
+      // Adding someone else: require commissioner (or creator)
+      if (!isCreator) {
+        await requireCommissioner(data.tournamentId);
+      }
+    }
 
     // Check person isn't already a participant
     const existingParticipant =
@@ -368,5 +372,37 @@ export const getMyPersonFn = createServerFn({ method: 'GET' }).handler(
     });
 
     return person ?? null;
+  },
+);
+
+// ──────────────────────────────────────────────
+// Ensure current user has a person record (create if missing)
+// ──────────────────────────────────────────────
+
+export const ensureMyPersonFn = createServerFn({ method: 'POST' }).handler(
+  async () => {
+    const user = await requireAuth();
+
+    const existing = await db.query.persons.findFirst({
+      where: eq(persons.userId, user.id),
+    });
+    if (existing) return existing;
+
+    // Look up profile for display name
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, user.id),
+    });
+    const displayName = profile?.displayName || profile?.email || 'Unknown';
+
+    const [person] = await db
+      .insert(persons)
+      .values({
+        displayName,
+        userId: user.id,
+        createdByUserId: user.id,
+      })
+      .returning();
+
+    return person;
   },
 );

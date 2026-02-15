@@ -1,7 +1,7 @@
 import { getRequest } from '@tanstack/react-start/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/db';
-import { persons, tournamentParticipants } from '@/db/schema';
+import { persons, tournaments, tournamentParticipants } from '@/db/schema';
 import { createSupabaseServerClient } from './supabase.server';
 
 // ──────────────────────────────────────────────
@@ -26,6 +26,12 @@ export async function requireAuth() {
 
 export async function requireCommissioner(tournamentId: string) {
   const user = await requireAuth();
+
+  // Tournament creator always has commissioner-level access
+  const tournament = await db.query.tournaments.findFirst({
+    where: eq(tournaments.id, tournamentId),
+  });
+  if (tournament?.createdByUserId === user.id) return user;
 
   const person = await db.query.persons.findFirst({
     where: eq(persons.userId, user.id),

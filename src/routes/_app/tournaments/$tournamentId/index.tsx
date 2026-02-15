@@ -8,7 +8,9 @@ import {
   updateParticipantFn,
   createGuestPersonFn,
   getMyPersonFn,
+  ensureMyPersonFn,
 } from '@/lib/tournaments.server';
+import { useAuth } from '@/hooks/use-auth';
 import {
   createTeamFn,
   updateTeamFn,
@@ -73,6 +75,7 @@ function TournamentDetailPage() {
   const { tournament, myPerson, courses, standings } = Route.useLoaderData();
   const navigate = useNavigate();
   const router = useRouter();
+  const { user } = useAuth();
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [commissionerConfirm, setCommissionerConfirm] = useState<{
@@ -80,11 +83,13 @@ function TournamentDetailPage() {
     name: string;
   } | null>(null);
 
-  const isCommissioner = myPerson
+  // The tournament creator always has commissioner-level access
+  const isCreator = user.id === tournament.createdByUserId;
+  const isCommissioner = isCreator || (myPerson
     ? tournament.participants.some(
         (p) => p.personId === myPerson.id && p.role === 'commissioner',
       )
-    : false;
+    : false);
   const iAmParticipant = myPerson
     ? tournament.participants.some((p) => p.personId === myPerson.id)
     : false;
@@ -108,13 +113,14 @@ function TournamentDetailPage() {
   };
 
   const handleAddMyself = async () => {
-    if (!myPerson) return;
     try {
+      // Ensure person record exists (creates one if missing)
+      const person = myPerson ?? await ensureMyPersonFn();
       await addParticipantFn({
         data: {
           tournamentId: tournament.id,
-          personId: myPerson.id,
-          role: 'player',
+          personId: person.id,
+          role: isCreator && tournament.participants.length === 0 ? 'commissioner' : 'player',
         },
       });
       toast.success('Added to the tournament!');
@@ -282,7 +288,7 @@ function TournamentDetailPage() {
                 {tournament.participants.length} player
                 {tournament.participants.length !== 1 ? 's' : ''}
               </Badge>
-              {!iAmParticipant && myPerson && (
+              {!iAmParticipant && (
                 <Button size="sm" variant="outline" onClick={handleAddMyself}>
                   Join
                 </Button>
