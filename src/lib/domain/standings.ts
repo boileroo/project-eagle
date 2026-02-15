@@ -277,6 +277,60 @@ function aggregateMatchWins(
           }
         }
 
+        if (
+          result.type === 'match_play' &&
+          participantType === 'team'
+        ) {
+          // Map individual match play results to teams
+          // Each player's points roll up to their team
+          const inputTeams = input.teams ?? [];
+          const playerTeamMap = new Map<string, { teamId: string; teamName: string }>();
+          for (const team of inputTeams) {
+            for (const memberId of team.memberParticipantIds) {
+              playerTeamMap.set(memberId, {
+                teamId: team.roundTeamId,
+                teamName: team.name,
+              });
+            }
+          }
+
+          for (const match of result.result.matches) {
+            const sides = [
+              { rpId: match.playerA.roundParticipantId, pts: match.pointsA },
+              { rpId: match.playerB.roundParticipantId, pts: match.pointsB },
+            ];
+            for (const side of sides) {
+              const team = playerTeamMap.get(side.rpId);
+              if (!team) continue;
+
+              const existing = totals.get(team.teamId) ?? {
+                displayName: team.teamName,
+                total: 0,
+                roundsPlayed: 0,
+                perRound: [],
+                bonusTotal: 0,
+              };
+
+              existing.total += side.pts;
+              // Only increment roundsPlayed once per round per team
+              const alreadyHasRound = existing.perRound.find(
+                (pr) => pr.roundId === round.roundId,
+              );
+              if (alreadyHasRound) {
+                alreadyHasRound.value += side.pts;
+              } else {
+                existing.roundsPlayed += 1;
+                existing.perRound.push({
+                  roundId: round.roundId,
+                  roundNumber: round.roundNumber,
+                  value: side.pts,
+                });
+              }
+              totals.set(team.teamId, existing);
+            }
+          }
+        }
+
         if (result.type === 'best_ball' && participantType === 'team') {
           for (const match of result.result.matches) {
             const entries = [

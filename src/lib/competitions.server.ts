@@ -388,7 +388,11 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
             tournamentParticipant: true,
           },
         },
-        teams: true,
+        teams: {
+          with: {
+            members: true,
+          },
+        },
         competitions: {
           with: {
             bonusAwards: true,
@@ -459,7 +463,7 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
         roundTeamId: t.id,
         name: t.name,
         tournamentTeamId: t.tournamentTeamId,
-        memberParticipantIds: [], // Not needed for standings aggregation currently
+        memberParticipantIds: t.members.map((m) => m.roundParticipantId),
       }));
 
       // Build CompetitionInput for each non-bonus competition
