@@ -1,14 +1,20 @@
 import { createServerFn } from '@tanstack/react-start';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from '@/db';
 import {
   competitions,
   bonusAwards,
   rounds,
+  scoreEvents,
   tournamentStandings,
 } from '@/db/schema';
 import { requireAuth, requireCommissioner } from './auth.helpers';
 import { competitionConfigSchema, aggregationConfigSchema, isBonusFormat } from './competitions';
+import type { CompetitionConfig } from './competitions';
+import { resolveEffectiveHandicap, getPlayingHandicap } from './handicaps';
+import { calculateStandings } from './domain/standings';
+import type { RoundCompetitionData, ContributorBonusAward, StandingsResult } from './domain/standings';
+import type { CompetitionInput, HoleData, ParticipantData, ResolvedScore, GroupData, TeamData } from './domain/index';
 import type {
   CreateCompetitionInput,
   UpdateCompetitionInput,
@@ -338,4 +344,190 @@ export const deleteTournamentStandingFn = createServerFn({ method: 'POST' })
       .where(eq(tournamentStandings.id, data.standingId));
 
     return { success: true };
+  });
+
+// ══════════════════════════════════════════════
+// Compute Standings (server-side)
+//
+// Loads all round data for a tournament, feeds it
+// through the pure standings engine, returns the
+// computed leaderboard.
+// ══════════════════════════════════════════════
+
+export const computeStandingsFn = createServerFn({ method: 'GET' })
+  .inputValidator((data: { standingId: string }) => data)
+  .handler(async ({ data }) => {
+    // 1. Load the standing config
+    const standing = await db.query.tournamentStandings.findFirst({
+      where: eq(tournamentStandings.id, data.standingId),
+    });
+    if (!standing) throw new Error('Standing not found');
+
+    const aggregationConfig = aggregationConfigSchema.parse(
+      standing.aggregationConfig,
+    );
+
+    // 2. Load all rounds with participants, scores, groups, teams, competitions
+    const tournamentRounds = await db.query.rounds.findMany({
+      where: eq(rounds.tournamentId, standing.tournamentId),
+      orderBy: (r, { asc }) => [asc(r.roundNumber)],
+      with: {
+        course: {
+          with: {
+            holes: {
+              orderBy: (holes, { asc }) => [asc(holes.holeNumber)],
+            },
+          },
+        },
+        groups: {
+          orderBy: (g, { asc }) => [asc(g.groupNumber)],
+        },
+        participants: {
+          with: {
+            person: true,
+            tournamentParticipant: true,
+          },
+        },
+        teams: true,
+        competitions: {
+          with: {
+            bonusAwards: true,
+          },
+        },
+      },
+    });
+
+    // 3. Build RoundCompetitionData[] for the engine
+    const roundDatas: RoundCompetitionData[] = [];
+    const allContributorBonuses: ContributorBonusAward[] = [];
+
+    for (const round of tournamentRounds) {
+      // Load scores for this round
+      const events = await db.query.scoreEvents.findMany({
+        where: eq(scoreEvents.roundId, round.id),
+        orderBy: [desc(scoreEvents.createdAt)],
+      });
+
+      // Resolve scores (latest event per participant+hole)
+      const resolvedScores: ResolvedScore[] = [];
+      const seen = new Set<string>();
+      for (const event of events) {
+        const key = `${event.roundParticipantId}:${event.holeNumber}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        resolvedScores.push({
+          roundParticipantId: event.roundParticipantId,
+          holeNumber: event.holeNumber,
+          strokes: event.strokes,
+        });
+      }
+
+      const holes: HoleData[] = round.course.holes.map((h) => ({
+        holeNumber: h.holeNumber,
+        par: h.par,
+        strokeIndex: h.strokeIndex,
+      }));
+
+      const participants: ParticipantData[] = round.participants.map((rp) => {
+        const effectiveHC = resolveEffectiveHandicap({
+          handicapOverride: rp.handicapOverride,
+          handicapSnapshot: rp.handicapSnapshot,
+          tournamentParticipant: rp.tournamentParticipant
+            ? { handicapOverride: rp.tournamentParticipant.handicapOverride }
+            : null,
+        });
+        return {
+          roundParticipantId: rp.id,
+          personId: rp.person.id,
+          displayName: rp.person.displayName,
+          effectiveHandicap: effectiveHC,
+          playingHandicap: getPlayingHandicap(effectiveHC),
+          roundGroupId: rp.roundGroupId ?? null,
+        };
+      });
+
+      const groups: GroupData[] = round.groups.map((g) => ({
+        roundGroupId: g.id,
+        groupNumber: g.groupNumber,
+        name: g.name,
+        memberParticipantIds: round.participants
+          .filter((rp) => rp.roundGroupId === g.id)
+          .map((rp) => rp.id),
+      }));
+
+      const teams: TeamData[] = round.teams.map((t) => ({
+        roundTeamId: t.id,
+        name: t.name,
+        tournamentTeamId: t.tournamentTeamId,
+        memberParticipantIds: [], // Not needed for standings aggregation currently
+      }));
+
+      // Build CompetitionInput for each non-bonus competition
+      const competitionInputs: CompetitionInput[] = round.competitions
+        .filter((c) => !isBonusFormat(c.formatType as CompetitionConfig['formatType']))
+        .map((c) => ({
+          competition: {
+            id: c.id,
+            name: c.name,
+            config: {
+              formatType: c.formatType,
+              config: (c.configJson ?? {}),
+            } as CompetitionConfig,
+            groupScope: (c.groupScope ?? 'all') as 'all' | 'within_group',
+          },
+          holes,
+          participants,
+          scores: resolvedScores,
+          teams,
+          groups,
+        }));
+
+      roundDatas.push({
+        roundId: round.id,
+        roundNumber: round.roundNumber,
+        groups,
+        competitionInputs,
+      });
+
+      // Collect contributor bonus awards
+      for (const comp of round.competitions) {
+        if (!isBonusFormat(comp.formatType as CompetitionConfig['formatType'])) continue;
+        const bonusConfig = comp.configJson as { bonusMode?: string; bonusPoints?: number } | null;
+        if (bonusConfig?.bonusMode !== 'contributor') continue;
+
+        for (const award of comp.bonusAwards) {
+          allContributorBonuses.push({
+            roundId: round.id,
+            roundNumber: round.roundNumber,
+            roundParticipantId: award.roundParticipantId,
+            bonusPoints: bonusConfig.bonusPoints ?? 1,
+          });
+        }
+      }
+    }
+
+    // 4. Run the pure standings engine
+    const result: StandingsResult = calculateStandings(
+      aggregationConfig,
+      roundDatas,
+      standing.participantType as 'individual' | 'team',
+      allContributorBonuses,
+    );
+
+    // 5. Return standings data with round info for column headers
+    return {
+      standing: {
+        id: standing.id,
+        name: standing.name,
+        participantType: standing.participantType,
+        aggregationConfig,
+      },
+      rounds: tournamentRounds.map((r) => ({
+        id: r.id,
+        roundNumber: r.roundNumber,
+        courseName: r.course.name,
+      })),
+      leaderboard: result.leaderboard,
+      sortDirection: result.sortDirection,
+    };
   });

@@ -1554,7 +1554,7 @@ function ConfigureMatchesDialog({
                           value={playerA}
                           onChange={(e) => setGroupPlayerA(group.id, e.target.value)}
                         >
-                          <option value="">Player A</option>
+                          <option value="" disabled>Player A</option>
                           {available
                             .filter((rp) => {
                               if (rp.id === playerB) return false;
@@ -1585,7 +1585,7 @@ function ConfigureMatchesDialog({
                           value={playerB}
                           onChange={(e) => setGroupPlayerB(group.id, e.target.value)}
                         >
-                          <option value="">Player B</option>
+                          <option value="" disabled>Player B</option>
                           {available
                             .filter((rp) => {
                               if (rp.id === playerA) return false;
