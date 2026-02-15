@@ -92,6 +92,54 @@ The current model requires `rounds.tournamentId` NOT NULL. Standalone rounds wer
 
 ---
 
+## Private Tournaments & Invite System
+
+Tournaments should be private by default. The tournaments dashboard should only show tournaments the user is a participant in (or created). Joining a tournament requires either an invite code or being added by a commissioner.
+
+### Why deferred
+
+The current model has no visibility/access control on tournaments — `getTournamentsFn` returns all tournaments for all users. This works fine for a single-user dev environment but won't scale to multiple users. The feature is straightforward but touches several layers (schema, queries, UI, invite flow).
+
+### Proposed approach
+
+**Schema changes:**
+
+- Add `inviteCode` column to `tournaments` (a short, human-friendly code like `EAGLE-7X3K`)
+- Auto-generate on tournament creation
+
+**Query changes:**
+
+- `getTournamentsFn` (dashboard list) — filter to tournaments where the user is a participant OR the creator
+- `getTournamentFn` (detail page) — allow access if participant, creator, or valid invite code provided
+
+**Join flow:**
+
+- New "Join Tournament" UI (enter invite code → preview tournament → join)
+- Commissioner can still add players directly (existing flow)
+- Commissioner can regenerate/revoke the invite code
+
+**UI changes:**
+
+- Tournament detail page: show invite code to commissioners (with copy button)
+- Dashboard: only shows "my tournaments"
+- New join route (e.g., `/tournaments/join` or `/tournaments/join/:code`)
+
+### Impact
+
+- Schema: minor (1 new column on `tournaments`)
+- Migration: simple (add column, backfill codes for existing tournaments)
+- Queries: minor (`getTournamentsFn` adds a WHERE clause)
+- UI: moderate (join flow, invite code display, share button)
+- Auth: no changes (existing participant/commissioner checks are sufficient)
+
+### Key decisions
+
+1. **Code format** — short alphanumeric (e.g., `EAGLE-7X3K`) vs UUID-based URL. Short codes are easier to share verbally on the golf course.
+2. **Code expiry** — codes could optionally expire or be single-use. Simplest v1: codes are permanent until regenerated.
+3. **Deep link** — `/tournaments/join/EAGLE-7X3K` could auto-fill the code from the URL, making it shareable as a link too.
+
+---
+
 ## Native Wrapper (Capacitor etc.)
 
 PWA and offline-first are **not deferred** — they are Phase 6 (IndexedDB persistence, offline mutation queue, Supabase Realtime). The open question is whether a **native wrapper** (Capacitor, etc.) is needed on top of the PWA if iOS imposes limitations on push notifications, background sync, or storage quotas. Test iOS PWA behaviour after Phase 6 and decide then.

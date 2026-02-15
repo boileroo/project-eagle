@@ -117,6 +117,53 @@ export const getScorecardFn = createServerFn({ method: 'GET' })
   });
 
 // ──────────────────────────────────────────────
+// Bulk submit scores (dev tools — fill entire scorecard)
+// ──────────────────────────────────────────────
+
+export const bulkSubmitScoresFn = createServerFn({ method: 'POST' })
+  .inputValidator(
+    (data: {
+      roundId: string;
+      roundParticipantId: string;
+      scores: Array<{ holeNumber: number; strokes: number }>;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    const user = await requireAuth();
+
+    // Validate round exists and is open
+    const round = await db.query.rounds.findFirst({
+      where: eq(rounds.id, data.roundId),
+    });
+    if (!round) throw new Error('Round not found');
+    if (round.status !== 'open') {
+      throw new Error('Round must be open to enter scores');
+    }
+
+    // Validate participant belongs to this round
+    const rp = await db.query.roundParticipants.findFirst({
+      where: and(
+        eq(roundParticipants.id, data.roundParticipantId),
+        eq(roundParticipants.roundId, data.roundId),
+      ),
+    });
+    if (!rp) throw new Error('Participant not in this round');
+
+    // Insert all score events in one batch
+    const values = data.scores.map((s) => ({
+      roundId: data.roundId,
+      roundParticipantId: data.roundParticipantId,
+      holeNumber: s.holeNumber,
+      strokes: s.strokes,
+      recordedByUserId: user.id,
+      recordedByRole: 'commissioner' as const,
+    }));
+
+    const events = await db.insert(scoreEvents).values(values).returning();
+    return events;
+  });
+
+// ──────────────────────────────────────────────
 // Get score history (audit trail) for a participant on a hole
 // ──────────────────────────────────────────────
 

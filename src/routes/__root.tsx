@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { Toaster } from '@/components/ui/sonner';
+import { DevTools } from '@/components/dev-tools';
 import { getAuthUser } from '@/lib/auth.server';
 import appCss from '@/styles/globals.css?url';
 
@@ -49,6 +50,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         {children}
         <Toaster />
         <Scripts />
+        {import.meta.env.DEV && <DevTools />}
         <TanStackRouterDevtools position="bottom-right" />
       </body>
     </html>
