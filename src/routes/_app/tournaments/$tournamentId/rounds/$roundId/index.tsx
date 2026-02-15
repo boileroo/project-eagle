@@ -1145,6 +1145,7 @@ function CompetitionsSection({
                             <ConfigureMatchesDialog
                               comp={comp}
                               participants={round.participants}
+                              groups={round.groups}
                               onSaved={onChanged}
                             />
                           )}
@@ -1330,15 +1331,18 @@ function BonusCompRow({
 
 // ──────────────────────────────────────────────
 // Configure Matches Dialog (match play pairings)
+// Pairings are scoped within each group.
 // ──────────────────────────────────────────────
 
 function ConfigureMatchesDialog({
   comp,
   participants,
+  groups,
   onSaved,
 }: {
   comp: CompetitionsData[number];
   participants: RoundData['participants'];
+  groups: RoundData['groups'];
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -1350,8 +1354,18 @@ function ConfigureMatchesDialog({
     existingConfig?.pairings ?? [];
 
   const [pairings, setPairings] = useState(existingPairings);
-  const [playerA, setPlayerA] = useState('');
-  const [playerB, setPlayerB] = useState('');
+
+  // Per-group "add pairing" state
+  const [addState, setAddState] = useState<Record<string, { playerA: string; playerB: string }>>({});
+
+  const getAddState = (groupId: string) =>
+    addState[groupId] ?? { playerA: '', playerB: '' };
+
+  const setGroupPlayerA = (groupId: string, value: string) =>
+    setAddState((prev) => ({ ...prev, [groupId]: { ...getAddState(groupId), playerA: value } }));
+
+  const setGroupPlayerB = (groupId: string, value: string) =>
+    setAddState((prev) => ({ ...prev, [groupId]: { ...getAddState(groupId), playerB: value } }));
 
   // Players already assigned to a pairing
   const assignedIds = useMemo(() => {
@@ -1363,11 +1377,6 @@ function ConfigureMatchesDialog({
     return ids;
   }, [pairings]);
 
-  // Available players (not yet in a pairing)
-  const availablePlayers = participants.filter(
-    (rp) => !assignedIds.has(rp.id),
-  );
-
   const getPlayerName = (rpId: string) =>
     participants.find((rp) => rp.id === rpId)?.person.displayName ?? 'Unknown';
 
@@ -1376,11 +1385,27 @@ function ConfigureMatchesDialog({
     return rp?.tournamentParticipant?.teamMemberships?.[0]?.team?.name ?? null;
   };
 
-  const handleAddPairing = () => {
+  // Get pairings that belong to a specific group
+  const getPairingsForGroup = (groupId: string) => {
+    const groupMemberIds = new Set(
+      participants.filter((rp) => rp.roundGroupId === groupId).map((rp) => rp.id),
+    );
+    return pairings
+      .map((p, i) => ({ ...p, index: i }))
+      .filter((p) => groupMemberIds.has(p.playerA) || groupMemberIds.has(p.playerB));
+  };
+
+  // Get available (unpaired) players within a group
+  const getAvailableInGroup = (groupId: string) =>
+    participants.filter(
+      (rp) => rp.roundGroupId === groupId && !assignedIds.has(rp.id),
+    );
+
+  const handleAddPairing = (groupId: string) => {
+    const { playerA, playerB } = getAddState(groupId);
     if (!playerA || !playerB || playerA === playerB) return;
     setPairings((prev) => [...prev, { playerA, playerB }]);
-    setPlayerA('');
-    setPlayerB('');
+    setAddState((prev) => ({ ...prev, [groupId]: { playerA: '', playerB: '' } }));
   };
 
   const handleRemovePairing = (index: number) => {
@@ -1417,13 +1442,18 @@ function ConfigureMatchesDialog({
 
   const handleOpenChange = (next: boolean) => {
     if (next) {
-      // Reset to existing pairings when opening
       setPairings(existingPairings);
-      setPlayerA('');
-      setPlayerB('');
+      setAddState({});
     }
     setOpen(next);
   };
+
+  const hasGroups = groups.length > 0;
+
+  // For ungrouped players (when groups exist but some players aren't assigned)
+  const ungroupedPlayers = participants.filter(
+    (rp) => !rp.roundGroupId && !assignedIds.has(rp.id),
+  );
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -1432,139 +1462,173 @@ function ConfigureMatchesDialog({
           Configure Matches
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configure Matches</DialogTitle>
           <DialogDescription>
             Set up head-to-head pairings for {comp.name}.
+            {hasGroups
+              ? ' Pairings are organised by group.'
+              : ' Create groups first to organise pairings.'}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Current pairings */}
-          {pairings.length > 0 && (
-            <div className="space-y-2">
-              <Label>Current Matches</Label>
-              {pairings.map((pairing, i) => {
-                const teamA = getPlayerTeam(pairing.playerA);
-                const teamB = getPlayerTeam(pairing.playerB);
-                return (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between rounded-md border px-3 py-2"
-                  >
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="font-medium">
-                        {getPlayerName(pairing.playerA)}
-                      </span>
-                      {teamA && (
-                        <Badge variant="secondary" className="text-xs">
-                          {teamA}
-                        </Badge>
-                      )}
-                      <span className="text-muted-foreground">vs</span>
-                      <span className="font-medium">
-                        {getPlayerName(pairing.playerB)}
-                      </span>
-                      {teamB && (
-                        <Badge variant="secondary" className="text-xs">
-                          {teamB}
-                        </Badge>
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-xs text-destructive"
-                      onClick={() => handleRemovePairing(i)}
-                    >
-                      ✕
-                    </Button>
+        {!hasGroups ? (
+          <p className="text-muted-foreground text-sm py-2">
+            No groups have been created. Set up groups in the Players &amp; Groups
+            section above, then come back to configure matches.
+          </p>
+        ) : (
+          <div className="space-y-5">
+            {groups.map((group) => {
+              const groupPairings = getPairingsForGroup(group.id);
+              const available = getAvailableInGroup(group.id);
+              const { playerA, playerB } = getAddState(group.id);
+
+              return (
+                <div key={group.id} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold">
+                      {group.name || `Group ${group.groupNumber}`}
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {participants.filter((rp) => rp.roundGroupId === group.id).length} players
+                    </Badge>
                   </div>
-                );
-              })}
-            </div>
-          )}
 
-          {/* Add pairing */}
-          {availablePlayers.length >= 2 && (
-            <div className="space-y-2">
-              <Label>Add Match</Label>
-              <div className="flex items-end gap-2">
-                <div className="flex-1 space-y-1">
-                  <select
-                    className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                    value={playerA}
-                    onChange={(e) => setPlayerA(e.target.value)}
-                  >
-                    <option value="">Player A</option>
-                    {availablePlayers
-                      .filter((rp) => rp.id !== playerB)
-                      .map((rp) => {
-                        const team =
-                          rp.tournamentParticipant?.teamMemberships?.[0]?.team?.name;
+                  {/* Existing pairings in this group */}
+                  {groupPairings.length > 0 && (
+                    <div className="space-y-1">
+                      {groupPairings.map((pairing) => {
+                        const teamA = getPlayerTeam(pairing.playerA);
+                        const teamB = getPlayerTeam(pairing.playerB);
                         return (
-                          <option key={rp.id} value={rp.id}>
-                            {rp.person.displayName}
-                            {team ? ` (${team})` : ''}
-                          </option>
+                          <div
+                            key={pairing.index}
+                            className="flex items-center justify-between rounded-md border px-3 py-2"
+                          >
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="font-medium">
+                                {getPlayerName(pairing.playerA)}
+                              </span>
+                              {teamA && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {teamA}
+                                </Badge>
+                              )}
+                              <span className="text-muted-foreground">vs</span>
+                              <span className="font-medium">
+                                {getPlayerName(pairing.playerB)}
+                              </span>
+                              {teamB && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {teamB}
+                                </Badge>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-xs text-destructive"
+                              onClick={() => handleRemovePairing(pairing.index)}
+                            >
+                              ✕
+                            </Button>
+                          </div>
                         );
                       })}
-                  </select>
-                </div>
-                <span className="text-muted-foreground pb-2 text-sm">vs</span>
-                <div className="flex-1 space-y-1">
-                  <select
-                    className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                    value={playerB}
-                    onChange={(e) => setPlayerB(e.target.value)}
-                  >
-                    <option value="">Player B</option>
-                    {availablePlayers
-                      .filter((rp) => rp.id !== playerA)
-                      .map((rp) => {
-                        const team =
-                          rp.tournamentParticipant?.teamMemberships?.[0]?.team?.name;
-                        return (
-                          <option key={rp.id} value={rp.id}>
-                            {rp.person.displayName}
-                            {team ? ` (${team})` : ''}
-                          </option>
-                        );
-                      })}
-                  </select>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9"
-                  disabled={!playerA || !playerB || playerA === playerB}
-                  onClick={handleAddPairing}
-                >
-                  Add
-                </Button>
-              </div>
-            </div>
-          )}
+                    </div>
+                  )}
 
-          {availablePlayers.length < 2 && pairings.length > 0 && (
-            <p className="text-muted-foreground text-xs">
-              All players have been paired.
-            </p>
-          )}
+                  {/* Add pairing within this group */}
+                  {available.length >= 2 ? (
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1">
+                        <select
+                          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                          value={playerA}
+                          onChange={(e) => setGroupPlayerA(group.id, e.target.value)}
+                        >
+                          <option value="">Player A</option>
+                          {available
+                            .filter((rp) => rp.id !== playerB)
+                            .map((rp) => {
+                              const team =
+                                rp.tournamentParticipant?.teamMemberships?.[0]?.team?.name;
+                              return (
+                                <option key={rp.id} value={rp.id}>
+                                  {rp.person.displayName}
+                                  {team ? ` (${team})` : ''}
+                                </option>
+                              );
+                            })}
+                        </select>
+                      </div>
+                      <span className="text-muted-foreground pb-2 text-sm">vs</span>
+                      <div className="flex-1">
+                        <select
+                          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                          value={playerB}
+                          onChange={(e) => setGroupPlayerB(group.id, e.target.value)}
+                        >
+                          <option value="">Player B</option>
+                          {available
+                            .filter((rp) => rp.id !== playerA)
+                            .map((rp) => {
+                              const team =
+                                rp.tournamentParticipant?.teamMemberships?.[0]?.team?.name;
+                              return (
+                                <option key={rp.id} value={rp.id}>
+                                  {rp.person.displayName}
+                                  {team ? ` (${team})` : ''}
+                                </option>
+                              );
+                            })}
+                        </select>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9"
+                        disabled={!playerA || !playerB || playerA === playerB}
+                        onClick={() => handleAddPairing(group.id)}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  ) : groupPairings.length > 0 && available.length === 0 ? (
+                    <p className="text-muted-foreground text-xs">
+                      All players in this group are paired.
+                    </p>
+                  ) : available.length === 1 ? (
+                    <p className="text-muted-foreground text-xs">
+                      1 player remaining without a match.
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground text-xs">
+                      No players in this group.
+                    </p>
+                  )}
 
-          {availablePlayers.length > 0 && availablePlayers.length < 2 && (
-            <p className="text-muted-foreground text-xs">
-              {availablePlayers.length} player remaining without a match.
-            </p>
-          )}
-        </div>
+                  <Separator />
+                </div>
+              );
+            })}
+
+            {ungroupedPlayers.length > 0 && (
+              <p className="text-muted-foreground text-xs">
+                {ungroupedPlayers.length} player{ungroupedPlayers.length !== 1 ? 's' : ''} not
+                assigned to a group. Assign them to a group to configure matches.
+              </p>
+            )}
+          </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button onClick={handleSave} disabled={saving || !hasGroups}>
             {saving ? 'Saving…' : 'Save'}
           </Button>
         </DialogFooter>
