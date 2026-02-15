@@ -19,6 +19,7 @@ import { Route as AppTournamentsIndexRouteImport } from './routes/_app/tournamen
 import { Route as AppCoursesIndexRouteImport } from './routes/_app/courses/index'
 import { Route as AppTournamentsNewRouteImport } from './routes/_app/tournaments/new'
 import { Route as AppRoundsNewRouteImport } from './routes/_app/rounds/new'
+import { Route as AppRoundsRoundIdRouteImport } from './routes/_app/rounds/$roundId'
 import { Route as AppCoursesNewRouteImport } from './routes/_app/courses/new'
 import { Route as AppTournamentsTournamentIdIndexRouteImport } from './routes/_app/tournaments/$tournamentId/index'
 import { Route as AppCoursesCourseIdIndexRouteImport } from './routes/_app/courses/$courseId/index'
@@ -74,6 +75,11 @@ const AppRoundsNewRoute = AppRoundsNewRouteImport.update({
   path: '/rounds/new',
   getParentRoute: () => AppRoute,
 } as any)
+const AppRoundsRoundIdRoute = AppRoundsRoundIdRouteImport.update({
+  id: '/rounds/$roundId',
+  path: '/rounds/$roundId',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCoursesNewRoute = AppCoursesNewRouteImport.update({
   id: '/courses/new',
   path: '/courses/new',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
   '/courses/new': typeof AppCoursesNewRoute
+  '/rounds/$roundId': typeof AppRoundsRoundIdRoute
   '/rounds/new': typeof AppRoundsNewRoute
   '/tournaments/new': typeof AppTournamentsNewRoute
   '/courses/': typeof AppCoursesIndexRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
   '/courses/new': typeof AppCoursesNewRoute
+  '/rounds/$roundId': typeof AppRoundsRoundIdRoute
   '/rounds/new': typeof AppRoundsNewRoute
   '/tournaments/new': typeof AppTournamentsNewRoute
   '/courses': typeof AppCoursesIndexRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/_auth/signup': typeof AuthSignupRoute
   '/_app/': typeof AppIndexRoute
   '/_app/courses/new': typeof AppCoursesNewRoute
+  '/_app/rounds/$roundId': typeof AppRoundsRoundIdRoute
   '/_app/rounds/new': typeof AppRoundsNewRoute
   '/_app/tournaments/new': typeof AppTournamentsNewRoute
   '/_app/courses/': typeof AppCoursesIndexRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/courses/new'
+    | '/rounds/$roundId'
     | '/rounds/new'
     | '/tournaments/new'
     | '/courses/'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/courses/new'
+    | '/rounds/$roundId'
     | '/rounds/new'
     | '/tournaments/new'
     | '/courses'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/_auth/signup'
     | '/_app/'
     | '/_app/courses/new'
+    | '/_app/rounds/$roundId'
     | '/_app/rounds/new'
     | '/_app/tournaments/new'
     | '/_app/courses/'
@@ -289,6 +301,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRoundsNewRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/rounds/$roundId': {
+      id: '/_app/rounds/$roundId'
+      path: '/rounds/$roundId'
+      fullPath: '/rounds/$roundId'
+      preLoaderRoute: typeof AppRoundsRoundIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/courses/new': {
       id: '/_app/courses/new'
       path: '/courses/new'
@@ -338,6 +357,7 @@ interface AppRouteChildren {
   AppAccountRoute: typeof AppAccountRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCoursesNewRoute: typeof AppCoursesNewRoute
+  AppRoundsRoundIdRoute: typeof AppRoundsRoundIdRoute
   AppRoundsNewRoute: typeof AppRoundsNewRoute
   AppTournamentsNewRoute: typeof AppTournamentsNewRoute
   AppCoursesIndexRoute: typeof AppCoursesIndexRoute
@@ -353,6 +373,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAccountRoute: AppAccountRoute,
   AppIndexRoute: AppIndexRoute,
   AppCoursesNewRoute: AppCoursesNewRoute,
+  AppRoundsRoundIdRoute: AppRoundsRoundIdRoute,
   AppRoundsNewRoute: AppRoundsNewRoute,
   AppTournamentsNewRoute: AppTournamentsNewRoute,
   AppCoursesIndexRoute: AppCoursesIndexRoute,

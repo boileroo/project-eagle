@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate, redirect } from '@tanstack/react-router';
 import {
   getTournamentFn,
   deleteTournamentFn,
@@ -66,6 +66,18 @@ export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
       getCoursesFn(),
       getTournamentStandingsFn({ data: { tournamentId: params.tournamentId } }),
     ]);
+
+    // Single rounds should redirect straight to the round detail
+    if (tournament.isSingleRound && tournament.rounds.length > 0) {
+      throw redirect({
+        to: '/tournaments/$tournamentId/rounds/$roundId',
+        params: {
+          tournamentId: tournament.id,
+          roundId: tournament.rounds[0].id,
+        },
+      });
+    }
+
     return { tournament, myPerson, courses, standings };
   },
   component: TournamentDetailPage,

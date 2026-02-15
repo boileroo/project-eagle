@@ -23,6 +23,7 @@ import type {
 export const getTournamentsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     const allTournaments = await db.query.tournaments.findMany({
+      where: eq(tournaments.isSingleRound, false),
       orderBy: (tournaments, { desc }) => [desc(tournaments.createdAt)],
       with: {
         participants: true,

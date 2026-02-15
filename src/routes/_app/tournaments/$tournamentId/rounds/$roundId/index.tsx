@@ -6,7 +6,24 @@ import {
   removeRoundParticipantFn,
   updateRoundParticipantFn,
   updateRoundFn,
+  addRoundParticipantFn,
 } from '@/lib/rounds.server';
+import {
+  getTournamentFn,
+  deleteTournamentFn,
+  searchPersonsFn,
+  addParticipantFn,
+  removeParticipantFn,
+  createGuestPersonFn,
+  ensureMyPersonFn,
+  getMyPersonFn,
+} from '@/lib/tournaments.server';
+import {
+  createTeamFn,
+  deleteTeamFn,
+  addTeamMemberFn,
+  removeTeamMemberFn,
+} from '@/lib/teams.server';
 import { getCoursesFn } from '@/lib/courses.server';
 import { getScorecardFn } from '@/lib/scores.server';
 import {
@@ -50,7 +67,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from '@tanstack/react-router';
 import {
@@ -80,7 +97,18 @@ export const Route = createFileRoute(
         data: { roundId: params.roundId },
       }),
     ]);
-    return { round, courses, scorecard, competitions };
+
+    // For single rounds, also load the full tournament data for Players/Teams panels
+    let tournament = null;
+    let myPerson = null;
+    if (round.tournament?.isSingleRound) {
+      [tournament, myPerson] = await Promise.all([
+        getTournamentFn({ data: { tournamentId: round.tournamentId } }),
+        getMyPersonFn(),
+      ]);
+    }
+
+    return { round, courses, scorecard, competitions, tournament, myPerson };
   },
   component: RoundDetailPage,
 });
@@ -113,12 +141,15 @@ const nextTransitions: Record<string, { label: string; status: string }[]> = {
 };
 
 function RoundDetailPage() {
-  const { round, courses, scorecard, competitions } = Route.useLoaderData();
+  const { round, courses, scorecard, competitions, tournament, myPerson } =
+    Route.useLoaderData();
   const navigate = useNavigate();
   const router = useRouter();
   const { user } = useAuth();
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const isSingleRound = round.tournament?.isSingleRound ?? false;
 
   // Score entry dialog state
   const [scoreDialogOpen, setScoreDialogOpen] = useState(false);
@@ -159,12 +190,19 @@ function RoundDetailPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await deleteRoundFn({ data: { roundId: round.id } });
-      toast.success('Round deleted.');
-      navigate({
-        to: '/tournaments/$tournamentId',
-        params: { tournamentId },
-      });
+      if (isSingleRound) {
+        // Delete the whole auto-tournament for single rounds
+        await deleteTournamentFn({ data: { tournamentId } });
+        toast.success('Round deleted.');
+        navigate({ to: '/' });
+      } else {
+        await deleteRoundFn({ data: { roundId: round.id } });
+        toast.success('Round deleted.');
+        navigate({
+          to: '/tournaments/$tournamentId',
+          params: { tournamentId },
+        });
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to delete round',
@@ -193,17 +231,26 @@ function RoundDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-muted-foreground mb-1 text-sm">
-            <Link
-              to="/tournaments/$tournamentId"
-              params={{ tournamentId }}
-              className="hover:text-primary underline"
-            >
-              ← {round.tournament?.name ?? 'Tournament'}
-            </Link>
-          </div>
+          {!isSingleRound && (
+            <div className="text-muted-foreground mb-1 text-sm">
+              <Link
+                to="/tournaments/$tournamentId"
+                params={{ tournamentId }}
+                className="hover:text-primary underline"
+              >
+                ← {round.tournament?.name ?? 'Tournament'}
+              </Link>
+            </div>
+          )}
+          {isSingleRound && (
+            <div className="text-muted-foreground mb-1 text-sm">
+              <Link to="/" className="hover:text-primary underline">
+                ← Dashboard
+              </Link>
+            </div>
+          )}
           <h1 className="text-3xl font-bold tracking-tight">
-            Round {round.roundNumber ?? '—'}
+            {isSingleRound ? round.course.name : `Round ${round.roundNumber ?? '—'}`}
           </h1>
           <div className="text-muted-foreground mt-1 flex items-center gap-3">
             <span>@ {round.course.name}</span>
@@ -289,27 +336,50 @@ function RoundDetailPage() {
 
       <Separator />
 
-      {/* Course info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Course</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">{round.course.name}</p>
-              {round.course.location && (
-                <p className="text-muted-foreground text-sm">
-                  {round.course.location}
-                </p>
-              )}
+      {/* Course info — hidden for single rounds since the course name is in the title */}
+      {!isSingleRound && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Course</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">{round.course.name}</p>
+                {round.course.location && (
+                  <p className="text-muted-foreground text-sm">
+                    {round.course.location}
+                  </p>
+                )}
+              </div>
+              <Badge variant="secondary">
+                {round.course.numberOfHoles} holes
+              </Badge>
             </div>
-            <Badge variant="secondary">
-              {round.course.numberOfHoles} holes
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* For single rounds: show tournament-level Players panel */}
+      {isSingleRound && tournament && (
+        <SingleRoundPlayersSection
+          tournament={tournament}
+          roundId={round.id}
+          isCommissioner={isCommissioner}
+          userId={user.id}
+          myPerson={myPerson}
+          onChanged={() => router.invalidate()}
+        />
+      )}
+
+      {/* For single rounds: show Teams panel */}
+      {isSingleRound && tournament && (
+        <SingleRoundTeamsSection
+          tournament={tournament}
+          isCommissioner={isCommissioner}
+          onChanged={() => router.invalidate()}
+        />
+      )}
 
       {/* Players & Groups */}
       <PlayersAndGroupsSection
@@ -2620,5 +2690,620 @@ function AddBonusCompDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Single Round: Players Section
+// ──────────────────────────────────────────────
+
+type TournamentData = Awaited<ReturnType<typeof getTournamentFn>>;
+
+function SingleRoundPlayersSection({
+  tournament,
+  roundId,
+  isCommissioner,
+  userId,
+  myPerson,
+  onChanged,
+}: {
+  tournament: TournamentData;
+  roundId: string;
+  isCommissioner: boolean;
+  userId: string;
+  myPerson: { id: string } | null;
+  onChanged: () => void;
+}) {
+  const iAmParticipant = myPerson
+    ? tournament.participants.some((p) => p.personId === myPerson.id)
+    : false;
+
+  const handleAddMyself = async () => {
+    try {
+      const person = myPerson ?? (await ensureMyPersonFn());
+      const tp = await addParticipantFn({
+        data: {
+          tournamentId: tournament.id,
+          personId: person.id,
+          role: 'player',
+        },
+      });
+      await addRoundParticipantFn({
+        data: {
+          roundId,
+          personId: person.id,
+          tournamentParticipantId: tp.participantId,
+          handicapSnapshot: '0',
+        },
+      });
+      toast.success('You joined the round!');
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to join',
+      );
+    }
+  };
+
+  const handleRemoveParticipant = async (
+    participantId: string,
+    name: string,
+  ) => {
+    try {
+      await removeParticipantFn({ data: { participantId } });
+      toast.success(`${name} removed.`);
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to remove',
+      );
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>Players</span>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">
+              {tournament.participants.length} player
+              {tournament.participants.length !== 1 ? 's' : ''}
+            </Badge>
+            {!iAmParticipant && (
+              <Button size="sm" variant="outline" onClick={handleAddMyself}>
+                Join
+              </Button>
+            )}
+            {isCommissioner && (
+              <SingleRoundAddPlayerDialog
+                tournamentId={tournament.id}
+                roundId={roundId}
+                onAdded={onChanged}
+              />
+            )}
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {tournament.participants.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No players yet. Add yourself or invite others.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {tournament.participants.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between rounded-md border px-3 py-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">
+                    {p.person.displayName}
+                  </span>
+                  {p.person.userId == null && (
+                    <Badge variant="outline" className="text-xs">
+                      Guest
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {(p.handicapOverride ?? p.person.currentHandicap) !=
+                    null && (
+                    <Badge variant="outline">
+                      HC {p.handicapOverride ?? p.person.currentHandicap}
+                    </Badge>
+                  )}
+                  {isCommissioner && p.person.userId !== userId && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive h-7 px-2"
+                      onClick={() =>
+                        handleRemoveParticipant(p.id, p.person.displayName)
+                      }
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Single Round: Add Player Dialog
+// ──────────────────────────────────────────────
+
+function SingleRoundAddPlayerDialog({
+  tournamentId,
+  roundId,
+  onAdded,
+}: {
+  tournamentId: string;
+  roundId: string;
+  onAdded: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<'search' | 'guest'>('search');
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<
+    {
+      id: string;
+      displayName: string;
+      currentHandicap: string | null;
+      isGuest: boolean;
+      email: string | null;
+    }[]
+  >([]);
+  const [searching, setSearching] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [guestHandicap, setGuestHandicap] = useState('');
+
+  const handleSearch = useCallback(
+    async (q: string) => {
+      setQuery(q);
+      if (q.length < 2) {
+        setResults([]);
+        return;
+      }
+      setSearching(true);
+      try {
+        const data = await searchPersonsFn({
+          data: { query: q, tournamentId },
+        });
+        setResults(data);
+      } catch {
+        // ignore
+      }
+      setSearching(false);
+    },
+    [tournamentId],
+  );
+
+  const handleAddPerson = async (personId: string, handicap: string | null) => {
+    setAdding(true);
+    try {
+      const tp = await addParticipantFn({
+        data: { tournamentId, personId, role: 'player' },
+      });
+      await addRoundParticipantFn({
+        data: {
+          roundId,
+          personId,
+          tournamentParticipantId: tp.participantId,
+          handicapSnapshot: handicap ?? '0',
+        },
+      });
+      toast.success('Player added!');
+      setOpen(false);
+      setQuery('');
+      setResults([]);
+      onAdded();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to add player',
+      );
+    }
+    setAdding(false);
+  };
+
+  const handleAddGuest = async () => {
+    if (guestName.length < 2) {
+      toast.error('Name must be at least 2 characters');
+      return;
+    }
+    setAdding(true);
+    try {
+      const hc = guestHandicap ? parseFloat(guestHandicap) : null;
+      const { personId } = await createGuestPersonFn({
+        data: { displayName: guestName, currentHandicap: hc },
+      });
+      const tp = await addParticipantFn({
+        data: { tournamentId, personId, role: 'player' },
+      });
+      await addRoundParticipantFn({
+        data: {
+          roundId,
+          personId,
+          tournamentParticipantId: tp.participantId,
+          handicapSnapshot: guestHandicap || '0',
+        },
+      });
+      toast.success(`${guestName} added!`);
+      setOpen(false);
+      setGuestName('');
+      setGuestHandicap('');
+      onAdded();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to add guest',
+      );
+    }
+    setAdding(false);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) {
+          setQuery('');
+          setResults([]);
+          setTab('search');
+          setGuestName('');
+          setGuestHandicap('');
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button size="sm">Add Player</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Player</DialogTitle>
+          <DialogDescription>
+            Search for an existing player or add a guest.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant={tab === 'search' ? 'default' : 'outline'}
+            onClick={() => setTab('search')}
+          >
+            Search
+          </Button>
+          <Button
+            size="sm"
+            variant={tab === 'guest' ? 'default' : 'outline'}
+            onClick={() => setTab('guest')}
+          >
+            Add Guest
+          </Button>
+        </div>
+
+        {tab === 'search' ? (
+          <div className="space-y-3">
+            <Input
+              placeholder="Search by name…"
+              value={query}
+              onChange={(e) => handleSearch(e.target.value)}
+              autoFocus
+            />
+            {searching && (
+              <p className="text-muted-foreground text-sm">Searching…</p>
+            )}
+            {results.length > 0 && (
+              <div className="max-h-60 space-y-1 overflow-y-auto">
+                {results.map((person) => (
+                  <div
+                    key={person.id}
+                    className="flex items-center justify-between rounded-md border px-3 py-2"
+                  >
+                    <div>
+                      <span className="text-sm font-medium">
+                        {person.displayName}
+                      </span>
+                      {person.isGuest && (
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          Guest
+                        </Badge>
+                      )}
+                      {person.currentHandicap && (
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          HC {person.currentHandicap}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        handleAddPerson(person.id, person.currentHandicap)
+                      }
+                      disabled={adding}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {query.length >= 2 && results.length === 0 && !searching && (
+              <p className="text-muted-foreground text-sm">
+                No matches found.{' '}
+                <button
+                  type="button"
+                  className="text-primary underline"
+                  onClick={() => {
+                    setTab('guest');
+                    setGuestName(query);
+                  }}
+                >
+                  Add as guest instead?
+                </button>
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="sr-guestName">Name</Label>
+              <Input
+                id="sr-guestName"
+                placeholder="e.g. Dave Smith"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div>
+              <Label htmlFor="sr-guestHandicap">Handicap (optional)</Label>
+              <Input
+                id="sr-guestHandicap"
+                type="number"
+                step="0.1"
+                placeholder="e.g. 18.4"
+                value={guestHandicap}
+                onChange={(e) => setGuestHandicap(e.target.value)}
+              />
+            </div>
+            <DialogFooter>
+              <Button onClick={handleAddGuest} disabled={adding}>
+                {adding ? 'Adding…' : 'Add Guest'}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Single Round: Teams Section
+// ──────────────────────────────────────────────
+
+function SingleRoundTeamsSection({
+  tournament,
+  isCommissioner,
+  onChanged,
+}: {
+  tournament: TournamentData;
+  isCommissioner: boolean;
+  onChanged: () => void;
+}) {
+  const [creating, setCreating] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    teamId: string;
+    name: string;
+  } | null>(null);
+
+  const assignedParticipantIds = new Set(
+    tournament.teams.flatMap((t) => t.members.map((m) => m.participantId)),
+  );
+  const unassigned = tournament.participants.filter(
+    (p) => !assignedParticipantIds.has(p.id) && p.role !== 'spectator',
+  );
+
+  const handleCreateTeam = async () => {
+    if (!newTeamName.trim()) return;
+    setCreating(true);
+    try {
+      await createTeamFn({
+        data: { tournamentId: tournament.id, name: newTeamName.trim() },
+      });
+      toast.success('Team created!');
+      setNewTeamName('');
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create team',
+      );
+    }
+    setCreating(false);
+  };
+
+  const handleDeleteTeam = async (teamId: string) => {
+    try {
+      await deleteTeamFn({ data: { teamId } });
+      toast.success('Team deleted.');
+      setDeleteConfirm(null);
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to delete team',
+      );
+    }
+  };
+
+  const handleAddMember = async (teamId: string, participantId: string) => {
+    try {
+      await addTeamMemberFn({ data: { teamId, participantId } });
+      toast.success('Player added to team.');
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to add to team',
+      );
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    try {
+      await removeTeamMemberFn({ data: { memberId } });
+      toast.success('Player removed from team.');
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to remove from team',
+      );
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>Teams</span>
+          <Badge variant="secondary">
+            {tournament.teams.length} team
+            {tournament.teams.length !== 1 ? 's' : ''}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isCommissioner && (
+          <div className="flex gap-2">
+            <Input
+              placeholder="New team name…"
+              value={newTeamName}
+              onChange={(e) => setNewTeamName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleCreateTeam()}
+            />
+            <Button
+              size="sm"
+              onClick={handleCreateTeam}
+              disabled={creating || !newTeamName.trim()}
+            >
+              {creating ? 'Creating…' : 'Create'}
+            </Button>
+          </div>
+        )}
+
+        {tournament.teams.length === 0 && (
+          <p className="text-muted-foreground text-sm">
+            No teams yet.{' '}
+            {isCommissioner
+              ? 'Create a team above to get started.'
+              : 'The commissioner can create teams.'}
+          </p>
+        )}
+
+        {tournament.teams.map((team) => (
+          <div key={team.id} className="space-y-2 rounded-md border p-3">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">{team.name}</span>
+              <div className="flex items-center gap-1">
+                <Badge variant="secondary">
+                  {team.members.length} member
+                  {team.members.length !== 1 ? 's' : ''}
+                </Badge>
+                {isCommissioner && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive h-7 px-2"
+                    onClick={() =>
+                      setDeleteConfirm({ teamId: team.id, name: team.name })
+                    }
+                  >
+                    ×
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              {team.members.map((m) => (
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between rounded px-2 py-1 text-sm"
+                >
+                  <span>{m.participant.person.displayName}</span>
+                  {isCommissioner && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-1 text-xs"
+                      onClick={() => handleRemoveMember(m.id)}
+                    >
+                      ×
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {isCommissioner && unassigned.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {unassigned.map((p) => (
+                  <Button
+                    key={p.id}
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => handleAddMember(team.id, p.id)}
+                  >
+                    + {p.person.displayName}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </CardContent>
+
+      <Dialog
+        open={deleteConfirm !== null}
+        onOpenChange={(open) => !open && setDeleteConfirm(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete team?</DialogTitle>
+            <DialogDescription>
+              This will delete <strong>{deleteConfirm?.name}</strong> and remove
+              all its member assignments. Players will remain in the round.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirm(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() =>
+                deleteConfirm && handleDeleteTeam(deleteConfirm.teamId)
+              }
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
   );
 }

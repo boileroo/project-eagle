@@ -55,11 +55,6 @@ function TournamentsPage() {
                     <span className="group-hover:text-primary">
                       {tournament.name}
                     </span>
-                    {tournament.isSingleRound && (
-                      <Badge variant="outline" className="text-xs">
-                        Single Round
-                      </Badge>
-                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -68,12 +63,10 @@ function TournamentsPage() {
                       {tournament.participants.length} player
                       {tournament.participants.length !== 1 ? 's' : ''}
                     </Badge>
-                    {!tournament.isSingleRound && (
-                      <Badge variant="outline">
-                        {tournament.rounds.length} round
-                        {tournament.rounds.length !== 1 ? 's' : ''}
-                      </Badge>
-                    )}
+                    <Badge variant="outline">
+                      {tournament.rounds.length} round
+                      {tournament.rounds.length !== 1 ? 's' : ''}
+                    </Badge>
                   </div>
                   {tournament.description && (
                     <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">
