@@ -1,9 +1,21 @@
 import { createServerFn } from '@tanstack/react-start';
 import { and, eq, count, asc, lt } from 'drizzle-orm';
 import { db } from '@/db';
-import { rounds, roundParticipants, tournamentParticipants } from '@/db/schema';
-import { requireCommissioner } from './auth.helpers';
-import type { CreateRoundInput, UpdateRoundInput } from './validators';
+import {
+  courses,
+  rounds,
+  roundParticipants,
+  tournamentParticipants,
+  tournaments,
+  persons,
+  profiles,
+} from '@/db/schema';
+import { requireAuth, requireCommissioner } from './auth.helpers';
+import type {
+  CreateRoundInput,
+  CreateSingleRoundInput,
+  UpdateRoundInput,
+} from './validators';
 
 // ──────────────────────────────────────────────
 // Helper: re-sort round numbers by date/teeTime
@@ -415,4 +427,99 @@ export const updateRoundParticipantFn = createServerFn({ method: 'POST' })
       .where(eq(roundParticipants.id, data.roundParticipantId));
 
     return { success: true };
+  });
+
+// ──────────────────────────────────────────────────
+// Create a single round (auto-creates tournament)
+// ──────────────────────────────────────────────────
+
+export const createSingleRoundFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: CreateSingleRoundInput) => data)
+  .handler(async ({ data }) => {
+    const user = await requireAuth();
+
+    // Ensure the user has a person record
+    let person = await db.query.persons.findFirst({
+      where: eq(persons.userId, user.id),
+    });
+    if (!person) {
+      const profile = await db.query.profiles.findFirst({
+        where: eq(profiles.id, user.id),
+      });
+      const displayName =
+        profile?.displayName || profile?.email || 'Unknown';
+      const [created] = await db
+        .insert(persons)
+        .values({
+          displayName,
+          userId: user.id,
+          createdByUserId: user.id,
+        })
+        .returning();
+      person = created;
+    }
+
+    // Look up the course name for the auto-generated tournament name
+    const course = await db.query.courses.findFirst({
+      where: eq(courses.id, data.courseId),
+    });
+    const courseName = course?.name ?? 'Round';
+    const dateLabel = data.date
+      ? new Date(data.date).toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        })
+      : new Date().toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        });
+    const tournamentName = `${courseName} – ${dateLabel}`;
+
+    // 1. Create the auto-tournament
+    const [tournament] = await db
+      .insert(tournaments)
+      .values({
+        name: tournamentName,
+        isSingleRound: true,
+        createdByUserId: user.id,
+      })
+      .returning();
+
+    // 2. Add creator as commissioner participant
+    const [tp] = await db
+      .insert(tournamentParticipants)
+      .values({
+        tournamentId: tournament.id,
+        personId: person.id,
+        role: 'commissioner',
+      })
+      .returning();
+
+    // 3. Create the round
+    const [round] = await db
+      .insert(rounds)
+      .values({
+        tournamentId: tournament.id,
+        courseId: data.courseId,
+        roundNumber: 1,
+        date: data.date ? new Date(data.date) : new Date(),
+        teeTime: data.teeTime || null,
+        createdByUserId: user.id,
+      })
+      .returning();
+
+    // 4. Add creator as round participant
+    await db.insert(roundParticipants).values({
+      roundId: round.id,
+      personId: person.id,
+      tournamentParticipantId: tp.id,
+      handicapSnapshot: person.currentHandicap ?? '0',
+    });
+
+    return {
+      tournamentId: tournament.id,
+      roundId: round.id,
+    };
   });

@@ -37,14 +37,17 @@ function Home() {
             Create and manage tournaments
           </p>
         </Link>
-        <div className="bg-card rounded-lg border p-6 opacity-50">
-          <h2 className="text-card-foreground mb-1 font-semibold">
-            Score Entry
+        <Link
+          to="/rounds/new"
+          className="group bg-card hover:border-primary/50 hover:bg-accent rounded-lg border p-6 transition-colors"
+        >
+          <h2 className="text-card-foreground group-hover:text-primary mb-1 font-semibold">
+            Single Round
           </h2>
           <p className="text-muted-foreground text-sm">
-            Enter live scores during rounds
+            Jump straight into a round without tournament setup
           </p>
-        </div>
+        </Link>
       </div>
     </div>
   );

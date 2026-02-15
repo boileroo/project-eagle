@@ -18,6 +18,7 @@ import { Route as AppAccountRouteImport } from './routes/_app/account'
 import { Route as AppTournamentsIndexRouteImport } from './routes/_app/tournaments/index'
 import { Route as AppCoursesIndexRouteImport } from './routes/_app/courses/index'
 import { Route as AppTournamentsNewRouteImport } from './routes/_app/tournaments/new'
+import { Route as AppRoundsNewRouteImport } from './routes/_app/rounds/new'
 import { Route as AppCoursesNewRouteImport } from './routes/_app/courses/new'
 import { Route as AppTournamentsTournamentIdIndexRouteImport } from './routes/_app/tournaments/$tournamentId/index'
 import { Route as AppCoursesCourseIdIndexRouteImport } from './routes/_app/courses/$courseId/index'
@@ -68,6 +69,11 @@ const AppTournamentsNewRoute = AppTournamentsNewRouteImport.update({
   path: '/tournaments/new',
   getParentRoute: () => AppRoute,
 } as any)
+const AppRoundsNewRoute = AppRoundsNewRouteImport.update({
+  id: '/rounds/new',
+  path: '/rounds/new',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCoursesNewRoute = AppCoursesNewRouteImport.update({
   id: '/courses/new',
   path: '/courses/new',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
   '/courses/new': typeof AppCoursesNewRoute
+  '/rounds/new': typeof AppRoundsNewRoute
   '/tournaments/new': typeof AppTournamentsNewRoute
   '/courses/': typeof AppCoursesIndexRoute
   '/tournaments/': typeof AppTournamentsIndexRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
   '/courses/new': typeof AppCoursesNewRoute
+  '/rounds/new': typeof AppRoundsNewRoute
   '/tournaments/new': typeof AppTournamentsNewRoute
   '/courses': typeof AppCoursesIndexRoute
   '/tournaments': typeof AppTournamentsIndexRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/_auth/signup': typeof AuthSignupRoute
   '/_app/': typeof AppIndexRoute
   '/_app/courses/new': typeof AppCoursesNewRoute
+  '/_app/rounds/new': typeof AppRoundsNewRoute
   '/_app/tournaments/new': typeof AppTournamentsNewRoute
   '/_app/courses/': typeof AppCoursesIndexRoute
   '/_app/tournaments/': typeof AppTournamentsIndexRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/courses/new'
+    | '/rounds/new'
     | '/tournaments/new'
     | '/courses/'
     | '/tournaments/'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/courses/new'
+    | '/rounds/new'
     | '/tournaments/new'
     | '/courses'
     | '/tournaments'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/_auth/signup'
     | '/_app/'
     | '/_app/courses/new'
+    | '/_app/rounds/new'
     | '/_app/tournaments/new'
     | '/_app/courses/'
     | '/_app/tournaments/'
@@ -270,6 +282,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTournamentsNewRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/rounds/new': {
+      id: '/_app/rounds/new'
+      path: '/rounds/new'
+      fullPath: '/rounds/new'
+      preLoaderRoute: typeof AppRoundsNewRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/courses/new': {
       id: '/_app/courses/new'
       path: '/courses/new'
@@ -319,6 +338,7 @@ interface AppRouteChildren {
   AppAccountRoute: typeof AppAccountRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCoursesNewRoute: typeof AppCoursesNewRoute
+  AppRoundsNewRoute: typeof AppRoundsNewRoute
   AppTournamentsNewRoute: typeof AppTournamentsNewRoute
   AppCoursesIndexRoute: typeof AppCoursesIndexRoute
   AppTournamentsIndexRoute: typeof AppTournamentsIndexRoute
@@ -333,6 +353,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAccountRoute: AppAccountRoute,
   AppIndexRoute: AppIndexRoute,
   AppCoursesNewRoute: AppCoursesNewRoute,
+  AppRoundsNewRoute: AppRoundsNewRoute,
   AppTournamentsNewRoute: AppTournamentsNewRoute,
   AppCoursesIndexRoute: AppCoursesIndexRoute,
   AppTournamentsIndexRoute: AppTournamentsIndexRoute,

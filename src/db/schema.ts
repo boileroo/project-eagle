@@ -5,6 +5,7 @@ import {
   text,
   integer,
   numeric,
+  boolean,
   timestamp,
   jsonb,
 } from 'drizzle-orm/pg-core';
@@ -126,6 +127,7 @@ export const tournaments = pgTable('tournaments', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   description: text('description'),
+  isSingleRound: boolean('is_single_round').notNull().default(false),
   createdByUserId: uuid('created_by_user_id')
     .references(() => profiles.id, { onDelete: 'set null' })
     .notNull(),

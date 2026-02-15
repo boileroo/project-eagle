@@ -99,6 +99,13 @@ export const updateTournamentSchema = createTournamentSchema.extend({
 });
 export type UpdateTournamentInput = z.infer<typeof updateTournamentSchema>;
 
+export const createSingleRoundSchema = z.object({
+  courseId: z.string().uuid('Please select a course'),
+  date: z.string().optional(),
+  teeTime: z.string().optional(),
+});
+export type CreateSingleRoundInput = z.infer<typeof createSingleRoundSchema>;
+
 // ──────────────────────────────────────────────
 // Tournament participant schemas
 // ──────────────────────────────────────────────
