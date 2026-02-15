@@ -318,9 +318,8 @@ export const reorderRoundsFn = createServerFn({ method: 'POST' })
 
 const validTransitions: Record<string, string[]> = {
   draft: ['open'],
-  open: ['locked', 'draft'],
-  locked: ['finalized', 'open'],
-  finalized: ['locked'], // allow unlock for corrections
+  open: ['finalized', 'draft'],
+  finalized: ['open'], // reopen for corrections
 };
 
 export const transitionRoundFn = createServerFn({ method: 'POST' })
@@ -373,7 +372,7 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
     await db
       .update(rounds)
       .set({
-        status: data.newStatus as 'draft' | 'open' | 'locked' | 'finalized',
+        status: data.newStatus as 'draft' | 'open' | 'finalized',
         updatedAt: new Date(),
       })
       .where(eq(rounds.id, data.roundId));
@@ -400,8 +399,8 @@ export const addRoundParticipantFn = createServerFn({ method: 'POST' })
       where: eq(rounds.id, data.roundId),
     });
     if (!round) throw new Error('Round not found');
-    if (round.status !== 'draft' && round.status !== 'open') {
-      throw new Error('Can only add participants to draft or open rounds');
+    if (round.status !== 'draft') {
+      throw new Error('Can only add participants to draft rounds');
     }
 
     await requireCommissioner(round.tournamentId);
@@ -452,8 +451,8 @@ export const removeRoundParticipantFn = createServerFn({ method: 'POST' })
       with: { round: true },
     });
     if (!rp) throw new Error('Participant not found');
-    if (rp.round.status !== 'draft' && rp.round.status !== 'open') {
-      throw new Error('Can only remove participants from draft or open rounds');
+    if (rp.round.status !== 'draft') {
+      throw new Error('Can only remove participants from draft rounds');
     }
 
     await requireCommissioner(rp.round.tournamentId);

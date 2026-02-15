@@ -20,14 +20,8 @@ export const submitScoreFn = createServerFn({ method: 'POST' })
     });
     if (!round) throw new Error('Round not found');
 
-    if (round.status === 'draft') {
-      throw new Error('Cannot enter scores for a draft round');
-    }
-    if (round.status === 'locked') {
-      throw new Error('Cannot enter scores for a locked round');
-    }
-    if (round.status === 'finalized') {
-      throw new Error('Cannot enter scores for a finalized round');
+    if (round.status !== 'open') {
+      throw new Error('Round must be open to enter scores');
     }
 
     // Validate participant belongs to this round

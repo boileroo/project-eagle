@@ -125,21 +125,20 @@ export const createCompetitionFn = createServerFn({ method: 'POST' })
     });
     if (!round) throw new Error('Round not found in this tournament');
 
-    // Enforce per-round competition limits:
-    // max 1 team comp + max 1 individual comp (bonuses unlimited)
-    if (!isBonusFormat(parsed.formatType)) {
-      const existingComps = await db.query.competitions.findMany({
-        where: eq(competitions.roundId, data.roundId),
+    // Disallow individual match play when teams are present on this round
+    if (
+      parsed.formatType === 'match_play' &&
+      data.participantType === 'individual'
+    ) {
+      const teamComps = await db.query.competitions.findMany({
+        where: and(
+          eq(competitions.roundId, data.roundId),
+          eq(competitions.participantType, 'team'),
+        ),
       });
-      const sameTypeComps = existingComps.filter(
-        (c) =>
-          c.participantType === data.participantType &&
-          !isBonusFormat(c.formatType as any),
-      );
-      if (sameTypeComps.length > 0) {
-        const label = data.participantType === 'team' ? 'team' : 'individual';
+      if (teamComps.length > 0) {
         throw new Error(
-          `This round already has a ${label} competition. Each round allows at most one team and one individual competition.`,
+          'Individual match play cannot be added to a round with team competitions. Use stableford or stroke play instead.',
         );
       }
     }

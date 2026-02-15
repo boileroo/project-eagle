@@ -4,6 +4,9 @@ import { db } from '@/db';
 import {
   persons,
   profiles,
+  roundGroups,
+  roundParticipants,
+  rounds,
   tournamentParticipants,
   tournaments,
 } from '@/db/schema';
@@ -296,6 +299,38 @@ export const addParticipantFn = createServerFn({ method: 'POST' })
         handicapOverride: data.handicapOverride?.toString() ?? null,
       })
       .returning();
+
+    // Auto-add to all draft/open rounds in this tournament
+    const openRounds = await db.query.rounds.findMany({
+      where: and(
+        eq(rounds.tournamentId, data.tournamentId),
+        eq(rounds.status, 'draft'),
+      ),
+    });
+
+    for (const round of openRounds) {
+      const [rp] = await db
+        .insert(roundParticipants)
+        .values({
+          roundId: round.id,
+          personId: data.personId,
+          tournamentParticipantId: participant.id,
+          handicapSnapshot:
+            data.handicapOverride?.toString() ?? person.currentHandicap ?? '0',
+        })
+        .returning();
+
+      // Auto-assign to default group if there's exactly one
+      const groups = await db.query.roundGroups.findMany({
+        where: eq(roundGroups.roundId, round.id),
+      });
+      if (groups.length === 1) {
+        await db
+          .update(roundParticipants)
+          .set({ roundGroupId: groups[0].id })
+          .where(eq(roundParticipants.id, rp.id));
+      }
+    }
 
     return { participantId: participant.id };
   });

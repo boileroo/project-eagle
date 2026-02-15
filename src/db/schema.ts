@@ -20,7 +20,6 @@ import { z } from 'zod';
 export const roundStatusEnum = pgEnum('round_status', [
   'draft',
   'open',
-  'locked',
   'finalized',
 ]);
 

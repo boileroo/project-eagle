@@ -71,11 +71,7 @@ import { Switch } from '@/components/ui/switch';
 import { useState, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from '@tanstack/react-router';
-import {
-  FORMAT_TYPE_LABELS,
-  isBonusFormat,
-  isMatchFormat,
-} from '@/lib/competitions';
+import { FORMAT_TYPE_LABELS, isBonusFormat } from '@/lib/competitions';
 import type { CompetitionConfig } from '@/lib/competitions';
 import {
   calculateCompetitionResults,
@@ -117,28 +113,22 @@ export const Route = createFileRoute(
 const statusColors: Record<string, 'default' | 'secondary' | 'outline'> = {
   draft: 'outline',
   open: 'secondary',
-  locked: 'default',
   finalized: 'default',
 };
 
 const statusLabels: Record<string, string> = {
   draft: 'Draft',
   open: 'Open',
-  locked: 'Locked',
   finalized: 'Finalized',
 };
 
 const nextTransitions: Record<string, { label: string; status: string }[]> = {
   draft: [{ label: 'Open Round', status: 'open' }],
   open: [
-    { label: 'Lock Round', status: 'locked' },
+    { label: 'Finalize', status: 'finalized' },
     { label: 'Back to Draft', status: 'draft' },
   ],
-  locked: [
-    { label: 'Finalize', status: 'finalized' },
-    { label: 'Reopen', status: 'open' },
-  ],
-  finalized: [{ label: 'Unlock for Corrections', status: 'locked' }],
+  finalized: [{ label: 'Reopen for Corrections', status: 'open' }],
 };
 
 function RoundDetailPage() {
@@ -384,47 +374,89 @@ function RoundDetailPage() {
         />
       )}
 
-      {/* Scorecard — visible when round is not draft */}
-      {round.status !== 'draft' && round.participants.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Scorecard</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 sm:p-6 sm:pt-0">
-            <Scorecard
-              holes={round.course.holes}
-              participants={round.participants}
-              scores={scorecard}
-              roundStatus={round.status}
-              onScoreClick={(rpId, holeNumber, currentStrokes) => {
-                const rp = round.participants.find((p) => p.id === rpId);
-                const hole = round.course.holes.find(
-                  (h) => h.holeNumber === holeNumber,
-                );
-                if (!rp || !hole) return;
-                setScoreTarget({
-                  roundParticipantId: rpId,
-                  holeNumber,
-                  currentStrokes,
-                  participantName: rp.person.displayName,
-                  par: hole.par,
-                });
-                setScoreDialogOpen(true);
-              }}
-              onHistoryClick={(rpId, holeNumber) => {
-                const rp = round.participants.find((p) => p.id === rpId);
-                if (!rp) return;
-                setHistoryTarget({
-                  roundParticipantId: rpId,
-                  holeNumber,
-                  participantName: rp.person.displayName,
-                });
-                setHistoryDialogOpen(true);
-              }}
-            />
-          </CardContent>
-        </Card>
-      )}
+      {/* Scorecards — one per group, visible when round is not draft */}
+      {round.status !== 'draft' &&
+        round.participants.length > 0 &&
+        (() => {
+          const groups = round.groups ?? [];
+          const ungrouped = round.participants.filter((rp) => !rp.roundGroupId);
+
+          // Build list of sections: one per group + ungrouped if any
+          const sections: {
+            label: string;
+            participants: typeof round.participants;
+          }[] = [];
+          for (const g of groups) {
+            const groupParticipants = round.participants.filter(
+              (rp) => rp.roundGroupId === g.id,
+            );
+            if (groupParticipants.length > 0) {
+              sections.push({
+                label: g.name ?? `Group ${g.groupNumber}`,
+                participants: groupParticipants,
+              });
+            }
+          }
+          if (ungrouped.length > 0) {
+            sections.push({ label: 'Ungrouped', participants: ungrouped });
+          }
+          // Fallback: if no groups at all, show everyone in one card
+          if (sections.length === 0) {
+            sections.push({
+              label: 'Scorecard',
+              participants: round.participants,
+            });
+          }
+
+          const handleScoreClick = (
+            rpId: string,
+            holeNumber: number,
+            currentStrokes?: number,
+          ) => {
+            const rp = round.participants.find((p) => p.id === rpId);
+            const hole = round.course.holes.find(
+              (h) => h.holeNumber === holeNumber,
+            );
+            if (!rp || !hole) return;
+            setScoreTarget({
+              roundParticipantId: rpId,
+              holeNumber,
+              currentStrokes,
+              participantName: rp.person.displayName,
+              par: hole.par,
+            });
+            setScoreDialogOpen(true);
+          };
+
+          const handleHistoryClick = (rpId: string, holeNumber: number) => {
+            const rp = round.participants.find((p) => p.id === rpId);
+            if (!rp) return;
+            setHistoryTarget({
+              roundParticipantId: rpId,
+              holeNumber,
+              participantName: rp.person.displayName,
+            });
+            setHistoryDialogOpen(true);
+          };
+
+          return sections.map((section) => (
+            <Card key={section.label}>
+              <CardHeader>
+                <CardTitle className="text-lg">{section.label}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 sm:p-6 sm:pt-0">
+                <Scorecard
+                  holes={round.course.holes}
+                  participants={section.participants}
+                  scores={scorecard}
+                  roundStatus={round.status}
+                  onScoreClick={handleScoreClick}
+                  onHistoryClick={handleHistoryClick}
+                />
+              </CardContent>
+            </Card>
+          ));
+        })()}
 
       {/* Score entry dialog */}
       {scoreTarget && (
@@ -842,7 +874,7 @@ function PlayersAndGroupsSection({
             (snap: {rp.handicapSnapshot})
           </span>
         )}
-        {(round.status === 'draft' || round.status === 'open') && (
+        {round.status === 'draft' && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
@@ -1154,12 +1186,14 @@ function CompetitionsSection({
                   <AddIndividualCompDialog
                     tournamentId={round.tournamentId}
                     roundId={round.id}
+                    hasTeams={hasTeams}
                     onSaved={onChanged}
                   />
                   {hasTeams && (
                     <AddTeamCompDialog
                       tournamentId={round.tournamentId}
                       roundId={round.id}
+                      round={round}
                       onSaved={onChanged}
                     />
                   )}
@@ -1231,9 +1265,7 @@ function CompetitionsSection({
                             hasGroups={round.groups.length > 0}
                             onSaved={onChanged}
                           />
-                          {isMatchFormat(
-                            comp.formatType as CompetitionConfig['formatType'],
-                          ) && (
+                          {comp.formatType === 'match_play' && (
                             <ConfigureMatchesDialog
                               comp={comp}
                               participants={round.participants}
@@ -1367,7 +1399,7 @@ function BonusCompRow({
     bonusPoints?: number;
   } | null;
   const isContributor = config?.bonusMode === 'contributor';
-  const canEdit = roundStatus === 'open' || roundStatus === 'locked';
+  const canEdit = roundStatus === 'open';
 
   return (
     <div className="flex items-center justify-between rounded-md border px-3 py-2">
@@ -2133,12 +2165,17 @@ const BONUS_FORMATS: {
 function AddIndividualCompDialog({
   tournamentId,
   roundId,
+  hasTeams,
   onSaved,
 }: {
   tournamentId: string;
   roundId: string;
+  hasTeams: boolean;
   onSaved: () => void;
 }) {
+  const availableFormats = hasTeams
+    ? INDIVIDUAL_FORMATS.filter((f) => f.value !== 'match_play')
+    : INDIVIDUAL_FORMATS;
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
@@ -2249,7 +2286,7 @@ function AddIndividualCompDialog({
                 setFormatType(e.target.value as CompetitionConfig['formatType'])
               }
             >
-              {INDIVIDUAL_FORMATS.map((ft) => (
+              {availableFormats.map((ft) => (
                 <option key={ft.value} value={ft.value}>
                   {ft.label}
                 </option>
@@ -2350,10 +2387,12 @@ const TEAM_FORMATS: {
 function AddTeamCompDialog({
   tournamentId,
   roundId,
+  round,
   onSaved,
 }: {
   tournamentId: string;
   roundId: string;
+  round: RoundData;
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -2372,6 +2411,61 @@ function AddTeamCompDialog({
     setPointsPerHalf(0.5);
   };
 
+  // Auto-generate best ball pairings: for each group with exactly 2 teams
+  // that each have exactly 2 members, create a team pairing.
+  const bestBallPairings = useMemo(() => {
+    const pairings: { teamA: string; teamB: string }[] = [];
+    for (const group of round.groups ?? []) {
+      const groupParticipants = round.participants.filter(
+        (rp) => rp.roundGroupId === group.id,
+      );
+      // Collect teams in this group
+      const teamCounts = new Map<string, number>();
+      for (const rp of groupParticipants) {
+        const teamId = rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id;
+        if (teamId) {
+          teamCounts.set(teamId, (teamCounts.get(teamId) ?? 0) + 1);
+        }
+      }
+      const teamIds = [...teamCounts.keys()];
+      // Valid 2v2: exactly 2 teams, each with 2 members
+      if (
+        teamIds.length === 2 &&
+        teamCounts.get(teamIds[0]) === 2 &&
+        teamCounts.get(teamIds[1]) === 2
+      ) {
+        pairings.push({ teamA: teamIds[0], teamB: teamIds[1] });
+      }
+    }
+    return pairings;
+  }, [round.groups, round.participants]);
+
+  // Count groups that are valid for best ball
+  const validBestBallGroups = useMemo(() => {
+    let count = 0;
+    for (const group of round.groups ?? []) {
+      const groupParticipants = round.participants.filter(
+        (rp) => rp.roundGroupId === group.id,
+      );
+      const teamCounts = new Map<string, number>();
+      for (const rp of groupParticipants) {
+        const teamId = rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id;
+        if (teamId) {
+          teamCounts.set(teamId, (teamCounts.get(teamId) ?? 0) + 1);
+        }
+      }
+      const teamIds = [...teamCounts.keys()];
+      if (
+        teamIds.length === 2 &&
+        teamCounts.get(teamIds[0]) === 2 &&
+        teamCounts.get(teamIds[1]) === 2
+      ) {
+        count++;
+      }
+    }
+    return count;
+  }, [round.groups, round.participants]);
+
   const buildConfig = (): CompetitionConfig => {
     switch (formatType) {
       case 'match_play':
@@ -2382,7 +2476,7 @@ function AddTeamCompDialog({
       case 'best_ball':
         return {
           formatType: 'best_ball',
-          config: { pointsPerWin, pointsPerHalf, pairings: [] },
+          config: { pointsPerWin, pointsPerHalf, pairings: bestBallPairings },
         };
       default:
         return {
@@ -2471,43 +2565,93 @@ function AddTeamCompDialog({
             </select>
           </div>
 
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Points per Win</Label>
-                <Input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  value={pointsPerWin}
-                  onChange={(e) =>
-                    setPointsPerWin(parseFloat(e.target.value) || 0)
-                  }
-                />
+          {formatType === 'best_ball' ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Points per Win</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={pointsPerWin}
+                    onChange={(e) =>
+                      setPointsPerWin(parseFloat(e.target.value) || 0)
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Points per Half</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={pointsPerHalf}
+                    onChange={(e) =>
+                      setPointsPerHalf(parseFloat(e.target.value) || 0)
+                    }
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Points per Half</Label>
-                <Input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  value={pointsPerHalf}
-                  onChange={(e) =>
-                    setPointsPerHalf(parseFloat(e.target.value) || 0)
-                  }
-                />
-              </div>
+              {validBestBallGroups > 0 ? (
+                <p className="text-muted-foreground text-xs">
+                  {validBestBallGroups} group
+                  {validBestBallGroups !== 1 ? 's' : ''} with valid 2v2 team
+                  matchups. Pairings will be set up automatically.
+                </p>
+              ) : (
+                <p className="text-destructive text-xs">
+                  No groups have a valid 2v2 setup (exactly 2 teams with 2
+                  players each). Set up groups and teams first.
+                </p>
+              )}
             </div>
-            <p className="text-muted-foreground text-xs">
-              Pairings can be configured after creation.
-            </p>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Points per Win</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={pointsPerWin}
+                    onChange={(e) =>
+                      setPointsPerWin(parseFloat(e.target.value) || 0)
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Points per Half</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={pointsPerHalf}
+                    onChange={(e) =>
+                      setPointsPerHalf(parseFloat(e.target.value) || 0)
+                    }
+                  />
+                </div>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Pairings can be configured after creation.
+              </p>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving || !name.trim()}>
+          <Button
+            onClick={handleSave}
+            disabled={
+              saving ||
+              !name.trim() ||
+              (formatType === 'best_ball' && validBestBallGroups === 0)
+            }
+          >
             {saving ? 'Creating…' : 'Create'}
           </Button>
         </DialogFooter>

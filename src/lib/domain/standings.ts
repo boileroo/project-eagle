@@ -58,6 +58,24 @@ export interface StandingsResult {
 // Main Dispatcher
 // ──────────────────────────────────────────────
 
+type TotalsEntry = {
+  displayName: string;
+  total: number;
+  roundsPlayed: number;
+  perRound: StandingEntry['perRound'];
+  bonusTotal: number;
+};
+
+function emptyTotalsEntry(displayName: string): TotalsEntry {
+  return {
+    displayName,
+    total: 0,
+    roundsPlayed: 0,
+    perRound: [],
+    bonusTotal: 0,
+  };
+}
+
 export function calculateStandings(
   config: AggregationConfig,
   rounds: RoundCompetitionData[],
@@ -66,7 +84,11 @@ export function calculateStandings(
 ): StandingsResult {
   switch (config.method) {
     case 'sum_stableford':
-      return aggregateSumStableford(rounds, participantType, contributorBonuses ?? []);
+      return aggregateSumStableford(
+        rounds,
+        participantType,
+        contributorBonuses ?? [],
+      );
     case 'lowest_strokes':
       return aggregateLowestStrokes(rounds, participantType, config.config);
     case 'match_wins':
@@ -86,10 +108,9 @@ function aggregateSumStableford(
   participantType: 'individual' | 'team',
   contributorBonuses: ContributorBonusAward[],
 ): StandingsResult {
-  const totals = new Map<
-    string,
-    { displayName: string; total: number; roundsPlayed: number; perRound: StandingEntry['perRound']; bonusTotal: number }
-  >();
+  const totals = new Map<string, TotalsEntry>();
+
+  const personLookup = buildPersonLookup(rounds);
 
   for (const round of rounds) {
     for (const input of round.competitionInputs) {
@@ -100,7 +121,10 @@ function aggregateSumStableford(
         if (participantType === 'team') {
           // Map individual stableford points to teams
           const inputTeams = input.teams ?? [];
-          const playerTeamMap = new Map<string, { teamId: string; teamName: string }>();
+          const playerTeamMap = new Map<
+            string,
+            { teamId: string; teamName: string }
+          >();
           for (const team of inputTeams) {
             for (const memberId of team.memberParticipantIds) {
               playerTeamMap.set(memberId, {
@@ -114,13 +138,8 @@ function aggregateSumStableford(
             const team = playerTeamMap.get(entry.roundParticipantId);
             if (!team) continue;
 
-            const existing = totals.get(team.teamId) ?? {
-              displayName: team.teamName,
-              total: 0,
-              roundsPlayed: 0,
-              perRound: [],
-              bonusTotal: 0,
-            };
+            const existing =
+              totals.get(team.teamId) ?? emptyTotalsEntry(team.teamName);
 
             existing.total += entry.totalPoints;
             const existingRound = existing.perRound.find(
@@ -140,13 +159,12 @@ function aggregateSumStableford(
           }
         } else {
           for (const entry of result.result.leaderboard) {
-            const existing = totals.get(entry.roundParticipantId) ?? {
-              displayName: entry.displayName,
-              total: 0,
-              roundsPlayed: 0,
-              perRound: [],
-              bonusTotal: 0,
-            };
+            const person = personLookup.get(entry.roundParticipantId);
+            const entityId = person?.personId ?? entry.roundParticipantId;
+            const displayName = person?.displayName ?? entry.displayName;
+
+            const existing =
+              totals.get(entityId) ?? emptyTotalsEntry(displayName);
             existing.total += entry.totalPoints;
             existing.roundsPlayed += 1;
             existing.perRound.push({
@@ -154,7 +172,7 @@ function aggregateSumStableford(
               roundNumber: round.roundNumber,
               value: entry.totalPoints,
             });
-            totals.set(entry.roundParticipantId, existing);
+            totals.set(entityId, existing);
           }
         }
       }
@@ -164,7 +182,9 @@ function aggregateSumStableford(
   // Add contributor bonus points
   if (participantType === 'individual') {
     for (const bonus of contributorBonuses) {
-      const existing = totals.get(bonus.roundParticipantId);
+      const person = personLookup.get(bonus.roundParticipantId);
+      const entityId = person?.personId ?? bonus.roundParticipantId;
+      const existing = totals.get(entityId);
       if (existing) {
         existing.total += bonus.bonusPoints;
         existing.bonusTotal += bonus.bonusPoints;
@@ -216,10 +236,9 @@ function aggregateLowestStrokes(
   participantType: 'individual' | 'team',
   config: { scoringBasis: 'net_strokes' | 'gross_strokes' },
 ): StandingsResult {
-  const totals = new Map<
-    string,
-    { displayName: string; total: number; roundsPlayed: number; perRound: StandingEntry['perRound']; bonusTotal: number }
-  >();
+  const totals = new Map<string, TotalsEntry>();
+
+  const personLookup = buildPersonLookup(rounds);
 
   for (const round of rounds) {
     for (const input of round.competitionInputs) {
@@ -230,7 +249,10 @@ function aggregateLowestStrokes(
         if (participantType === 'team') {
           // Map individual stroke play results to teams
           const inputTeams = input.teams ?? [];
-          const playerTeamMap = new Map<string, { teamId: string; teamName: string }>();
+          const playerTeamMap = new Map<
+            string,
+            { teamId: string; teamName: string }
+          >();
           for (const team of inputTeams) {
             for (const memberId of team.memberParticipantIds) {
               playerTeamMap.set(memberId, {
@@ -249,13 +271,8 @@ function aggregateLowestStrokes(
                 ? entry.rankingScore
                 : entry.grossTotal;
 
-            const existing = totals.get(team.teamId) ?? {
-              displayName: team.teamName,
-              total: 0,
-              roundsPlayed: 0,
-              perRound: [],
-              bonusTotal: 0,
-            };
+            const existing =
+              totals.get(team.teamId) ?? emptyTotalsEntry(team.teamName);
 
             existing.total += value;
             const existingRound = existing.perRound.find(
@@ -280,13 +297,12 @@ function aggregateLowestStrokes(
                 ? entry.rankingScore
                 : entry.grossTotal;
 
-            const existing = totals.get(entry.roundParticipantId) ?? {
-              displayName: entry.displayName,
-              total: 0,
-              roundsPlayed: 0,
-              perRound: [],
-              bonusTotal: 0,
-            };
+            const person = personLookup.get(entry.roundParticipantId);
+            const entityId = person?.personId ?? entry.roundParticipantId;
+            const displayName = person?.displayName ?? entry.displayName;
+
+            const existing =
+              totals.get(entityId) ?? emptyTotalsEntry(displayName);
             existing.total += value;
             existing.roundsPlayed += 1;
             existing.perRound.push({
@@ -294,7 +310,7 @@ function aggregateLowestStrokes(
               roundNumber: round.roundNumber,
               value,
             });
-            totals.set(entry.roundParticipantId, existing);
+            totals.set(entityId, existing);
           }
         }
       }
@@ -327,8 +343,16 @@ function aggregateMatchWins(
 ): StandingsResult {
   const totals = new Map<
     string,
-    { displayName: string; total: number; roundsPlayed: number; perRound: StandingEntry['perRound']; bonusTotal: number }
+    {
+      displayName: string;
+      total: number;
+      roundsPlayed: number;
+      perRound: StandingEntry['perRound'];
+      bonusTotal: number;
+    }
   >();
+
+  const personLookup = buildPersonLookup(rounds);
 
   for (const round of rounds) {
     for (const input of round.competitionInputs) {
@@ -336,39 +360,35 @@ function aggregateMatchWins(
       for (const result of results) {
         if (!result) continue;
 
-        if (
-          result.type === 'match_play' &&
-          participantType === 'individual'
-        ) {
+        if (result.type === 'match_play' && participantType === 'individual') {
           for (const match of result.result.matches) {
             const entries = [
               {
-                id: match.playerA.roundParticipantId,
+                rpId: match.playerA.roundParticipantId,
                 name: match.playerA.displayName,
               },
               {
-                id: match.playerB.roundParticipantId,
+                rpId: match.playerB.roundParticipantId,
                 name: match.playerB.displayName,
               },
             ];
 
             for (const entry of entries) {
-              const existing = totals.get(entry.id) ?? {
-                displayName: entry.name,
-                total: 0,
-                roundsPlayed: 0,
-                perRound: [],
-                bonusTotal: 0,
-              };
+              const person = personLookup.get(entry.rpId);
+              const entityId = person?.personId ?? entry.rpId;
+              const displayName = person?.displayName ?? entry.name;
+
+              const existing =
+                totals.get(entityId) ?? emptyTotalsEntry(displayName);
 
               let pts = 0;
               if (match.winner === 'halved') {
                 pts = config.pointsPerHalf;
               } else if (
                 (match.winner === 'A' &&
-                  entry.id === match.playerA.roundParticipantId) ||
+                  entry.rpId === match.playerA.roundParticipantId) ||
                 (match.winner === 'B' &&
-                  entry.id === match.playerB.roundParticipantId)
+                  entry.rpId === match.playerB.roundParticipantId)
               ) {
                 pts = config.pointsPerWin;
               }
@@ -380,19 +400,19 @@ function aggregateMatchWins(
                 roundNumber: round.roundNumber,
                 value: pts,
               });
-              totals.set(entry.id, existing);
+              totals.set(entityId, existing);
             }
           }
         }
 
-        if (
-          result.type === 'match_play' &&
-          participantType === 'team'
-        ) {
+        if (result.type === 'match_play' && participantType === 'team') {
           // Map individual match play results to teams
           // Each player's points roll up to their team
           const inputTeams = input.teams ?? [];
-          const playerTeamMap = new Map<string, { teamId: string; teamName: string }>();
+          const playerTeamMap = new Map<
+            string,
+            { teamId: string; teamName: string }
+          >();
           for (const team of inputTeams) {
             for (const memberId of team.memberParticipantIds) {
               playerTeamMap.set(memberId, {
@@ -411,13 +431,8 @@ function aggregateMatchWins(
               const team = playerTeamMap.get(side.rpId);
               if (!team) continue;
 
-              const existing = totals.get(team.teamId) ?? {
-                displayName: team.teamName,
-                total: 0,
-                roundsPlayed: 0,
-                perRound: [],
-                bonusTotal: 0,
-              };
+              const existing =
+                totals.get(team.teamId) ?? emptyTotalsEntry(team.teamName);
 
               existing.total += side.pts;
               // Only increment roundsPlayed once per round per team
@@ -447,13 +462,8 @@ function aggregateMatchWins(
             ];
 
             for (const entry of entries) {
-              const existing = totals.get(entry.id) ?? {
-                displayName: entry.name,
-                total: 0,
-                roundsPlayed: 0,
-                perRound: [],
-                bonusTotal: 0,
-              };
+              const existing =
+                totals.get(entry.id) ?? emptyTotalsEntry(entry.name);
 
               let pts = 0;
               if (match.winner === 'halved') {
@@ -461,8 +471,7 @@ function aggregateMatchWins(
               } else if (
                 (match.winner === 'A' &&
                   entry.id === match.teamA.roundTeamId) ||
-                (match.winner === 'B' &&
-                  entry.id === match.teamB.roundTeamId)
+                (match.winner === 'B' && entry.id === match.teamB.roundTeamId)
               ) {
                 pts = config.pointsPerWin;
               }
@@ -506,6 +515,27 @@ function safeCalculate(input: CompetitionInput): CompetitionResult | null {
 }
 
 /**
+ * Build a lookup from roundParticipantId → { personId, displayName }
+ * across all rounds, so we can aggregate individuals by personId.
+ */
+function buildPersonLookup(
+  rounds: RoundCompetitionData[],
+): Map<string, { personId: string; displayName: string }> {
+  const lookup = new Map<string, { personId: string; displayName: string }>();
+  for (const round of rounds) {
+    for (const input of round.competitionInputs) {
+      for (const p of input.participants) {
+        lookup.set(p.roundParticipantId, {
+          personId: p.personId,
+          displayName: p.displayName,
+        });
+      }
+    }
+  }
+  return lookup;
+}
+
+/**
  * For a given competition input, return an array of results.
  * For `all`-scope competitions, returns a single result.
  * For `within_group` competitions, returns one result per group
@@ -528,9 +558,7 @@ function expandByGroup(
       participants: input.participants.filter((p) =>
         memberIds.has(p.roundParticipantId),
       ),
-      scores: input.scores.filter((s) =>
-        memberIds.has(s.roundParticipantId),
-      ),
+      scores: input.scores.filter((s) => memberIds.has(s.roundParticipantId)),
       teams: input.teams?.filter((t) =>
         t.memberParticipantIds.some((id) => memberIds.has(id)),
       ),
