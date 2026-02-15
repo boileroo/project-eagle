@@ -12,6 +12,7 @@ import { getScorecardFn } from '@/lib/scores.server';
 import {
   getRoundCompetitionsFn,
   createCompetitionFn,
+  updateCompetitionFn,
   deleteCompetitionFn,
   awardBonusFn,
   removeBonusAwardFn,
@@ -56,6 +57,7 @@ import {
   FORMAT_TYPE_LABELS,
   FORMAT_TYPES,
   isBonusFormat,
+  isMatchFormat,
 } from '@/lib/competitions';
 import type { CompetitionConfig } from '@/lib/competitions';
 import {
@@ -1133,15 +1135,24 @@ function CompetitionsSection({
                         </Badge>
                       </div>
                       {isCommissioner && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-destructive"
-                          disabled={deletingId === comp.id}
-                          onClick={() => handleDelete(comp.id)}
-                        >
-                          {deletingId === comp.id ? '…' : '✕'}
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          {isMatchFormat(comp.formatType as CompetitionConfig['formatType']) && (
+                            <ConfigureMatchesDialog
+                              comp={comp}
+                              participants={round.participants}
+                              onSaved={onChanged}
+                            />
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-destructive"
+                            disabled={deletingId === comp.id}
+                            onClick={() => handleDelete(comp.id)}
+                          >
+                            {deletingId === comp.id ? '…' : '✕'}
+                          </Button>
+                        </div>
                       )}
                     </div>
                     {result ? (
@@ -1309,6 +1320,251 @@ function BonusCompRow({
         )}
       </div>
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Configure Matches Dialog (match play pairings)
+// ──────────────────────────────────────────────
+
+function ConfigureMatchesDialog({
+  comp,
+  participants,
+  onSaved,
+}: {
+  comp: CompetitionsData[number];
+  participants: RoundData['participants'];
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Parse existing pairings from config
+  const existingConfig = comp.configJson as Record<string, any> | null;
+  const existingPairings: { playerA: string; playerB: string }[] =
+    existingConfig?.pairings ?? [];
+
+  const [pairings, setPairings] = useState(existingPairings);
+  const [playerA, setPlayerA] = useState('');
+  const [playerB, setPlayerB] = useState('');
+
+  // Players already assigned to a pairing
+  const assignedIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const p of pairings) {
+      ids.add(p.playerA);
+      ids.add(p.playerB);
+    }
+    return ids;
+  }, [pairings]);
+
+  // Available players (not yet in a pairing)
+  const availablePlayers = participants.filter(
+    (rp) => !assignedIds.has(rp.id),
+  );
+
+  const getPlayerName = (rpId: string) =>
+    participants.find((rp) => rp.id === rpId)?.person.displayName ?? 'Unknown';
+
+  const getPlayerTeam = (rpId: string) => {
+    const rp = participants.find((p) => p.id === rpId);
+    return rp?.tournamentParticipant?.teamMemberships?.[0]?.team?.name ?? null;
+  };
+
+  const handleAddPairing = () => {
+    if (!playerA || !playerB || playerA === playerB) return;
+    setPairings((prev) => [...prev, { playerA, playerB }]);
+    setPlayerA('');
+    setPlayerB('');
+  };
+
+  const handleRemovePairing = (index: number) => {
+    setPairings((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const config: CompetitionConfig = {
+        formatType: comp.formatType as CompetitionConfig['formatType'],
+        config: {
+          ...existingConfig,
+          pairings,
+        },
+      } as CompetitionConfig;
+
+      await updateCompetitionFn({
+        data: {
+          id: comp.id,
+          competitionConfig: config,
+        },
+      });
+      toast.success('Matches configured.');
+      setOpen(false);
+      onSaved();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to save matches',
+      );
+    }
+    setSaving(false);
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      // Reset to existing pairings when opening
+      setPairings(existingPairings);
+      setPlayerA('');
+      setPlayerB('');
+    }
+    setOpen(next);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="h-7 text-xs">
+          Configure Matches
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Configure Matches</DialogTitle>
+          <DialogDescription>
+            Set up head-to-head pairings for {comp.name}.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Current pairings */}
+          {pairings.length > 0 && (
+            <div className="space-y-2">
+              <Label>Current Matches</Label>
+              {pairings.map((pairing, i) => {
+                const teamA = getPlayerTeam(pairing.playerA);
+                const teamB = getPlayerTeam(pairing.playerB);
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between rounded-md border px-3 py-2"
+                  >
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium">
+                        {getPlayerName(pairing.playerA)}
+                      </span>
+                      {teamA && (
+                        <Badge variant="secondary" className="text-xs">
+                          {teamA}
+                        </Badge>
+                      )}
+                      <span className="text-muted-foreground">vs</span>
+                      <span className="font-medium">
+                        {getPlayerName(pairing.playerB)}
+                      </span>
+                      {teamB && (
+                        <Badge variant="secondary" className="text-xs">
+                          {teamB}
+                        </Badge>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs text-destructive"
+                      onClick={() => handleRemovePairing(i)}
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Add pairing */}
+          {availablePlayers.length >= 2 && (
+            <div className="space-y-2">
+              <Label>Add Match</Label>
+              <div className="flex items-end gap-2">
+                <div className="flex-1 space-y-1">
+                  <select
+                    className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    value={playerA}
+                    onChange={(e) => setPlayerA(e.target.value)}
+                  >
+                    <option value="">Player A</option>
+                    {availablePlayers
+                      .filter((rp) => rp.id !== playerB)
+                      .map((rp) => {
+                        const team =
+                          rp.tournamentParticipant?.teamMemberships?.[0]?.team?.name;
+                        return (
+                          <option key={rp.id} value={rp.id}>
+                            {rp.person.displayName}
+                            {team ? ` (${team})` : ''}
+                          </option>
+                        );
+                      })}
+                  </select>
+                </div>
+                <span className="text-muted-foreground pb-2 text-sm">vs</span>
+                <div className="flex-1 space-y-1">
+                  <select
+                    className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    value={playerB}
+                    onChange={(e) => setPlayerB(e.target.value)}
+                  >
+                    <option value="">Player B</option>
+                    {availablePlayers
+                      .filter((rp) => rp.id !== playerA)
+                      .map((rp) => {
+                        const team =
+                          rp.tournamentParticipant?.teamMemberships?.[0]?.team?.name;
+                        return (
+                          <option key={rp.id} value={rp.id}>
+                            {rp.person.displayName}
+                            {team ? ` (${team})` : ''}
+                          </option>
+                        );
+                      })}
+                  </select>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  disabled={!playerA || !playerB || playerA === playerB}
+                  onClick={handleAddPairing}
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {availablePlayers.length < 2 && pairings.length > 0 && (
+            <p className="text-muted-foreground text-xs">
+              All players have been paired.
+            </p>
+          )}
+
+          {availablePlayers.length > 0 && availablePlayers.length < 2 && (
+            <p className="text-muted-foreground text-xs">
+              {availablePlayers.length} player remaining without a match.
+            </p>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
