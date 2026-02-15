@@ -126,7 +126,11 @@ function NewSingleRoundPage() {
                     <FormItem>
                       <FormLabel>Date</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} value={field.value ?? ''} />
+                        <Input
+                          type="date"
+                          {...field}
+                          value={field.value ?? ''}
+                        />
                       </FormControl>
                       <FormDescription>
                         Defaults to today if left blank.

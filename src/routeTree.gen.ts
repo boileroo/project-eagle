@@ -16,6 +16,7 @@ import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AppAccountRouteImport } from './routes/_app/account'
 import { Route as AppTournamentsIndexRouteImport } from './routes/_app/tournaments/index'
+import { Route as AppRoundsIndexRouteImport } from './routes/_app/rounds/index'
 import { Route as AppCoursesIndexRouteImport } from './routes/_app/courses/index'
 import { Route as AppTournamentsNewRouteImport } from './routes/_app/tournaments/new'
 import { Route as AppRoundsNewRouteImport } from './routes/_app/rounds/new'
@@ -58,6 +59,11 @@ const AppAccountRoute = AppAccountRouteImport.update({
 const AppTournamentsIndexRoute = AppTournamentsIndexRouteImport.update({
   id: '/tournaments/',
   path: '/tournaments/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRoundsIndexRoute = AppRoundsIndexRouteImport.update({
+  id: '/rounds/',
+  path: '/rounds/',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCoursesIndexRoute = AppCoursesIndexRouteImport.update({
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/rounds/new': typeof AppRoundsNewRoute
   '/tournaments/new': typeof AppTournamentsNewRoute
   '/courses/': typeof AppCoursesIndexRoute
+  '/rounds/': typeof AppRoundsIndexRoute
   '/tournaments/': typeof AppTournamentsIndexRoute
   '/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute
   '/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/rounds/new': typeof AppRoundsNewRoute
   '/tournaments/new': typeof AppTournamentsNewRoute
   '/courses': typeof AppCoursesIndexRoute
+  '/rounds': typeof AppRoundsIndexRoute
   '/tournaments': typeof AppTournamentsIndexRoute
   '/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute
   '/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/_app/rounds/new': typeof AppRoundsNewRoute
   '/_app/tournaments/new': typeof AppTournamentsNewRoute
   '/_app/courses/': typeof AppCoursesIndexRoute
+  '/_app/rounds/': typeof AppRoundsIndexRoute
   '/_app/tournaments/': typeof AppTournamentsIndexRoute
   '/_app/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute
   '/_app/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/rounds/new'
     | '/tournaments/new'
     | '/courses/'
+    | '/rounds/'
     | '/tournaments/'
     | '/courses/$courseId/edit'
     | '/tournaments/$tournamentId/edit'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/rounds/new'
     | '/tournaments/new'
     | '/courses'
+    | '/rounds'
     | '/tournaments'
     | '/courses/$courseId/edit'
     | '/tournaments/$tournamentId/edit'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '/_app/rounds/new'
     | '/_app/tournaments/new'
     | '/_app/courses/'
+    | '/_app/rounds/'
     | '/_app/tournaments/'
     | '/_app/courses/$courseId/edit'
     | '/_app/tournaments/$tournamentId/edit'
@@ -278,6 +290,13 @@ declare module '@tanstack/react-router' {
       path: '/tournaments'
       fullPath: '/tournaments/'
       preLoaderRoute: typeof AppTournamentsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/rounds/': {
+      id: '/_app/rounds/'
+      path: '/rounds'
+      fullPath: '/rounds/'
+      preLoaderRoute: typeof AppRoundsIndexRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/courses/': {
@@ -361,6 +380,7 @@ interface AppRouteChildren {
   AppRoundsNewRoute: typeof AppRoundsNewRoute
   AppTournamentsNewRoute: typeof AppTournamentsNewRoute
   AppCoursesIndexRoute: typeof AppCoursesIndexRoute
+  AppRoundsIndexRoute: typeof AppRoundsIndexRoute
   AppTournamentsIndexRoute: typeof AppTournamentsIndexRoute
   AppCoursesCourseIdEditRoute: typeof AppCoursesCourseIdEditRoute
   AppTournamentsTournamentIdEditRoute: typeof AppTournamentsTournamentIdEditRoute
@@ -377,6 +397,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppRoundsNewRoute: AppRoundsNewRoute,
   AppTournamentsNewRoute: AppTournamentsNewRoute,
   AppCoursesIndexRoute: AppCoursesIndexRoute,
+  AppRoundsIndexRoute: AppRoundsIndexRoute,
   AppTournamentsIndexRoute: AppTournamentsIndexRoute,
   AppCoursesCourseIdEditRoute: AppCoursesCourseIdEditRoute,
   AppTournamentsTournamentIdEditRoute: AppTournamentsTournamentIdEditRoute,

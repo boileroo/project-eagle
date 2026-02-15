@@ -4,6 +4,7 @@ import { db } from '@/db';
 import {
   courses,
   rounds,
+  roundGroups,
   roundParticipants,
   tournamentParticipants,
   tournaments,
@@ -61,6 +62,34 @@ async function resortRoundsByDate(tournamentId: string) {
     }
   }
 }
+
+// ──────────────────────────────────────────────
+// List all single rounds (for /rounds page)
+// ──────────────────────────────────────────────
+
+export const getSingleRoundsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    // Single rounds live inside auto-tournaments with isSingleRound=true
+    // Each auto-tournament has exactly one round
+    const singleTournaments = await db.query.tournaments.findMany({
+      where: eq(tournaments.isSingleRound, true),
+      orderBy: (t, { desc }) => [desc(t.createdAt)],
+      with: {
+        rounds: {
+          with: {
+            course: true,
+            participants: {
+              with: { person: true },
+            },
+          },
+        },
+      },
+    });
+
+    // Flatten: extract the single round from each tournament
+    return singleTournaments.map((t) => t.rounds[0]).filter(Boolean);
+  },
+);
 
 // ──────────────────────────────────────────────
 // Get a single round with participants & course
@@ -153,6 +182,30 @@ export const createRoundFn = createServerFn({ method: 'POST' })
             tp.handicapOverride ?? tp.person.currentHandicap ?? '0',
         })),
       );
+    }
+
+    // Create default Group 1 and assign all participants
+    const [defaultGroup] = await db
+      .insert(roundGroups)
+      .values({
+        roundId: round.id,
+        groupNumber: 1,
+        name: 'Group 1',
+      })
+      .returning();
+
+    if (tpList.length > 0) {
+      for (const tp of tpList) {
+        await db
+          .update(roundParticipants)
+          .set({ roundGroupId: defaultGroup.id })
+          .where(
+            and(
+              eq(roundParticipants.roundId, round.id),
+              eq(roundParticipants.personId, tp.personId),
+            ),
+          );
+      }
     }
 
     // Re-sort if dates are present
@@ -372,6 +425,17 @@ export const addRoundParticipantFn = createServerFn({ method: 'POST' })
       })
       .returning();
 
+    // Auto-assign to group if there's exactly one group (the default)
+    const groups = await db.query.roundGroups.findMany({
+      where: eq(roundGroups.roundId, data.roundId),
+    });
+    if (groups.length === 1) {
+      await db
+        .update(roundParticipants)
+        .set({ roundGroupId: groups[0].id })
+        .where(eq(roundParticipants.id, rp.id));
+    }
+
     return { roundParticipantId: rp.id };
   });
 
@@ -446,8 +510,7 @@ export const createSingleRoundFn = createServerFn({ method: 'POST' })
       const profile = await db.query.profiles.findFirst({
         where: eq(profiles.id, user.id),
       });
-      const displayName =
-        profile?.displayName || profile?.email || 'Unknown';
+      const displayName = profile?.displayName || profile?.email || 'Unknown';
       const [created] = await db
         .insert(persons)
         .values({
@@ -517,6 +580,26 @@ export const createSingleRoundFn = createServerFn({ method: 'POST' })
       tournamentParticipantId: tp.id,
       handicapSnapshot: person.currentHandicap ?? '0',
     });
+
+    // 5. Create default Group 1 and assign the creator
+    const [defaultGroup] = await db
+      .insert(roundGroups)
+      .values({
+        roundId: round.id,
+        groupNumber: 1,
+        name: 'Group 1',
+      })
+      .returning();
+
+    await db
+      .update(roundParticipants)
+      .set({ roundGroupId: defaultGroup.id })
+      .where(
+        and(
+          eq(roundParticipants.roundId, round.id),
+          eq(roundParticipants.personId, person.id),
+        ),
+      );
 
     return {
       tournamentId: tournament.id,

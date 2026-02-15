@@ -22,6 +22,7 @@ export const Route = createFileRoute('/_app')({
 const navLinks = [
   { to: '/' as const, label: 'Dashboard' },
   { to: '/courses' as const, label: 'Courses' },
+  { to: '/rounds' as const, label: 'Rounds' },
   { to: '/tournaments' as const, label: 'Tournaments' },
 ] as const;
 

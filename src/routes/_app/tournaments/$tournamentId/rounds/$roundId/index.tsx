@@ -67,6 +67,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useState, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from '@tanstack/react-router';
@@ -250,7 +251,9 @@ function RoundDetailPage() {
             </div>
           )}
           <h1 className="text-3xl font-bold tracking-tight">
-            {isSingleRound ? round.course.name : `Round ${round.roundNumber ?? '—'}`}
+            {isSingleRound
+              ? round.course.name
+              : `Round ${round.roundNumber ?? '—'}`}
           </h1>
           <div className="text-muted-foreground mt-1 flex items-center gap-3">
             <span>@ {round.course.name}</span>
@@ -372,21 +375,14 @@ function RoundDetailPage() {
         />
       )}
 
-      {/* For single rounds: show Teams panel */}
-      {isSingleRound && tournament && (
-        <SingleRoundTeamsSection
-          tournament={tournament}
+      {/* Players & Groups — hidden for single rounds (handled by SingleRoundPlayersSection above) */}
+      {!isSingleRound && (
+        <PlayersAndGroupsSection
+          round={round}
           isCommissioner={isCommissioner}
           onChanged={() => router.invalidate()}
         />
       )}
-
-      {/* Players & Groups */}
-      <PlayersAndGroupsSection
-        round={round}
-        isCommissioner={isCommissioner}
-        onChanged={() => router.invalidate()}
-      />
 
       {/* Scorecard — visible when round is not draft */}
       {round.status !== 'draft' && round.participants.length > 0 && (
@@ -463,6 +459,14 @@ function RoundDetailPage() {
         scorecard={scorecard}
         competitions={competitions}
         isCommissioner={isCommissioner}
+        hasTeams={
+          isSingleRound
+            ? (tournament?.teams?.length ?? 0) > 0
+            : round.participants.some(
+                (rp) =>
+                  (rp.tournamentParticipant?.teamMemberships?.length ?? 0) > 0,
+              )
+        }
         onChanged={() => router.invalidate()}
       />
     </div>
@@ -704,6 +708,7 @@ function PlayersAndGroupsSection({
 
   const isDraft = round.status === 'draft';
   const canEditGroups = isCommissioner && isDraft;
+  const showGroups = round.participants.length > 4;
 
   // Separate participants into grouped and ungrouped
   const ungrouped = round.participants.filter((rp) => !rp.roundGroupId);
@@ -849,31 +854,34 @@ function PlayersAndGroupsSection({
                 roundParticipant={rp}
                 onSaved={onChanged}
               />
-              {showGroupAssign && canEditGroups && groups.length > 0 && (
-                <>
-                  <DropdownMenuSeparator />
-                  {/* Move to another group or unassign */}
-                  {groups
-                    .filter((g) => g.id !== rp.roundGroupId)
-                    .map((g) => (
+              {showGroupAssign &&
+                canEditGroups &&
+                showGroups &&
+                groups.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    {/* Move to another group or unassign */}
+                    {groups
+                      .filter((g) => g.id !== rp.roundGroupId)
+                      .map((g) => (
+                        <DropdownMenuItem
+                          key={g.id}
+                          disabled={assigning === rp.id}
+                          onClick={() => handleAssignToGroup(rp.id, g.id)}
+                        >
+                          Move to {g.name || `Group ${g.groupNumber}`}
+                        </DropdownMenuItem>
+                      ))}
+                    {rp.roundGroupId && (
                       <DropdownMenuItem
-                        key={g.id}
                         disabled={assigning === rp.id}
-                        onClick={() => handleAssignToGroup(rp.id, g.id)}
+                        onClick={() => handleAssignToGroup(rp.id, null)}
                       >
-                        Move to {g.name || `Group ${g.groupNumber}`}
+                        Unassign from Group
                       </DropdownMenuItem>
-                    ))}
-                  {rp.roundGroupId && (
-                    <DropdownMenuItem
-                      disabled={assigning === rp.id}
-                      onClick={() => handleAssignToGroup(rp.id, null)}
-                    >
-                      Unassign from Group
-                    </DropdownMenuItem>
-                  )}
-                </>
-              )}
+                    )}
+                  </>
+                )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive"
@@ -894,13 +902,13 @@ function PlayersAndGroupsSection({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between text-lg">
-          <span>Players & Groups</span>
+          <span>{showGroups ? 'Players & Groups' : 'Players'}</span>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">
               {round.participants.length} player
               {round.participants.length !== 1 ? 's' : ''}
             </Badge>
-            {canEditGroups && (
+            {canEditGroups && showGroups && (
               <>
                 <Button
                   variant="outline"
@@ -928,8 +936,8 @@ function PlayersAndGroupsSection({
           <p className="text-muted-foreground text-sm">
             No players in this round.
           </p>
-        ) : groups.length === 0 ? (
-          /* No groups — show flat list like before */
+        ) : !showGroups || groups.length === 0 ? (
+          /* Under 5 players or no groups — show flat list */
           <div className="space-y-2">
             {round.participants.map((rp) => (
               <PlayerRow key={rp.id} rp={rp} showGroupAssign={false} />
@@ -1057,12 +1065,14 @@ function CompetitionsSection({
   scorecard,
   competitions,
   isCommissioner,
+  hasTeams,
   onChanged,
 }: {
   round: RoundData;
   scorecard: ScorecardData;
   competitions: CompetitionsData;
   isCommissioner: boolean;
+  hasTeams: boolean;
   onChanged: () => void;
 }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -1146,11 +1156,13 @@ function CompetitionsSection({
                     roundId={round.id}
                     onSaved={onChanged}
                   />
-                  <AddTeamCompDialog
-                    tournamentId={round.tournamentId}
-                    roundId={round.id}
-                    onSaved={onChanged}
-                  />
+                  {hasTeams && (
+                    <AddTeamCompDialog
+                      tournamentId={round.tournamentId}
+                      roundId={round.id}
+                      onSaved={onChanged}
+                    />
+                  )}
                   <AddBonusCompDialog
                     tournamentId={round.tournamentId}
                     roundId={round.id}
@@ -2714,9 +2726,24 @@ function SingleRoundPlayersSection({
   myPerson: { id: string } | null;
   onChanged: () => void;
 }) {
+  const [showTeams, setShowTeams] = useState(tournament.teams.length > 0);
+  const [creatingTeam, setCreatingTeam] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    teamId: string;
+    name: string;
+  } | null>(null);
+
   const iAmParticipant = myPerson
     ? tournament.participants.some((p) => p.personId === myPerson.id)
     : false;
+
+  const assignedParticipantIds = new Set(
+    tournament.teams.flatMap((t) => t.members.map((m) => m.participantId)),
+  );
+  const unassignedForTeams = tournament.participants.filter(
+    (p) => !assignedParticipantIds.has(p.id) && p.role !== 'spectator',
+  );
 
   const handleAddMyself = async () => {
     try {
@@ -2739,9 +2766,7 @@ function SingleRoundPlayersSection({
       toast.success('You joined the round!');
       onChanged();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to join',
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to join');
     }
   };
 
@@ -2754,85 +2779,294 @@ function SingleRoundPlayersSection({
       toast.success(`${name} removed.`);
       onChanged();
     } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to remove');
+    }
+  };
+
+  const handleCreateTeam = async () => {
+    if (!newTeamName.trim()) return;
+    setCreatingTeam(true);
+    try {
+      await createTeamFn({
+        data: { tournamentId: tournament.id, name: newTeamName.trim() },
+      });
+      toast.success('Team created!');
+      setNewTeamName('');
+      onChanged();
+    } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to remove',
+        error instanceof Error ? error.message : 'Failed to create team',
+      );
+    }
+    setCreatingTeam(false);
+  };
+
+  const handleDeleteTeam = async (teamId: string) => {
+    try {
+      await deleteTeamFn({ data: { teamId } });
+      toast.success('Team deleted.');
+      setDeleteConfirm(null);
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to delete team',
+      );
+    }
+  };
+
+  const handleAddTeamMember = async (teamId: string, participantId: string) => {
+    try {
+      await addTeamMemberFn({ data: { teamId, participantId } });
+      toast.success('Player added to team.');
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to add to team',
+      );
+    }
+  };
+
+  const handleRemoveTeamMember = async (memberId: string) => {
+    try {
+      await removeTeamMemberFn({ data: { memberId } });
+      toast.success('Player removed from team.');
+      onChanged();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to remove from team',
       );
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Players</span>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">
-              {tournament.participants.length} player
-              {tournament.participants.length !== 1 ? 's' : ''}
-            </Badge>
-            {!iAmParticipant && (
-              <Button size="sm" variant="outline" onClick={handleAddMyself}>
-                Join
-              </Button>
-            )}
-            {isCommissioner && (
-              <SingleRoundAddPlayerDialog
-                tournamentId={tournament.id}
-                roundId={roundId}
-                onAdded={onChanged}
-              />
-            )}
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {tournament.participants.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            No players yet. Add yourself or invite others.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {tournament.participants.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between rounded-md border px-3 py-2"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">
-                    {p.person.displayName}
-                  </span>
-                  {p.person.userId == null && (
-                    <Badge variant="outline" className="text-xs">
-                      Guest
-                    </Badge>
-                  )}
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Players</span>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <Switch
+                  id="teams-toggle"
+                  checked={showTeams}
+                  onCheckedChange={setShowTeams}
+                  className="scale-75"
+                />
+                <Label
+                  htmlFor="teams-toggle"
+                  className="text-muted-foreground cursor-pointer text-xs font-normal"
+                >
+                  Teams
+                </Label>
+              </div>
+              <Badge variant="secondary">
+                {tournament.participants.length} player
+                {tournament.participants.length !== 1 ? 's' : ''}
+              </Badge>
+              {!iAmParticipant && (
+                <Button size="sm" variant="outline" onClick={handleAddMyself}>
+                  Join
+                </Button>
+              )}
+              {isCommissioner && (
+                <SingleRoundAddPlayerDialog
+                  tournamentId={tournament.id}
+                  roundId={roundId}
+                  onAdded={onChanged}
+                />
+              )}
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {tournament.participants.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No players yet. Add yourself or invite others.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {tournament.participants.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between rounded-md border px-3 py-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      {p.person.displayName}
+                    </span>
+                    {p.person.userId == null && (
+                      <Badge variant="outline" className="text-xs">
+                        Guest
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {(p.handicapOverride ?? p.person.currentHandicap) !=
+                      null && (
+                      <Badge variant="outline">
+                        HC {p.handicapOverride ?? p.person.currentHandicap}
+                      </Badge>
+                    )}
+                    {isCommissioner && p.person.userId !== userId && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive h-7 px-2"
+                        onClick={() =>
+                          handleRemoveParticipant(p.id, p.person.displayName)
+                        }
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {(p.handicapOverride ?? p.person.currentHandicap) !=
-                    null && (
-                    <Badge variant="outline">
-                      HC {p.handicapOverride ?? p.person.currentHandicap}
-                    </Badge>
-                  )}
-                  {isCommissioner && p.person.userId !== userId && (
+              ))}
+            </div>
+          )}
+
+          {/* Inline Teams section */}
+          {showTeams && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">Teams</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {tournament.teams.length} team
+                    {tournament.teams.length !== 1 ? 's' : ''}
+                  </Badge>
+                </div>
+
+                {isCommissioner && (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="New team name…"
+                      value={newTeamName}
+                      onChange={(e) => setNewTeamName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCreateTeam()}
+                      className="h-8 text-sm"
+                    />
                     <Button
                       size="sm"
-                      variant="ghost"
-                      className="text-destructive h-7 px-2"
-                      onClick={() =>
-                        handleRemoveParticipant(p.id, p.person.displayName)
-                      }
+                      onClick={handleCreateTeam}
+                      disabled={creatingTeam || !newTeamName.trim()}
+                      className="h-8"
                     >
-                      Remove
+                      {creatingTeam ? '…' : 'Add'}
                     </Button>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {tournament.teams.length === 0 && (
+                  <p className="text-muted-foreground text-xs">
+                    No teams yet.{' '}
+                    {isCommissioner
+                      ? 'Create a team above.'
+                      : 'The commissioner can create teams.'}
+                  </p>
+                )}
+
+                {tournament.teams.map((team) => (
+                  <div
+                    key={team.id}
+                    className="space-y-1 rounded-md border p-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{team.name}</span>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline" className="text-xs">
+                          {team.members.length}
+                        </Badge>
+                        {isCommissioner && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive h-6 w-6 p-0 text-xs"
+                            onClick={() =>
+                              setDeleteConfirm({
+                                teamId: team.id,
+                                name: team.name,
+                              })
+                            }
+                          >
+                            ×
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-0.5">
+                      {team.members.map((m) => (
+                        <div
+                          key={m.id}
+                          className="flex items-center justify-between rounded px-2 py-0.5 text-sm"
+                        >
+                          <span>{m.participant.person.displayName}</span>
+                          {isCommissioner && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-5 px-1 text-xs"
+                              onClick={() => handleRemoveTeamMember(m.id)}
+                            >
+                              ×
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {isCommissioner && unassignedForTeams.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {unassignedForTeams.map((p) => (
+                          <Button
+                            key={p.id}
+                            size="sm"
+                            variant="outline"
+                            className="h-6 text-xs"
+                            onClick={() => handleAddTeamMember(team.id, p.id)}
+                          >
+                            + {p.person.displayName}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Delete team confirmation */}
+      <Dialog
+        open={deleteConfirm !== null}
+        onOpenChange={(o) => !o && setDeleteConfirm(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete team?</DialogTitle>
+            <DialogDescription>
+              This will delete <strong>{deleteConfirm?.name}</strong> and remove
+              all its member assignments. Players will remain in the round.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() =>
+                deleteConfirm && handleDeleteTeam(deleteConfirm.teamId)
+              }
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -3086,224 +3320,5 @@ function SingleRoundAddPlayerDialog({
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-// ──────────────────────────────────────────────
-// Single Round: Teams Section
-// ──────────────────────────────────────────────
-
-function SingleRoundTeamsSection({
-  tournament,
-  isCommissioner,
-  onChanged,
-}: {
-  tournament: TournamentData;
-  isCommissioner: boolean;
-  onChanged: () => void;
-}) {
-  const [creating, setCreating] = useState(false);
-  const [newTeamName, setNewTeamName] = useState('');
-  const [deleteConfirm, setDeleteConfirm] = useState<{
-    teamId: string;
-    name: string;
-  } | null>(null);
-
-  const assignedParticipantIds = new Set(
-    tournament.teams.flatMap((t) => t.members.map((m) => m.participantId)),
-  );
-  const unassigned = tournament.participants.filter(
-    (p) => !assignedParticipantIds.has(p.id) && p.role !== 'spectator',
-  );
-
-  const handleCreateTeam = async () => {
-    if (!newTeamName.trim()) return;
-    setCreating(true);
-    try {
-      await createTeamFn({
-        data: { tournamentId: tournament.id, name: newTeamName.trim() },
-      });
-      toast.success('Team created!');
-      setNewTeamName('');
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to create team',
-      );
-    }
-    setCreating(false);
-  };
-
-  const handleDeleteTeam = async (teamId: string) => {
-    try {
-      await deleteTeamFn({ data: { teamId } });
-      toast.success('Team deleted.');
-      setDeleteConfirm(null);
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to delete team',
-      );
-    }
-  };
-
-  const handleAddMember = async (teamId: string, participantId: string) => {
-    try {
-      await addTeamMemberFn({ data: { teamId, participantId } });
-      toast.success('Player added to team.');
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to add to team',
-      );
-    }
-  };
-
-  const handleRemoveMember = async (memberId: string) => {
-    try {
-      await removeTeamMemberFn({ data: { memberId } });
-      toast.success('Player removed from team.');
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to remove from team',
-      );
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Teams</span>
-          <Badge variant="secondary">
-            {tournament.teams.length} team
-            {tournament.teams.length !== 1 ? 's' : ''}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {isCommissioner && (
-          <div className="flex gap-2">
-            <Input
-              placeholder="New team name…"
-              value={newTeamName}
-              onChange={(e) => setNewTeamName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleCreateTeam()}
-            />
-            <Button
-              size="sm"
-              onClick={handleCreateTeam}
-              disabled={creating || !newTeamName.trim()}
-            >
-              {creating ? 'Creating…' : 'Create'}
-            </Button>
-          </div>
-        )}
-
-        {tournament.teams.length === 0 && (
-          <p className="text-muted-foreground text-sm">
-            No teams yet.{' '}
-            {isCommissioner
-              ? 'Create a team above to get started.'
-              : 'The commissioner can create teams.'}
-          </p>
-        )}
-
-        {tournament.teams.map((team) => (
-          <div key={team.id} className="space-y-2 rounded-md border p-3">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">{team.name}</span>
-              <div className="flex items-center gap-1">
-                <Badge variant="secondary">
-                  {team.members.length} member
-                  {team.members.length !== 1 ? 's' : ''}
-                </Badge>
-                {isCommissioner && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-destructive h-7 px-2"
-                    onClick={() =>
-                      setDeleteConfirm({ teamId: team.id, name: team.name })
-                    }
-                  >
-                    ×
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              {team.members.map((m) => (
-                <div
-                  key={m.id}
-                  className="flex items-center justify-between rounded px-2 py-1 text-sm"
-                >
-                  <span>{m.participant.person.displayName}</span>
-                  {isCommissioner && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 px-1 text-xs"
-                      onClick={() => handleRemoveMember(m.id)}
-                    >
-                      ×
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {isCommissioner && unassigned.length > 0 && (
-              <div className="flex flex-wrap gap-1 pt-1">
-                {unassigned.map((p) => (
-                  <Button
-                    key={p.id}
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs"
-                    onClick={() => handleAddMember(team.id, p.id)}
-                  >
-                    + {p.person.displayName}
-                  </Button>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </CardContent>
-
-      <Dialog
-        open={deleteConfirm !== null}
-        onOpenChange={(open) => !open && setDeleteConfirm(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete team?</DialogTitle>
-            <DialogDescription>
-              This will delete <strong>{deleteConfirm?.name}</strong> and remove
-              all its member assignments. Players will remain in the round.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirm(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() =>
-                deleteConfirm && handleDeleteTeam(deleteConfirm.teamId)
-              }
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
   );
 }

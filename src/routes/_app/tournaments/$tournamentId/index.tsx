@@ -1,4 +1,9 @@
-import { createFileRoute, Link, useNavigate, redirect } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  Link,
+  useNavigate,
+  redirect,
+} from '@tanstack/react-router';
 import {
   getTournamentFn,
   deleteTournamentFn,
@@ -37,6 +42,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -90,6 +96,7 @@ function TournamentDetailPage() {
   const { user } = useAuth();
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [showTeams, setShowTeams] = useState(tournament.teams.length > 0);
   const [commissionerConfirm, setCommissionerConfirm] = useState<{
     participantId: string;
     name: string;
@@ -311,6 +318,20 @@ function TournamentDetailPage() {
           <CardTitle className="flex items-center justify-between">
             <span>Players</span>
             <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <Switch
+                  id="tournament-teams-toggle"
+                  checked={showTeams}
+                  onCheckedChange={setShowTeams}
+                  className="scale-75"
+                />
+                <Label
+                  htmlFor="tournament-teams-toggle"
+                  className="text-muted-foreground cursor-pointer text-xs font-normal"
+                >
+                  Teams
+                </Label>
+              </div>
               <Badge variant="secondary">
                 {tournament.participants.length} player
                 {tournament.participants.length !== 1 ? 's' : ''}
@@ -439,12 +460,14 @@ function TournamentDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Teams section */}
-      <TeamsSection
-        tournament={tournament}
-        isCommissioner={isCommissioner}
-        onChanged={() => router.invalidate()}
-      />
+      {/* Inline Teams section — shown when toggle is on */}
+      {showTeams && (
+        <TeamsSection
+          tournament={tournament}
+          isCommissioner={isCommissioner}
+          onChanged={() => router.invalidate()}
+        />
+      )}
 
       {/* Rounds section */}
       <RoundsSection
@@ -860,7 +883,7 @@ function AddRoundDialog({
             <Label htmlFor="courseSelect">Course</Label>
             <select
               id="courseSelect"
-              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
             >
@@ -1331,7 +1354,7 @@ function StandingsSection({
                         <Label htmlFor="standingType">Type</Label>
                         <select
                           id="standingType"
-                          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                           value={participantType}
                           onChange={(e) =>
                             setParticipantType(
@@ -1349,7 +1372,7 @@ function StandingsSection({
                         </Label>
                         <select
                           id="standingMethod"
-                          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                           value={method}
                           onChange={(e) =>
                             setMethod(
@@ -1371,7 +1394,7 @@ function StandingsSection({
                           <Label htmlFor="scoringBasis">Scoring Basis</Label>
                           <select
                             id="scoringBasis"
-                            className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                            className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                             value={scoringBasis}
                             onChange={(e) =>
                               setScoringBasis(
