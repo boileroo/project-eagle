@@ -45,11 +45,13 @@ Irish Rumble requires a new competition format engine and potentially a `between
 ### Possible approach
 
 **Option A — `between_groups` scope:**
+
 - Add a `between_groups` value to `groupScopeEnum`
 - New `irish_rumble` format type with its own config (e.g. which groups are paired, points per win)
 - Engine compares aggregate scores across paired groups
 
 **Option B — `all`-scope team competition:**
+
 - Irish Rumble maps naturally to a team competition with `all` scope where the commissioner simply awards the result
 - No new scope needed — the existing team match play model can represent it if groups happen to align with teams
 - May need a "commissioner-decided" match result mode (winner picked manually, not derived from scores)

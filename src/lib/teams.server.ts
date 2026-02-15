@@ -76,9 +76,7 @@ export const deleteTeamFn = createServerFn({ method: 'POST' })
 
     await requireCommissioner(existing.tournamentId);
 
-    await db
-      .delete(tournamentTeams)
-      .where(eq(tournamentTeams.id, data.teamId));
+    await db.delete(tournamentTeams).where(eq(tournamentTeams.id, data.teamId));
 
     return { success: true };
   });
@@ -108,20 +106,17 @@ export const addTeamMemberFn = createServerFn({ method: 'POST' })
     }
 
     // Check not already in this team
-    const existingMembership =
-      await db.query.tournamentTeamMembers.findFirst({
-        where: and(
-          eq(tournamentTeamMembers.teamId, data.teamId),
-          eq(tournamentTeamMembers.participantId, data.participantId),
-        ),
-      });
+    const existingMembership = await db.query.tournamentTeamMembers.findFirst({
+      where: and(
+        eq(tournamentTeamMembers.teamId, data.teamId),
+        eq(tournamentTeamMembers.participantId, data.participantId),
+      ),
+    });
     if (existingMembership) throw new Error('Already a member of this team');
 
     // Remove from any other team in the same tournament first
     const otherTeams = await db.query.tournamentTeams.findMany({
-      where: and(
-        eq(tournamentTeams.tournamentId, team.tournamentId),
-      ),
+      where: and(eq(tournamentTeams.tournamentId, team.tournamentId)),
     });
     const otherTeamIds = otherTeams.map((t) => t.id);
     for (const otherTeamId of otherTeamIds) {

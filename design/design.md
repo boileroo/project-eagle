@@ -163,22 +163,22 @@ CourseHole { id, courseId, holeNumber, par, strokeIndex, yardage (optional) }
 
 ### Core Entities
 
-| Entity                | Purpose                                                            |
-| --------------------- | ------------------------------------------------------------------ |
-| Tournament            | Top-level container (mandatory, even for a single round)           |
-| Round                 | A single round of golf within a tournament                         |
-| RoundGroup            | A playing group / fourball within a round (1–4 players)            |
-| Course                | A golf course (shared library)                                     |
-| CourseHole            | Hole-level data for a course (par, SI, yardage)                    |
-| Person                | A human identity (guest or registered) with handicap               |
-| TournamentParticipant | Links a Person to a Tournament (+ HC override)                     |
-| RoundParticipant      | Links a TournamentParticipant to a Round + Group (+ HC snapshot)   |
-| TournamentTeam        | A persistent team identity across the tournament                   |
-| RoundTeam             | Per-round team composition (optionally linked to a TournamentTeam) |
-| ScoreEvent            | An immutable record of strokes on a hole                           |
+| Entity                | Purpose                                                                      |
+| --------------------- | ---------------------------------------------------------------------------- |
+| Tournament            | Top-level container (mandatory, even for a single round)                     |
+| Round                 | A single round of golf within a tournament                                   |
+| RoundGroup            | A playing group / fourball within a round (1–4 players)                      |
+| Course                | A golf course (shared library)                                               |
+| CourseHole            | Hole-level data for a course (par, SI, yardage)                              |
+| Person                | A human identity (guest or registered) with handicap                         |
+| TournamentParticipant | Links a Person to a Tournament (+ HC override)                               |
+| RoundParticipant      | Links a TournamentParticipant to a Round + Group (+ HC snapshot)             |
+| TournamentTeam        | A persistent team identity across the tournament                             |
+| RoundTeam             | Per-round team composition (optionally linked to a TournamentTeam)           |
+| ScoreEvent            | An immutable record of strokes on a hole                                     |
 | Competition           | A round-scoped scoring format config (up to 1 team + 1 individual per round) |
-| BonusAward            | Winner of a bonus competition (NTP/LD) — single award per comp     |
-| TournamentStanding    | Tournament-wide aggregation config (rolls up round competitions)   |
+| BonusAward            | Winner of a bonus competition (NTP/LD) — single award per comp               |
+| TournamentStanding    | Tournament-wide aggregation config (rolls up round competitions)             |
 
 ### Key Relationships
 
@@ -226,22 +226,46 @@ The `configJson` field is validated using a **Zod discriminated union** keyed on
 **Per-round constraints:** Each round allows at most **1 team competition**, at most **1 individual competition**, and **any number of bonus competitions** (NTP/LD). This is validated at competition creation time.
 
 ```ts
-const competitionConfigSchema = z.discriminatedUnion("formatType", [
-  z.object({ formatType: z.literal("stableford"), config: z.object({ countBack: z.boolean() }) }),
-  z.object({ formatType: z.literal("stroke_play"), config: z.object({ scoringBasis: z.enum(["net_strokes", "gross_strokes"]) }) }),
-  z.object({ formatType: z.literal("match_play"), config: z.object({
-    pointsPerWin: z.number(),
-    pointsPerHalf: z.number(),
-    pairings: z.array(z.object({ playerA: z.string().uuid(), playerB: z.string().uuid() })),
-  }) }),
-  z.object({ formatType: z.literal("best_ball"), config: z.object({
-    pointsPerWin: z.number(),
-    pointsPerHalf: z.number(),
-    pairings: z.array(z.object({ teamA: z.string().uuid(), teamB: z.string().uuid() })),
-  }) }),
-  z.object({ formatType: z.literal("nearest_pin"), config: z.object({ holeNumber: z.number() }) }),
-  z.object({ formatType: z.literal("longest_drive"), config: z.object({ holeNumber: z.number() }) }),
-])
+const competitionConfigSchema = z.discriminatedUnion('formatType', [
+  z.object({
+    formatType: z.literal('stableford'),
+    config: z.object({ countBack: z.boolean() }),
+  }),
+  z.object({
+    formatType: z.literal('stroke_play'),
+    config: z.object({
+      scoringBasis: z.enum(['net_strokes', 'gross_strokes']),
+    }),
+  }),
+  z.object({
+    formatType: z.literal('match_play'),
+    config: z.object({
+      pointsPerWin: z.number(),
+      pointsPerHalf: z.number(),
+      pairings: z.array(
+        z.object({ playerA: z.string().uuid(), playerB: z.string().uuid() }),
+      ),
+    }),
+  }),
+  z.object({
+    formatType: z.literal('best_ball'),
+    config: z.object({
+      pointsPerWin: z.number(),
+      pointsPerHalf: z.number(),
+      pairings: z.array(
+        z.object({ teamA: z.string().uuid(), teamB: z.string().uuid() }),
+      ),
+    }),
+  }),
+  z.object({
+    formatType: z.literal('nearest_pin'),
+    config: z.object({ holeNumber: z.number() }),
+  }),
+  z.object({
+    formatType: z.literal('longest_drive'),
+    config: z.object({ holeNumber: z.number() }),
+  }),
+]);
 ```
 
 This keeps the database schema flexible (`jsonb`) while giving us **full type safety** at the application layer. Adding a new format means adding a new union member — no schema migration required.
@@ -272,9 +296,9 @@ Only one winner per bonus competition — awarding a new winner replaces the pre
 
 **Bonus modes:**
 
-| Mode | Behaviour |
-|---|---|
-| `standalone` | Records a winner. Displayed as a separate award. No impact on standings. |
+| Mode          | Behaviour                                                                                                             |
+| ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `standalone`  | Records a winner. Displayed as a separate award. No impact on standings.                                              |
 | `contributor` | Records a winner AND adds bonus points (e.g. +1 stableford) to the winner's individual tournament standing aggregate. |
 
 The commissioner selects the mode when creating the bonus competition. Both modes can coexist in the same round (e.g. NTP as standalone, LD as contributor).
@@ -294,6 +318,7 @@ TournamentStanding {
 ```
 
 Aggregation methods (extensible via discriminated union):
+
 - **sum_stableford** — sum stableford points across all rounds (individual)
 - **lowest_strokes** — sum net or gross strokes across all rounds (individual)
 - **match_wins** — count match wins across all rounds (individual or team), configurable points per win/half
@@ -304,12 +329,13 @@ Results are **derived at display time** from round-level competition results —
 
 Competitions have a `groupScope` that determines how they relate to playing groups:
 
-| Value | Meaning | Example |
-|---|---|---|
-| `all` | One leaderboard across all players in the round | Individual stableford |
+| Value          | Meaning                                             | Example                              |
+| -------------- | --------------------------------------------------- | ------------------------------------ |
+| `all`          | One leaderboard across all players in the round     | Individual stableford                |
 | `within_group` | Runs independently per group, results aggregated up | Match play singles within a fourball |
 
 For `within_group` competitions:
+
 - The scoring engine runs once per group with filtered participants/scores
 - Per-group results aggregate to round level (e.g. "Group 1: Europe 2, USA 2")
 - Round-level results aggregate to tournament via `TournamentStandings`
@@ -351,13 +377,13 @@ calculateCompetitionResults({
 
 ### Format Engines
 
-| Format | File | Mechanism |
-| --- | --- | --- |
-| **Stableford** | `stableford.ts` | Net points per hole (0-5 scale), count-back tiebreaker (last 9/6/3/1 holes) |
-| **Stroke Play** | `stroke-play.ts` | Gross or net total, ranked ascending |
-| **Match Play** | `match-play.ts` | 1v1 using stableford points per hole. Declared at point (e.g. "3&2"). Halved holes stay halved (0-0 = no tiebreaker) |
-| **Best Ball** | `best-ball.ts` | 2v2 team. Best stableford from each pair compared per hole. Same match logic as match play |
-| **NTP / LD** | `bonus.ts` | Award-based, not score-derived. Helpers for UI dropdowns |
+| Format          | File             | Mechanism                                                                                                            |
+| --------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Stableford**  | `stableford.ts`  | Net points per hole (0-5 scale), count-back tiebreaker (last 9/6/3/1 holes)                                          |
+| **Stroke Play** | `stroke-play.ts` | Gross or net total, ranked ascending                                                                                 |
+| **Match Play**  | `match-play.ts`  | 1v1 using stableford points per hole. Declared at point (e.g. "3&2"). Halved holes stay halved (0-0 = no tiebreaker) |
+| **Best Ball**   | `best-ball.ts`   | 2v2 team. Best stableford from each pair compared per hole. Same match logic as match play                           |
+| **NTP / LD**    | `bonus.ts`       | Award-based, not score-derived. Helpers for UI dropdowns                                                             |
 
 ### Key Design Decisions
 
@@ -373,7 +399,7 @@ The caller resolves effective handicaps _before_ passing data to the engine:
 effectiveHandicap =
   roundParticipant.handicapOverride ??
   tournamentParticipant.handicapOverride ??
-  roundParticipant.handicapSnapshot
+  roundParticipant.handicapSnapshot;
 ```
 
 Playing handicap is then derived: `Math.round(effectiveHandicap)`, clamped 0–54.
@@ -386,12 +412,12 @@ The engine never touches the database or knows about override precedence. It rec
 
 ### Tournament-Scoped
 
-| Role         | Capabilities                                                              |
-| ------------ | ------------------------------------------------------------------------- |
+| Role         | Capabilities                                                                          |
+| ------------ | ------------------------------------------------------------------------------------- |
 | Commissioner | Configure tournament, manage teams, lock rounds, override scores, manage competitions |
-| Marker       | Enter/edit scores for their group, award bonus comps                       |
-| Player       | Enter/edit own score, self-join tournaments                                |
-| Spectator    | Read-only access                                                          |
+| Marker       | Enter/edit scores for their group, award bonus comps                                  |
+| Player       | Enter/edit own score, self-join tournaments                                           |
+| Spectator    | Read-only access                                                                      |
 
 Permissions are enforced at **both** layers:
 

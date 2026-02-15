@@ -1,7 +1,12 @@
 import { createServerFn } from '@tanstack/react-start';
 import { and, eq, ilike } from 'drizzle-orm';
 import { db } from '@/db';
-import { persons, profiles, tournamentParticipants, tournaments } from '@/db/schema';
+import {
+  persons,
+  profiles,
+  tournamentParticipants,
+  tournaments,
+} from '@/db/schema';
 import { requireAuth, requireCommissioner } from './auth.helpers';
 import type {
   AddParticipantInput,
@@ -233,7 +238,11 @@ export const addParticipantFn = createServerFn({ method: 'POST' })
 
     if (isSelfJoin) {
       // Creator can join as commissioner; others self-join as player only
-      if (data.role && data.role !== 'player' && !(data.role === 'commissioner' && isCreator)) {
+      if (
+        data.role &&
+        data.role !== 'player' &&
+        !(data.role === 'commissioner' && isCreator)
+      ) {
         throw new Error('You can only join as a player');
       }
     } else {
@@ -244,19 +253,23 @@ export const addParticipantFn = createServerFn({ method: 'POST' })
     }
 
     // Check person isn't already a participant
-    const existingParticipant =
-      await db.query.tournamentParticipants.findFirst({
+    const existingParticipant = await db.query.tournamentParticipants.findFirst(
+      {
         where: and(
           eq(tournamentParticipants.tournamentId, data.tournamentId),
           eq(tournamentParticipants.personId, data.personId),
         ),
-      });
+      },
+    );
     if (existingParticipant) throw new Error('Person is already a participant');
 
     const role = isSelfJoin ? 'player' : (data.role ?? 'player');
 
     // Guests can only be player or spectator
-    if (person.userId == null && (role === 'commissioner' || role === 'marker')) {
+    if (
+      person.userId == null &&
+      (role === 'commissioner' || role === 'marker')
+    ) {
       throw new Error('Guests can only be assigned player or spectator roles');
     }
 

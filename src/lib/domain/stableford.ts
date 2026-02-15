@@ -67,9 +67,7 @@ export function stablefordPoints(
 // Build a score lookup: (participantId, holeNumber) → strokes
 // ──────────────────────────────────────────────
 
-export function buildScoreLookup(
-  scores: ResolvedScore[],
-): Map<string, number> {
+export function buildScoreLookup(scores: ResolvedScore[]): Map<string, number> {
   const map = new Map<string, number>();
   for (const s of scores) {
     map.set(`${s.roundParticipantId}:${s.holeNumber}`, s.strokes);

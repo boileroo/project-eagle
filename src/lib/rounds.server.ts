@@ -1,11 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { and, eq, count, asc, lt } from 'drizzle-orm';
 import { db } from '@/db';
-import {
-  rounds,
-  roundParticipants,
-  tournamentParticipants,
-} from '@/db/schema';
+import { rounds, roundParticipants, tournamentParticipants } from '@/db/schema';
 import { requireCommissioner } from './auth.helpers';
 import type { CreateRoundInput, UpdateRoundInput } from './validators';
 
@@ -129,10 +125,7 @@ export const createRoundFn = createServerFn({ method: 'POST' })
 
     // Auto-add all tournament participants as round participants
     const tpList = await db.query.tournamentParticipants.findMany({
-      where: eq(
-        tournamentParticipants.tournamentId,
-        data.tournamentId,
-      ),
+      where: eq(tournamentParticipants.tournamentId, data.tournamentId),
       with: {
         person: true,
       },
@@ -145,9 +138,7 @@ export const createRoundFn = createServerFn({ method: 'POST' })
           personId: tp.personId,
           tournamentParticipantId: tp.id,
           handicapSnapshot:
-            tp.handicapOverride ??
-            tp.person.currentHandicap ??
-            '0',
+            tp.handicapOverride ?? tp.person.currentHandicap ?? '0',
         })),
       );
     }
@@ -179,10 +170,8 @@ export const updateRoundFn = createServerFn({ method: 'POST' })
     if (data.courseId !== undefined) updates.courseId = data.courseId;
     if (data.date !== undefined)
       updates.date = data.date ? new Date(data.date) : null;
-    if (data.teeTime !== undefined)
-      updates.teeTime = data.teeTime || null;
-    if (data.format !== undefined)
-      updates.format = data.format || null;
+    if (data.teeTime !== undefined) updates.teeTime = data.teeTime || null;
+    if (data.format !== undefined) updates.format = data.format || null;
 
     await db.update(rounds).set(updates).where(eq(rounds.id, data.id));
 
@@ -221,9 +210,7 @@ export const deleteRoundFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const reorderRoundsFn = createServerFn({ method: 'POST' })
-  .inputValidator(
-    (data: { tournamentId: string; roundIds: string[] }) => data,
-  )
+  .inputValidator((data: { tournamentId: string; roundIds: string[] }) => data)
   .handler(async ({ data }) => {
     await requireCommissioner(data.tournamentId);
 

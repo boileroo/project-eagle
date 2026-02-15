@@ -86,7 +86,10 @@ export const getScorecardFn = createServerFn({ method: 'GET' })
     // Resolve: latest event per (roundParticipantId, holeNumber)
     const scorecard: Record<
       string,
-      Record<number, { strokes: number; recordedByRole: string; eventCount: number }>
+      Record<
+        number,
+        { strokes: number; recordedByRole: string; eventCount: number }
+      >
     > = {};
 
     // Count all events per cell first
@@ -169,10 +172,7 @@ export const bulkSubmitScoresFn = createServerFn({ method: 'POST' })
 
 export const getScoreHistoryFn = createServerFn({ method: 'GET' })
   .inputValidator(
-    (data: {
-      roundParticipantId: string;
-      holeNumber: number;
-    }) => data,
+    (data: { roundParticipantId: string; holeNumber: number }) => data,
   )
   .handler(async ({ data }) => {
     const events = await db.query.scoreEvents.findMany({

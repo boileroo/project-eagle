@@ -38,9 +38,7 @@ export function ScoreEntryDialog({
   recordedByRole,
   onSaved,
 }: ScoreEntryDialogProps) {
-  const [strokes, setStrokes] = useState<number | null>(
-    currentStrokes ?? null,
-  );
+  const [strokes, setStrokes] = useState<number | null>(currentStrokes ?? null);
   const [saving, setSaving] = useState(false);
 
   // Sync strokes state when the target hole/participant changes
@@ -112,9 +110,7 @@ export function ScoreEntryDialog({
               variant="outline"
               size="icon"
               className="h-12 w-12 text-xl"
-              onClick={() =>
-                setStrokes((s) => Math.max(1, (s ?? par) - 1))
-              }
+              onClick={() => setStrokes((s) => Math.max(1, (s ?? par) - 1))}
               disabled={strokes != null && strokes <= 1}
             >
               −
@@ -142,9 +138,7 @@ export function ScoreEntryDialog({
               variant="outline"
               size="icon"
               className="h-12 w-12 text-xl"
-              onClick={() =>
-                setStrokes((s) => Math.min(20, (s ?? par) + 1))
-              }
+              onClick={() => setStrokes((s) => Math.min(20, (s ?? par) + 1))}
             >
               +
             </Button>
@@ -187,16 +181,10 @@ export function ScoreEntryDialog({
               Reset
             </Button>
           )}
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving || strokes == null}
-          >
+          <Button onClick={handleSave} disabled={saving || strokes == null}>
             {saving ? 'Saving…' : 'Save'}
           </Button>
         </DialogFooter>

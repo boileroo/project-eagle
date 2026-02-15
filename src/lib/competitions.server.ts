@@ -10,12 +10,27 @@ import {
   tournamentTeams,
 } from '@/db/schema';
 import { requireAuth, requireCommissioner } from './auth.helpers';
-import { competitionConfigSchema, aggregationConfigSchema, isBonusFormat } from './competitions';
+import {
+  competitionConfigSchema,
+  aggregationConfigSchema,
+  isBonusFormat,
+} from './competitions';
 import type { CompetitionConfig } from './competitions';
 import { resolveEffectiveHandicap, getPlayingHandicap } from './handicaps';
 import { calculateStandings } from './domain/standings';
-import type { RoundCompetitionData, ContributorBonusAward, StandingsResult } from './domain/standings';
-import type { CompetitionInput, HoleData, ParticipantData, ResolvedScore, GroupData, TeamData } from './domain/index';
+import type {
+  RoundCompetitionData,
+  ContributorBonusAward,
+  StandingsResult,
+} from './domain/standings';
+import type {
+  CompetitionInput,
+  HoleData,
+  ParticipantData,
+  ResolvedScore,
+  GroupData,
+  TeamData,
+} from './domain/index';
 import type {
   CreateCompetitionInput,
   UpdateCompetitionInput,
@@ -117,7 +132,9 @@ export const createCompetitionFn = createServerFn({ method: 'POST' })
         where: eq(competitions.roundId, data.roundId),
       });
       const sameTypeComps = existingComps.filter(
-        (c) => c.participantType === data.participantType && !isBonusFormat(c.formatType as any),
+        (c) =>
+          c.participantType === data.participantType &&
+          !isBonusFormat(c.formatType as any),
       );
       if (sameTypeComps.length > 0) {
         const label = data.participantType === 'team' ? 'team' : 'individual';
@@ -370,7 +387,11 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
     );
 
     // 2. Load tournament-level teams (fallback when rounds have no round_teams)
-    let tTeams: { id: string; name: string; members: { participantId: string }[] }[] = [];
+    let tTeams: {
+      id: string;
+      name: string;
+      members: { participantId: string }[];
+    }[] = [];
     if (standing.participantType === 'team') {
       tTeams = await db.query.tournamentTeams.findMany({
         where: eq(tournamentTeams.tournamentId, standing.tournamentId),
@@ -500,14 +521,17 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
 
       // Build CompetitionInput for each non-bonus competition
       const competitionInputs: CompetitionInput[] = round.competitions
-        .filter((c) => !isBonusFormat(c.formatType as CompetitionConfig['formatType']))
+        .filter(
+          (c) =>
+            !isBonusFormat(c.formatType as CompetitionConfig['formatType']),
+        )
         .map((c) => ({
           competition: {
             id: c.id,
             name: c.name,
             config: {
               formatType: c.formatType,
-              config: (c.configJson ?? {}),
+              config: c.configJson ?? {},
             } as CompetitionConfig,
             groupScope: (c.groupScope ?? 'all') as 'all' | 'within_group',
           },
@@ -527,8 +551,12 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
 
       // Collect contributor bonus awards
       for (const comp of round.competitions) {
-        if (!isBonusFormat(comp.formatType as CompetitionConfig['formatType'])) continue;
-        const bonusConfig = comp.configJson as { bonusMode?: string; bonusPoints?: number } | null;
+        if (!isBonusFormat(comp.formatType as CompetitionConfig['formatType']))
+          continue;
+        const bonusConfig = comp.configJson as {
+          bonusMode?: string;
+          bonusPoints?: number;
+        } | null;
         if (bonusConfig?.bonusMode !== 'contributor') continue;
 
         for (const award of comp.bonusAwards) {

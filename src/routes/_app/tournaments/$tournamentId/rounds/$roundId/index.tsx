@@ -66,10 +66,7 @@ import {
   type ParticipantData,
   type ResolvedScore,
 } from '@/lib/domain';
-import {
-  resolveEffectiveHandicap,
-  getPlayingHandicap,
-} from '@/lib/handicaps';
+import { resolveEffectiveHandicap, getPlayingHandicap } from '@/lib/handicaps';
 
 export const Route = createFileRoute(
   '/_app/tournaments/$tournamentId/rounds/$roundId/',
@@ -149,7 +146,9 @@ function RoundDetailPage() {
   );
 
   // Determine the recording role for the current user
-  const getRecordingRole = (roundParticipantId: string): 'player' | 'marker' | 'commissioner' => {
+  const getRecordingRole = (
+    roundParticipantId: string,
+  ): 'player' | 'marker' | 'commissioner' => {
     const rp = round.participants.find((p) => p.id === roundParticipantId);
     if (rp?.person.userId === user.id) return 'player';
     return 'marker';
@@ -235,54 +234,55 @@ function RoundDetailPage() {
             />
           )}
 
-          {isCommissioner && transitions.map((t) => (
-            <Button
-              key={t.status}
-              size="sm"
-              variant={
-                t.status === 'draft' || t.status === 'open'
-                  ? 'outline'
-                  : 'default'
-              }
-              onClick={() => handleTransition(t.status)}
-            >
-              {t.label}
-            </Button>
-          ))}
+          {isCommissioner &&
+            transitions.map((t) => (
+              <Button
+                key={t.status}
+                size="sm"
+                variant={
+                  t.status === 'draft' || t.status === 'open'
+                    ? 'outline'
+                    : 'default'
+                }
+                onClick={() => handleTransition(t.status)}
+              >
+                {t.label}
+              </Button>
+            ))}
 
           {isCommissioner && round.status === 'draft' && (
-          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                Delete
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Delete round?</DialogTitle>
-                <DialogDescription>
-                  This will permanently delete Round{' '}
-                  {round.roundNumber ?? '—'} and all its participants and
-                  scores. This action cannot be undone.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setDeleteDialogOpen(false)}
-                >
-                  Cancel
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  Delete
                 </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={deleting}
-                >
-                  {deleting ? 'Deleting…' : 'Delete'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete round?</DialogTitle>
+                  <DialogDescription>
+                    This will permanently delete Round{' '}
+                    {round.roundNumber ?? '—'} and all its participants and
+                    scores. This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                  >
+                    {deleting ? 'Deleting…' : 'Delete'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
         </div>
       </div>
@@ -414,7 +414,12 @@ function EditRoundDialog({
     date: string | Date | null;
     teeTime?: string | null;
   };
-  courses: { id: string; name: string; location: string | null; numberOfHoles: number }[];
+  courses: {
+    id: string;
+    name: string;
+    location: string | null;
+    numberOfHoles: number;
+  }[];
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -548,9 +553,7 @@ function EditRoundHandicapDialog({
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(
-    roundParticipant.handicapOverride ?? '',
-  );
+  const [value, setValue] = useState(roundParticipant.handicapOverride ?? '');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -582,8 +585,8 @@ function EditRoundHandicapDialog({
         <DialogHeader>
           <DialogTitle>Round Handicap Override</DialogTitle>
           <DialogDescription>
-            Override the handicap for this round only. Snapshot from
-            tournament: {roundParticipant.handicapSnapshot}
+            Override the handicap for this round only. Snapshot from tournament:{' '}
+            {roundParticipant.handicapSnapshot}
           </DialogDescription>
         </DialogHeader>
         <Input
@@ -686,9 +689,10 @@ function PlayersAndGroupsSection({
   const handleAddGroup = async () => {
     setAddingGroup(true);
     try {
-      const nextNumber = groups.length > 0
-        ? Math.max(...groups.map((g) => g.groupNumber)) + 1
-        : 1;
+      const nextNumber =
+        groups.length > 0
+          ? Math.max(...groups.map((g) => g.groupNumber)) + 1
+          : 1;
       await createRoundGroupFn({
         data: {
           roundId: round.id,
@@ -742,9 +746,7 @@ function PlayersAndGroupsSection({
   }) => (
     <div className="flex items-center justify-between rounded-md border px-3 py-2">
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">
-          {rp.person.displayName}
-        </span>
+        <span className="text-sm font-medium">{rp.person.displayName}</span>
         {rp.person.userId == null && (
           <Badge variant="outline" className="text-xs">
             Guest
@@ -883,7 +885,7 @@ function PlayersAndGroupsSection({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 text-xs text-destructive"
+                        className="text-destructive h-7 text-xs"
                         disabled={deletingGroupId === group.id}
                         onClick={() => handleDeleteGroup(group.id)}
                       >
@@ -897,9 +899,7 @@ function PlayersAndGroupsSection({
                         No players assigned.
                       </p>
                     ) : (
-                      members.map((rp) => (
-                        <PlayerRow key={rp.id} rp={rp} />
-                      ))
+                      members.map((rp) => <PlayerRow key={rp.id} rp={rp} />)
                     )}
                   </div>
                 </div>
@@ -935,8 +935,8 @@ function PlayersAndGroupsSection({
             <DialogTitle>Auto-assign Groups</DialogTitle>
             <DialogDescription>
               Automatically distribute {round.participants.length} player
-              {round.participants.length !== 1 ? 's' : ''} into groups.
-              Existing groups will be replaced.
+              {round.participants.length !== 1 ? 's' : ''} into groups. Existing
+              groups will be replaced.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -954,8 +954,7 @@ function PlayersAndGroupsSection({
               }
             />
             <p className="text-muted-foreground text-xs">
-              Creates{' '}
-              {Math.ceil(round.participants.length / autoAssignSize)}{' '}
+              Creates {Math.ceil(round.participants.length / autoAssignSize)}{' '}
               group
               {Math.ceil(round.participants.length / autoAssignSize) !== 1
                 ? 's'
@@ -964,16 +963,10 @@ function PlayersAndGroupsSection({
             </p>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setAutoAssignOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setAutoAssignOpen(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={handleAutoAssign}
-              disabled={autoAssigning}
-            >
+            <Button onClick={handleAutoAssign} disabled={autoAssigning}>
               {autoAssigning ? 'Assigning…' : 'Assign'}
             </Button>
           </DialogFooter>
@@ -1063,8 +1056,8 @@ function CompetitionsSection({
   const scoredComps = competitions.filter(
     (c) => !isBonusFormat(c.formatType as CompetitionConfig['formatType']),
   );
-  const bonusComps = competitions.filter(
-    (c) => isBonusFormat(c.formatType as CompetitionConfig['formatType']),
+  const bonusComps = competitions.filter((c) =>
+    isBonusFormat(c.formatType as CompetitionConfig['formatType']),
   );
 
   return (
@@ -1075,9 +1068,7 @@ function CompetitionsSection({
           <CardTitle className="flex items-center justify-between text-lg">
             <span>Competitions</span>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary">
-                {competitions.length}
-              </Badge>
+              <Badge variant="secondary">{competitions.length}</Badge>
               {isCommissioner && (
                 <>
                   <AddIndividualCompDialog
@@ -1112,7 +1103,8 @@ function CompetitionsSection({
               {scoredComps.map((comp) => {
                 // Build competition config for the engine
                 const config: CompetitionConfig = {
-                  formatType: comp.formatType as CompetitionConfig['formatType'],
+                  formatType:
+                    comp.formatType as CompetitionConfig['formatType'],
                   config: (comp.configJson ?? {}) as Record<string, any>,
                 } as CompetitionConfig;
 
@@ -1123,7 +1115,9 @@ function CompetitionsSection({
                       id: comp.id,
                       name: comp.name,
                       config,
-                      groupScope: (comp.groupScope ?? 'all') as 'all' | 'within_group',
+                      groupScope: (comp.groupScope ?? 'all') as
+                        | 'all'
+                        | 'within_group',
                     },
                     ...engineInputs,
                   };
@@ -1138,10 +1132,14 @@ function CompetitionsSection({
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium">{comp.name}</h3>
                         <Badge variant="outline" className="text-xs">
-                          {FORMAT_TYPE_LABELS[comp.formatType as CompetitionConfig['formatType']] ?? comp.formatType}
+                          {FORMAT_TYPE_LABELS[
+                            comp.formatType as CompetitionConfig['formatType']
+                          ] ?? comp.formatType}
                         </Badge>
                         <Badge variant="secondary" className="text-xs">
-                          {comp.participantType === 'team' ? 'Team' : 'Individual'}
+                          {comp.participantType === 'team'
+                            ? 'Team'
+                            : 'Individual'}
                         </Badge>
                       </div>
                       {isCommissioner && (
@@ -1151,7 +1149,9 @@ function CompetitionsSection({
                             hasGroups={round.groups.length > 0}
                             onSaved={onChanged}
                           />
-                          {isMatchFormat(comp.formatType as CompetitionConfig['formatType']) && (
+                          {isMatchFormat(
+                            comp.formatType as CompetitionConfig['formatType'],
+                          ) && (
                             <ConfigureMatchesDialog
                               comp={comp}
                               participants={round.participants}
@@ -1162,7 +1162,7 @@ function CompetitionsSection({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 text-destructive"
+                            className="text-destructive h-7"
                             disabled={deletingId === comp.id}
                             onClick={() => handleDelete(comp.id)}
                           >
@@ -1189,7 +1189,9 @@ function CompetitionsSection({
                   <h3 className="mb-3 font-medium">Bonus Prizes</h3>
                   <div className="space-y-2">
                     {bonusComps.map((comp) => {
-                      const config = comp.configJson as { holeNumber?: number } | null;
+                      const config = comp.configJson as {
+                        holeNumber?: number;
+                      } | null;
                       const holeNumber = config?.holeNumber ?? 0;
                       const award = comp.bonusAwards?.[0];
 
@@ -1276,9 +1278,12 @@ function BonusCompRow({
     setAwarding(false);
   };
 
-  const typeLabel =
-    comp.formatType === 'nearest_pin' ? 'NTP' : 'LD';
-  const config = comp.configJson as { holeNumber?: number; bonusMode?: string; bonusPoints?: number } | null;
+  const typeLabel = comp.formatType === 'nearest_pin' ? 'NTP' : 'LD';
+  const config = comp.configJson as {
+    holeNumber?: number;
+    bonusMode?: string;
+    bonusPoints?: number;
+  } | null;
   const isContributor = config?.bonusMode === 'contributor';
   const canEdit = roundStatus === 'open' || roundStatus === 'locked';
 
@@ -1295,9 +1300,7 @@ function BonusCompRow({
         )}
         <span className="text-sm">
           {comp.name}{' '}
-          <span className="text-muted-foreground">
-            (Hole {holeNumber})
-          </span>
+          <span className="text-muted-foreground">(Hole {holeNumber})</span>
         </span>
       </div>
       <div className="flex items-center gap-2">
@@ -1317,7 +1320,7 @@ function BonusCompRow({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 text-xs text-destructive"
+                className="text-destructive h-6 text-xs"
                 disabled={awarding}
                 onClick={handleRemoveAward}
               >
@@ -1376,16 +1379,24 @@ function ConfigureMatchesDialog({
   const [pairings, setPairings] = useState(existingPairings);
 
   // Per-group "add pairing" state
-  const [addState, setAddState] = useState<Record<string, { playerA: string; playerB: string }>>({});
+  const [addState, setAddState] = useState<
+    Record<string, { playerA: string; playerB: string }>
+  >({});
 
   const getAddState = (groupId: string) =>
     addState[groupId] ?? { playerA: '', playerB: '' };
 
   const setGroupPlayerA = (groupId: string, value: string) =>
-    setAddState((prev) => ({ ...prev, [groupId]: { ...getAddState(groupId), playerA: value } }));
+    setAddState((prev) => ({
+      ...prev,
+      [groupId]: { ...getAddState(groupId), playerA: value },
+    }));
 
   const setGroupPlayerB = (groupId: string, value: string) =>
-    setAddState((prev) => ({ ...prev, [groupId]: { ...getAddState(groupId), playerB: value } }));
+    setAddState((prev) => ({
+      ...prev,
+      [groupId]: { ...getAddState(groupId), playerB: value },
+    }));
 
   // Players already assigned to a pairing
   const assignedIds = useMemo(() => {
@@ -1413,11 +1424,15 @@ function ConfigureMatchesDialog({
   // Get pairings that belong to a specific group
   const getPairingsForGroup = (groupId: string) => {
     const groupMemberIds = new Set(
-      participants.filter((rp) => rp.roundGroupId === groupId).map((rp) => rp.id),
+      participants
+        .filter((rp) => rp.roundGroupId === groupId)
+        .map((rp) => rp.id),
     );
     return pairings
       .map((p, i) => ({ ...p, index: i }))
-      .filter((p) => groupMemberIds.has(p.playerA) || groupMemberIds.has(p.playerB));
+      .filter(
+        (p) => groupMemberIds.has(p.playerA) || groupMemberIds.has(p.playerB),
+      );
   };
 
   // Get available (unpaired) players within a group
@@ -1430,7 +1445,10 @@ function ConfigureMatchesDialog({
     const { playerA, playerB } = getAddState(groupId);
     if (!playerA || !playerB || playerA === playerB) return;
     setPairings((prev) => [...prev, { playerA, playerB }]);
-    setAddState((prev) => ({ ...prev, [groupId]: { playerA: '', playerB: '' } }));
+    setAddState((prev) => ({
+      ...prev,
+      [groupId]: { playerA: '', playerB: '' },
+    }));
   };
 
   const handleRemovePairing = (index: number) => {
@@ -1487,7 +1505,7 @@ function ConfigureMatchesDialog({
           Configure Matches
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Configure Matches</DialogTitle>
           <DialogDescription>
@@ -1499,9 +1517,9 @@ function ConfigureMatchesDialog({
         </DialogHeader>
 
         {!hasGroups ? (
-          <p className="text-muted-foreground text-sm py-2">
-            No groups have been created. Set up groups in the Players &amp; Groups
-            section above, then come back to configure matches.
+          <p className="text-muted-foreground py-2 text-sm">
+            No groups have been created. Set up groups in the Players &amp;
+            Groups section above, then come back to configure matches.
           </p>
         ) : (
           <div className="space-y-5">
@@ -1517,7 +1535,12 @@ function ConfigureMatchesDialog({
                       {group.name || `Group ${group.groupNumber}`}
                     </span>
                     <Badge variant="secondary" className="text-xs">
-                      {participants.filter((rp) => rp.roundGroupId === group.id).length} players
+                      {
+                        participants.filter(
+                          (rp) => rp.roundGroupId === group.id,
+                        ).length
+                      }{' '}
+                      players
                     </Badge>
                   </div>
 
@@ -1554,7 +1577,7 @@ function ConfigureMatchesDialog({
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-6 text-xs text-destructive"
+                              className="text-destructive h-6 text-xs"
                               onClick={() => handleRemovePairing(pairing.index)}
                             >
                               ✕
@@ -1572,23 +1595,35 @@ function ConfigureMatchesDialog({
                         <select
                           className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                           value={playerA}
-                          onChange={(e) => setGroupPlayerA(group.id, e.target.value)}
+                          onChange={(e) =>
+                            setGroupPlayerA(group.id, e.target.value)
+                          }
                         >
-                          <option value="" disabled>Player A</option>
+                          <option value="" disabled>
+                            Player A
+                          </option>
                           {available
                             .filter((rp) => {
                               if (rp.id === playerB) return false;
                               // If Player B is selected, hide same-team players
                               if (playerB) {
                                 const selectedTeamId = getPlayerTeamId(playerB);
-                                const rpTeamId = rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id ?? null;
-                                if (selectedTeamId && rpTeamId && selectedTeamId === rpTeamId) return false;
+                                const rpTeamId =
+                                  rp.tournamentParticipant?.teamMemberships?.[0]
+                                    ?.team?.id ?? null;
+                                if (
+                                  selectedTeamId &&
+                                  rpTeamId &&
+                                  selectedTeamId === rpTeamId
+                                )
+                                  return false;
                               }
                               return true;
                             })
                             .map((rp) => {
                               const team =
-                                rp.tournamentParticipant?.teamMemberships?.[0]?.team?.name;
+                                rp.tournamentParticipant?.teamMemberships?.[0]
+                                  ?.team?.name;
                               return (
                                 <option key={rp.id} value={rp.id}>
                                   {rp.person.displayName}
@@ -1598,28 +1633,42 @@ function ConfigureMatchesDialog({
                             })}
                         </select>
                       </div>
-                      <span className="text-muted-foreground pb-2 text-sm">vs</span>
+                      <span className="text-muted-foreground pb-2 text-sm">
+                        vs
+                      </span>
                       <div className="flex-1">
                         <select
                           className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                           value={playerB}
-                          onChange={(e) => setGroupPlayerB(group.id, e.target.value)}
+                          onChange={(e) =>
+                            setGroupPlayerB(group.id, e.target.value)
+                          }
                         >
-                          <option value="" disabled>Player B</option>
+                          <option value="" disabled>
+                            Player B
+                          </option>
                           {available
                             .filter((rp) => {
                               if (rp.id === playerA) return false;
                               // If Player A is selected, hide same-team players
                               if (playerA) {
                                 const selectedTeamId = getPlayerTeamId(playerA);
-                                const rpTeamId = rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id ?? null;
-                                if (selectedTeamId && rpTeamId && selectedTeamId === rpTeamId) return false;
+                                const rpTeamId =
+                                  rp.tournamentParticipant?.teamMemberships?.[0]
+                                    ?.team?.id ?? null;
+                                if (
+                                  selectedTeamId &&
+                                  rpTeamId &&
+                                  selectedTeamId === rpTeamId
+                                )
+                                  return false;
                               }
                               return true;
                             })
                             .map((rp) => {
                               const team =
-                                rp.tournamentParticipant?.teamMemberships?.[0]?.team?.name;
+                                rp.tournamentParticipant?.teamMemberships?.[0]
+                                  ?.team?.name;
                               return (
                                 <option key={rp.id} value={rp.id}>
                                   {rp.person.displayName}
@@ -1660,8 +1709,9 @@ function ConfigureMatchesDialog({
 
             {ungroupedPlayers.length > 0 && (
               <p className="text-muted-foreground text-xs">
-                {ungroupedPlayers.length} player{ungroupedPlayers.length !== 1 ? 's' : ''} not
-                assigned to a group. Assign them to a group to configure matches.
+                {ungroupedPlayers.length} player
+                {ungroupedPlayers.length !== 1 ? 's' : ''} not assigned to a
+                group. Assign them to a group to configure matches.
               </p>
             )}
           </div>
@@ -1705,17 +1755,27 @@ function EditCompetitionDialog({
   const [groupScope, setGroupScope] = useState<'all' | 'within_group'>(
     (comp.groupScope as 'all' | 'within_group') ?? 'all',
   );
-  const [countBack, setCountBack] = useState<boolean>(existingConfig.countBack ?? true);
-  const [scoringBasis, setScoringBasis] = useState<'net_strokes' | 'gross_strokes'>(
-    existingConfig.scoringBasis ?? 'net_strokes',
+  const [countBack, setCountBack] = useState<boolean>(
+    existingConfig.countBack ?? true,
   );
-  const [pointsPerWin, setPointsPerWin] = useState<number>(existingConfig.pointsPerWin ?? 1);
-  const [pointsPerHalf, setPointsPerHalf] = useState<number>(existingConfig.pointsPerHalf ?? 0.5);
-  const [holeNumber, setHoleNumber] = useState<number>(existingConfig.holeNumber ?? 1);
+  const [scoringBasis, setScoringBasis] = useState<
+    'net_strokes' | 'gross_strokes'
+  >(existingConfig.scoringBasis ?? 'net_strokes');
+  const [pointsPerWin, setPointsPerWin] = useState<number>(
+    existingConfig.pointsPerWin ?? 1,
+  );
+  const [pointsPerHalf, setPointsPerHalf] = useState<number>(
+    existingConfig.pointsPerHalf ?? 0.5,
+  );
+  const [holeNumber, setHoleNumber] = useState<number>(
+    existingConfig.holeNumber ?? 1,
+  );
   const [bonusMode, setBonusMode] = useState<'standalone' | 'contributor'>(
     existingConfig.bonusMode ?? 'standalone',
   );
-  const [bonusPoints, setBonusPoints] = useState<number>(existingConfig.bonusPoints ?? 1);
+  const [bonusPoints, setBonusPoints] = useState<number>(
+    existingConfig.bonusPoints ?? 1,
+  );
 
   const resetForm = () => {
     setName(comp.name);
@@ -1754,9 +1814,15 @@ function EditCompetitionDialog({
           },
         };
       case 'nearest_pin':
-        return { formatType: 'nearest_pin', config: { holeNumber, bonusMode, bonusPoints } };
+        return {
+          formatType: 'nearest_pin',
+          config: { holeNumber, bonusMode, bonusPoints },
+        };
       case 'longest_drive':
-        return { formatType: 'longest_drive', config: { holeNumber, bonusMode, bonusPoints } };
+        return {
+          formatType: 'longest_drive',
+          config: { holeNumber, bonusMode, bonusPoints },
+        };
     }
   };
 
@@ -1786,8 +1852,7 @@ function EditCompetitionDialog({
     setSaving(false);
   };
 
-  const formatLabel =
-    FORMAT_TYPE_LABELS[formatType] ?? formatType;
+  const formatLabel = FORMAT_TYPE_LABELS[formatType] ?? formatType;
 
   return (
     <Dialog
@@ -1806,7 +1871,8 @@ function EditCompetitionDialog({
         <DialogHeader>
           <DialogTitle>Edit Competition</DialogTitle>
           <DialogDescription>
-            {formatLabel} · {comp.participantType === 'team' ? 'Team' : 'Individual'}
+            {formatLabel} ·{' '}
+            {comp.participantType === 'team' ? 'Team' : 'Individual'}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -1847,9 +1913,7 @@ function EditCompetitionDialog({
                 onChange={(e) => setCountBack(e.target.checked)}
                 className="h-4 w-4"
               />
-              <Label htmlFor="edit-countback">
-                Count-back tiebreaker
-              </Label>
+              <Label htmlFor="edit-countback">Count-back tiebreaker</Label>
             </div>
           )}
 
@@ -1861,7 +1925,9 @@ function EditCompetitionDialog({
                 className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 value={scoringBasis}
                 onChange={(e) =>
-                  setScoringBasis(e.target.value as 'net_strokes' | 'gross_strokes')
+                  setScoringBasis(
+                    e.target.value as 'net_strokes' | 'gross_strokes',
+                  )
                 }
               >
                 <option value="net_strokes">Net Strokes</option>
@@ -1910,9 +1976,7 @@ function EditCompetitionDialog({
                   min={1}
                   max={18}
                   value={holeNumber}
-                  onChange={(e) =>
-                    setHoleNumber(parseInt(e.target.value) || 1)
-                  }
+                  onChange={(e) => setHoleNumber(parseInt(e.target.value) || 1)}
                 />
               </div>
               <div className="space-y-2">
@@ -1925,7 +1989,9 @@ function EditCompetitionDialog({
                   }
                 >
                   <option value="standalone">Standalone (award only)</option>
-                  <option value="contributor">Contributor (adds to individual standings)</option>
+                  <option value="contributor">
+                    Contributor (adds to individual standings)
+                  </option>
                 </select>
               </div>
               {bonusMode === 'contributor' && (
@@ -1965,13 +2031,19 @@ function EditCompetitionDialog({
 // Add Individual Competition Dialog
 // ──────────────────────────────────────────────
 
-const INDIVIDUAL_FORMATS: { value: CompetitionConfig['formatType']; label: string }[] = [
+const INDIVIDUAL_FORMATS: {
+  value: CompetitionConfig['formatType'];
+  label: string;
+}[] = [
   { value: 'stableford', label: 'Stableford' },
   { value: 'stroke_play', label: 'Stroke Play' },
   { value: 'match_play', label: 'Match Play' },
 ];
 
-const BONUS_FORMATS: { value: CompetitionConfig['formatType']; label: string }[] = [
+const BONUS_FORMATS: {
+  value: CompetitionConfig['formatType'];
+  label: string;
+}[] = [
   { value: 'nearest_pin', label: 'Nearest the Pin' },
   { value: 'longest_drive', label: 'Longest Drive' },
 ];
@@ -1993,7 +2065,9 @@ function AddIndividualCompDialog({
 
   // Format-specific config state
   const [countBack, setCountBack] = useState(true);
-  const [scoringBasis, setScoringBasis] = useState<'net_strokes' | 'gross_strokes'>('net_strokes');
+  const [scoringBasis, setScoringBasis] = useState<
+    'net_strokes' | 'gross_strokes'
+  >('net_strokes');
   const [pointsPerWin, setPointsPerWin] = useState(1);
   const [pointsPerHalf, setPointsPerHalf] = useState(0.5);
 
@@ -2110,9 +2184,7 @@ function AddIndividualCompDialog({
                 onChange={(e) => setCountBack(e.target.checked)}
                 className="h-4 w-4"
               />
-              <Label htmlFor="indiv-countback">
-                Count-back tiebreaker
-              </Label>
+              <Label htmlFor="indiv-countback">Count-back tiebreaker</Label>
             </div>
           )}
 
@@ -2123,7 +2195,9 @@ function AddIndividualCompDialog({
                 className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 value={scoringBasis}
                 onChange={(e) =>
-                  setScoringBasis(e.target.value as 'net_strokes' | 'gross_strokes')
+                  setScoringBasis(
+                    e.target.value as 'net_strokes' | 'gross_strokes',
+                  )
                 }
               >
                 <option value="net_strokes">Net Strokes</option>
@@ -2183,7 +2257,10 @@ function AddIndividualCompDialog({
 // Add Team Competition Dialog
 // ──────────────────────────────────────────────
 
-const TEAM_FORMATS: { value: CompetitionConfig['formatType']; label: string }[] = [
+const TEAM_FORMATS: {
+  value: CompetitionConfig['formatType'];
+  label: string;
+}[] = [
   { value: 'match_play', label: 'Match Play' },
   { value: 'best_ball', label: 'Best Ball' },
 ];
@@ -2376,7 +2453,9 @@ function AddBonusCompDialog({
   const [formatType, setFormatType] =
     useState<CompetitionConfig['formatType']>('nearest_pin');
   const [holeNumber, setHoleNumber] = useState(1);
-  const [bonusMode, setBonusMode] = useState<'standalone' | 'contributor'>('standalone');
+  const [bonusMode, setBonusMode] = useState<'standalone' | 'contributor'>(
+    'standalone',
+  );
   const [bonusPoints, setBonusPoints] = useState(1);
 
   const resetForm = () => {
@@ -2390,11 +2469,20 @@ function AddBonusCompDialog({
   const buildConfig = (): CompetitionConfig => {
     switch (formatType) {
       case 'nearest_pin':
-        return { formatType: 'nearest_pin', config: { holeNumber, bonusMode, bonusPoints } };
+        return {
+          formatType: 'nearest_pin',
+          config: { holeNumber, bonusMode, bonusPoints },
+        };
       case 'longest_drive':
-        return { formatType: 'longest_drive', config: { holeNumber, bonusMode, bonusPoints } };
+        return {
+          formatType: 'longest_drive',
+          config: { holeNumber, bonusMode, bonusPoints },
+        };
       default:
-        return { formatType: 'nearest_pin', config: { holeNumber, bonusMode, bonusPoints } };
+        return {
+          formatType: 'nearest_pin',
+          config: { holeNumber, bonusMode, bonusPoints },
+        };
     }
   };
 
@@ -2484,9 +2572,7 @@ function AddBonusCompDialog({
               min={1}
               max={18}
               value={holeNumber}
-              onChange={(e) =>
-                setHoleNumber(parseInt(e.target.value) || 1)
-              }
+              onChange={(e) => setHoleNumber(parseInt(e.target.value) || 1)}
             />
           </div>
 
@@ -2500,7 +2586,9 @@ function AddBonusCompDialog({
               }
             >
               <option value="standalone">Standalone (award only)</option>
-              <option value="contributor">Contributor (adds to individual standings)</option>
+              <option value="contributor">
+                Contributor (adds to individual standings)
+              </option>
             </select>
           </div>
 

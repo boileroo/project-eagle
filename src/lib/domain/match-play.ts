@@ -78,9 +78,7 @@ export function calculateMatchPlay(
     const pA = participantMap.get(pairing.playerA);
     const pB = participantMap.get(pairing.playerB);
     if (!pA || !pB) {
-      throw new Error(
-        `Match play pairing references unknown participant(s)`,
-      );
+      throw new Error(`Match play pairing references unknown participant(s)`);
     }
 
     return calculateMatch(
@@ -166,8 +164,7 @@ export function calculateMatch(
   }
 
   // Determine result
-  const isDecided =
-    decidedAt !== null || holesCompleted === totalHoles;
+  const isDecided = decidedAt !== null || holesCompleted === totalHoles;
   let winner: 'A' | 'B' | 'halved' | null = null;
   let resultText: string;
   let pointsA = 0;

@@ -9,7 +9,11 @@ import { z } from 'zod';
 // Scoring basis enum (shared across formats)
 // ──────────────────────────────────────────────
 
-export const scoringBasisSchema = z.enum(['stableford', 'net_strokes', 'gross_strokes']);
+export const scoringBasisSchema = z.enum([
+  'stableford',
+  'net_strokes',
+  'gross_strokes',
+]);
 export type ScoringBasis = z.infer<typeof scoringBasisSchema>;
 
 // ──────────────────────────────────────────────
@@ -140,7 +144,10 @@ export type LongestDriveConfig = z.infer<typeof longestDriveConfigSchema>;
 // Format type labels (for UI display)
 // ──────────────────────────────────────────────
 
-export const FORMAT_TYPE_LABELS: Record<CompetitionConfig['formatType'], string> = {
+export const FORMAT_TYPE_LABELS: Record<
+  CompetitionConfig['formatType'],
+  string
+> = {
   stableford: 'Stableford',
   stroke_play: 'Stroke Play',
   match_play: 'Match Play',
@@ -149,13 +156,17 @@ export const FORMAT_TYPE_LABELS: Record<CompetitionConfig['formatType'], string>
   longest_drive: 'Longest Drive',
 };
 
-export const FORMAT_TYPES = Object.keys(FORMAT_TYPE_LABELS) as CompetitionConfig['formatType'][];
+export const FORMAT_TYPES = Object.keys(
+  FORMAT_TYPE_LABELS,
+) as CompetitionConfig['formatType'][];
 
 // ──────────────────────────────────────────────
 // Helper: is this a team format?
 // ──────────────────────────────────────────────
 
-export function isTeamFormat(formatType: CompetitionConfig['formatType']): boolean {
+export function isTeamFormat(
+  formatType: CompetitionConfig['formatType'],
+): boolean {
   return formatType === 'best_ball';
 }
 
@@ -163,7 +174,9 @@ export function isTeamFormat(formatType: CompetitionConfig['formatType']): boole
 // Helper: is this a match-based format (has pairings & points)?
 // ──────────────────────────────────────────────
 
-export function isMatchFormat(formatType: CompetitionConfig['formatType']): boolean {
+export function isMatchFormat(
+  formatType: CompetitionConfig['formatType'],
+): boolean {
   return formatType === 'match_play' || formatType === 'best_ball';
 }
 
@@ -171,7 +184,9 @@ export function isMatchFormat(formatType: CompetitionConfig['formatType']): bool
 // Helper: is this a bonus competition?
 // ──────────────────────────────────────────────
 
-export function isBonusFormat(formatType: CompetitionConfig['formatType']): boolean {
+export function isBonusFormat(
+  formatType: CompetitionConfig['formatType'],
+): boolean {
   return formatType === 'nearest_pin' || formatType === 'longest_drive';
 }
 
@@ -233,7 +248,10 @@ export const aggregationConfigSchema = z.discriminatedUnion('method', [
 ]);
 export type AggregationConfig = z.infer<typeof aggregationConfigSchema>;
 
-export const AGGREGATION_METHOD_LABELS: Record<AggregationConfig['method'], string> = {
+export const AGGREGATION_METHOD_LABELS: Record<
+  AggregationConfig['method'],
+  string
+> = {
   sum_stableford: 'Total Stableford Points',
   lowest_strokes: 'Lowest Total Strokes',
   match_wins: 'Match Wins',

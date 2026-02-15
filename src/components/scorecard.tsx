@@ -44,10 +44,7 @@ type ScorecardProps = {
     holeNumber: number,
     currentStrokes?: number,
   ) => void;
-  onHistoryClick?: (
-    roundParticipantId: string,
-    holeNumber: number,
-  ) => void;
+  onHistoryClick?: (roundParticipantId: string, holeNumber: number) => void;
 };
 
 // ──────────────────────────────────────────────
@@ -58,16 +55,22 @@ type ScorecardProps = {
 function shortName(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 3);
-  return parts.map((p) => p[0]).join('').toUpperCase();
+  return parts
+    .map((p) => p[0])
+    .join('')
+    .toUpperCase();
 }
 
 /** Colour class for a score relative to par */
 function scoreCellClass(strokes: number, par: number): string {
   const diff = strokes - par;
-  if (diff <= -2) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
-  if (diff === -1) return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
+  if (diff <= -2)
+    return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
+  if (diff === -1)
+    return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
   if (diff === 0) return '';
-  if (diff === 1) return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+  if (diff === 1)
+    return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
   return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
 }
 
@@ -133,7 +136,8 @@ export function Scorecard({
         className={cn(
           'relative h-10 min-w-12 border px-1 text-center text-sm',
           cell ? scoreCellClass(cell.strokes, hole.par) : '',
-          canEdit && 'cursor-pointer hover:ring-2 hover:ring-primary hover:ring-inset',
+          canEdit &&
+            'hover:ring-primary cursor-pointer hover:ring-2 hover:ring-inset',
         )}
         onClick={() => {
           if (canEdit) {
@@ -148,7 +152,7 @@ export function Scorecard({
         )}
         {/* Stroke dots — show strokes received on this hole */}
         {strokesReceived > 0 && (
-          <span className="absolute top-0.5 right-0.5 flex gap-px">
+          <span className="absolute right-0.5 top-0.5 flex gap-px">
             {Array.from({ length: strokesReceived }).map((_, i) => (
               <span
                 key={i}
@@ -167,7 +171,7 @@ export function Scorecard({
         {cell && cell.eventCount > 1 && onHistoryClick && (
           <button
             type="button"
-            className="absolute top-0.5 left-0.5 text-[8px] text-muted-foreground opacity-60 hover:opacity-100"
+            className="text-muted-foreground absolute left-0.5 top-0.5 text-[8px] opacity-60 hover:opacity-100"
             onClick={(e) => {
               e.stopPropagation();
               onHistoryClick(participant.id, hole.holeNumber);
@@ -188,12 +192,20 @@ export function Scorecard({
     const total = getTotal(participantId, holeList);
     const diff = total != null ? total - par : null;
     return (
-      <td key={participantId} className="border bg-muted/50 px-1 text-center text-sm font-semibold">
+      <td
+        key={participantId}
+        className="bg-muted/50 border px-1 text-center text-sm font-semibold"
+      >
         {total != null ? (
           <span>
             {total}
             {diff != null && diff !== 0 && (
-              <span className={cn('ml-1 text-xs', diff > 0 ? 'text-red-500' : 'text-green-600')}>
+              <span
+                className={cn(
+                  'ml-1 text-xs',
+                  diff > 0 ? 'text-red-500' : 'text-green-600',
+                )}
+              >
                 {diff > 0 ? `+${diff}` : diff}
               </span>
             )}
@@ -210,7 +222,7 @@ export function Scorecard({
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="bg-muted/30">
-            <th className="sticky left-0 z-10 border bg-background px-2 py-1.5 text-left text-xs font-medium">
+            <th className="bg-background sticky left-0 z-10 border px-2 py-1.5 text-left text-xs font-medium">
               Hole
             </th>
             <th className="border px-2 py-1.5 text-center text-xs font-medium">
@@ -234,13 +246,13 @@ export function Scorecard({
           {/* Front 9 */}
           {frontNine.map((hole) => (
             <tr key={hole.holeNumber}>
-              <td className="sticky left-0 z-10 border bg-background px-2 py-1 text-center text-xs font-medium">
+              <td className="bg-background sticky left-0 z-10 border px-2 py-1 text-center text-xs font-medium">
                 {hole.holeNumber}
               </td>
-              <td className="border px-2 py-1 text-center text-xs text-muted-foreground">
+              <td className="text-muted-foreground border px-2 py-1 text-center text-xs">
                 {hole.par}
               </td>
-              <td className="border px-2 py-1 text-center text-xs text-muted-foreground">
+              <td className="text-muted-foreground border px-2 py-1 text-center text-xs">
                 {hole.strokeIndex}
               </td>
               {participants.map((p, i) => renderScoreCell(p, i, hole))}
@@ -249,12 +261,14 @@ export function Scorecard({
 
           {/* Out row */}
           <tr className="bg-muted/30 font-semibold">
-            <td className="sticky left-0 z-10 border bg-muted/30 px-2 py-1 text-center text-xs">
+            <td className="bg-muted/30 sticky left-0 z-10 border px-2 py-1 text-center text-xs">
               Out
             </td>
             <td className="border px-2 py-1 text-center text-xs">{frontPar}</td>
             <td className="border px-2 py-1 text-center text-xs" />
-            {participants.map((p) => renderTotalCell(p.id, frontNine, frontPar))}
+            {participants.map((p) =>
+              renderTotalCell(p.id, frontNine, frontPar),
+            )}
           </tr>
 
           {/* Back 9 */}
@@ -262,13 +276,13 @@ export function Scorecard({
             <>
               {backNine.map((hole) => (
                 <tr key={hole.holeNumber}>
-                  <td className="sticky left-0 z-10 border bg-background px-2 py-1 text-center text-xs font-medium">
+                  <td className="bg-background sticky left-0 z-10 border px-2 py-1 text-center text-xs font-medium">
                     {hole.holeNumber}
                   </td>
-                  <td className="border px-2 py-1 text-center text-xs text-muted-foreground">
+                  <td className="text-muted-foreground border px-2 py-1 text-center text-xs">
                     {hole.par}
                   </td>
-                  <td className="border px-2 py-1 text-center text-xs text-muted-foreground">
+                  <td className="text-muted-foreground border px-2 py-1 text-center text-xs">
                     {hole.strokeIndex}
                   </td>
                   {participants.map((p, i) => renderScoreCell(p, i, hole))}
@@ -277,7 +291,7 @@ export function Scorecard({
 
               {/* In row */}
               <tr className="bg-muted/30 font-semibold">
-                <td className="sticky left-0 z-10 border bg-muted/30 px-2 py-1 text-center text-xs">
+                <td className="bg-muted/30 sticky left-0 z-10 border px-2 py-1 text-center text-xs">
                   In
                 </td>
                 <td className="border px-2 py-1 text-center text-xs">
@@ -293,7 +307,7 @@ export function Scorecard({
 
           {/* Total row */}
           <tr className="bg-muted/50 font-bold">
-            <td className="sticky left-0 z-10 border bg-muted/50 px-2 py-1.5 text-center text-xs">
+            <td className="bg-muted/50 sticky left-0 z-10 border px-2 py-1.5 text-center text-xs">
               Total
             </td>
             <td className="border px-2 py-1.5 text-center text-xs">

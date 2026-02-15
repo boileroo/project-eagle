@@ -34,10 +34,7 @@ export const recordedByRoleEnum = pgEnum('recorded_by_role', [
   'commissioner',
 ]);
 
-export const groupScopeEnum = pgEnum('group_scope', [
-  'all',
-  'within_group',
-]);
+export const groupScopeEnum = pgEnum('group_scope', ['all', 'within_group']);
 
 export const tournamentRoleEnum = pgEnum('tournament_role', [
   'commissioner',
@@ -70,9 +67,11 @@ export const profiles = pgTable('profiles', {
 export const persons = pgTable('persons', {
   id: uuid('id').primaryKey().defaultRandom(),
   displayName: text('display_name').notNull(),
-  userId: uuid('user_id').unique().references(() => profiles.id, {
-    onDelete: 'set null',
-  }),
+  userId: uuid('user_id')
+    .unique()
+    .references(() => profiles.id, {
+      onDelete: 'set null',
+    }),
   createdByUserId: uuid('created_by_user_id').references(() => profiles.id, {
     onDelete: 'set null',
   }),
@@ -334,7 +333,9 @@ export const competitions = pgTable('competitions', {
     .references(() => rounds.id, { onDelete: 'cascade' })
     .notNull(),
   name: text('name').notNull(),
-  participantType: participantTypeEnum('participant_type').notNull().default('individual'),
+  participantType: participantTypeEnum('participant_type')
+    .notNull()
+    .default('individual'),
   groupScope: groupScopeEnum('group_scope').notNull().default('all'),
   formatType: text('format_type').notNull(),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -360,7 +361,9 @@ export const tournamentStandings = pgTable('tournament_standings', {
   participantType: participantTypeEnum('participant_type').notNull(),
   /** Aggregation method + config */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  aggregationConfig: jsonb('aggregation_config').$type<Record<string, any>>().notNull(),
+  aggregationConfig: jsonb('aggregation_config')
+    .$type<Record<string, any>>()
+    .notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -381,8 +384,9 @@ export const bonusAwards = pgTable('bonus_awards', {
   roundParticipantId: uuid('round_participant_id')
     .references(() => roundParticipants.id, { onDelete: 'cascade' })
     .notNull(),
-  awardedByUserId: uuid('awarded_by_user_id')
-    .references(() => profiles.id, { onDelete: 'set null' }),
+  awardedByUserId: uuid('awarded_by_user_id').references(() => profiles.id, {
+    onDelete: 'set null',
+  }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -501,16 +505,13 @@ export const roundsRelations = relations(rounds, ({ one, many }) => ({
   competitions: many(competitions),
 }));
 
-export const roundGroupsRelations = relations(
-  roundGroups,
-  ({ one, many }) => ({
-    round: one(rounds, {
-      fields: [roundGroups.roundId],
-      references: [rounds.id],
-    }),
-    participants: many(roundParticipants),
+export const roundGroupsRelations = relations(roundGroups, ({ one, many }) => ({
+  round: one(rounds, {
+    fields: [roundGroups.roundId],
+    references: [rounds.id],
   }),
-);
+  participants: many(roundParticipants),
+}));
 
 export const roundParticipantsRelations = relations(
   roundParticipants,
@@ -678,10 +679,12 @@ export type InsertTournamentTeam = z.infer<typeof insertTournamentTeamSchema>;
 export type SelectTournamentTeam = z.infer<typeof selectTournamentTeamSchema>;
 
 // Tournament Team Members
-export const insertTournamentTeamMemberSchema =
-  createInsertSchema(tournamentTeamMembers);
-export const selectTournamentTeamMemberSchema =
-  createSelectSchema(tournamentTeamMembers);
+export const insertTournamentTeamMemberSchema = createInsertSchema(
+  tournamentTeamMembers,
+);
+export const selectTournamentTeamMemberSchema = createSelectSchema(
+  tournamentTeamMembers,
+);
 export type InsertTournamentTeamMember = z.infer<
   typeof insertTournamentTeamMemberSchema
 >;

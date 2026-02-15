@@ -85,11 +85,13 @@ function TournamentDetailPage() {
 
   // The tournament creator always has commissioner-level access
   const isCreator = user.id === tournament.createdByUserId;
-  const isCommissioner = isCreator || (myPerson
-    ? tournament.participants.some(
-        (p) => p.personId === myPerson.id && p.role === 'commissioner',
-      )
-    : false);
+  const isCommissioner =
+    isCreator ||
+    (myPerson
+      ? tournament.participants.some(
+          (p) => p.personId === myPerson.id && p.role === 'commissioner',
+        )
+      : false);
   const iAmParticipant = myPerson
     ? tournament.participants.some((p) => p.personId === myPerson.id)
     : false;
@@ -115,12 +117,15 @@ function TournamentDetailPage() {
   const handleAddMyself = async () => {
     try {
       // Ensure person record exists (creates one if missing)
-      const person = myPerson ?? await ensureMyPersonFn();
+      const person = myPerson ?? (await ensureMyPersonFn());
       await addParticipantFn({
         data: {
           tournamentId: tournament.id,
           personId: person.id,
-          role: isCreator && tournament.participants.length === 0 ? 'commissioner' : 'player',
+          role:
+            isCreator && tournament.participants.length === 0
+              ? 'commissioner'
+              : 'player',
         },
       });
       toast.success('Added to the tournament!');
@@ -132,7 +137,10 @@ function TournamentDetailPage() {
     }
   };
 
-  const handleRemoveParticipant = async (participantId: string, name: string) => {
+  const handleRemoveParticipant = async (
+    participantId: string,
+    name: string,
+  ) => {
     try {
       await removeParticipantFn({ data: { participantId } });
       toast.success(`${name} removed from tournament.`);
@@ -150,8 +158,15 @@ function TournamentDetailPage() {
     personName?: string,
   ) => {
     // If promoting to commissioner and there's an existing one, confirm first
-    if (role === 'commissioner' && currentCommissioner && currentCommissioner.id !== participantId) {
-      setCommissionerConfirm({ participantId, name: personName ?? 'this person' });
+    if (
+      role === 'commissioner' &&
+      currentCommissioner &&
+      currentCommissioner.id !== participantId
+    ) {
+      setCommissionerConfirm({
+        participantId,
+        name: personName ?? 'this person',
+      });
       return;
     }
     await applyRoleChange(participantId, role);
@@ -325,67 +340,80 @@ function TournamentDetailPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {(p.handicapOverride ?? p.person.currentHandicap) != null && (
+                    {(p.handicapOverride ?? p.person.currentHandicap) !=
+                      null && (
                       <Badge variant="outline">
-                        HC{' '}
-                        {p.handicapOverride ?? p.person.currentHandicap}
+                        HC {p.handicapOverride ?? p.person.currentHandicap}
                       </Badge>
                     )}
                     {isCommissioner && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-7 px-2">
-                          <Badge
-                            variant={
-                              p.role === 'commissioner'
-                                ? 'default'
-                                : 'secondary'
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                          >
+                            <Badge
+                              variant={
+                                p.role === 'commissioner'
+                                  ? 'default'
+                                  : 'secondary'
+                              }
+                            >
+                              {p.role}
+                            </Badge>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {(p.person.userId == null
+                            ? (['player', 'spectator'] as const)
+                            : ([
+                                'commissioner',
+                                'player',
+                                'marker',
+                                'spectator',
+                              ] as const)
+                          ).map((role) => (
+                            <DropdownMenuItem
+                              key={role}
+                              onClick={() =>
+                                handleRoleChange(
+                                  p.id,
+                                  role,
+                                  p.person.displayName,
+                                )
+                              }
+                              disabled={p.role === role}
+                            >
+                              {role.charAt(0).toUpperCase() + role.slice(1)}
+                              {p.role === role ? ' ✓' : ''}
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <EditHandicapDialog
+                            participant={p}
+                            onSaved={() => router.invalidate()}
+                          />
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() =>
+                              handleRemoveParticipant(
+                                p.id,
+                                p.person.displayName,
+                              )
                             }
                           >
-                            {p.role}
-                          </Badge>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {(p.person.userId == null
-                          ? (['player', 'spectator'] as const)
-                          : (['commissioner', 'player', 'marker', 'spectator'] as const)
-                        ).map((role) => (
-                          <DropdownMenuItem
-                            key={role}
-                            onClick={() => handleRoleChange(p.id, role, p.person.displayName)}
-                            disabled={p.role === role}
-                          >
-                            {role.charAt(0).toUpperCase() + role.slice(1)}
-                            {p.role === role ? ' ✓' : ''}
+                            Remove
                           </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuSeparator />
-                        <EditHandicapDialog
-                          participant={p}
-                          onSaved={() => router.invalidate()}
-                        />
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() =>
-                            handleRemoveParticipant(
-                              p.id,
-                              p.person.displayName,
-                            )
-                          }
-                        >
-                          Remove
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                     {!isCommissioner && (
                       <Badge
                         variant={
-                          p.role === 'commissioner'
-                            ? 'default'
-                            : 'secondary'
+                          p.role === 'commissioner' ? 'default' : 'secondary'
                         }
                       >
                         {p.role}
@@ -440,7 +468,13 @@ function AddParticipantDialog({
   const [tab, setTab] = useState<'search' | 'guest'>('search');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<
-    { id: string; displayName: string; currentHandicap: string | null; isGuest: boolean; email: string | null }[]
+    {
+      id: string;
+      displayName: string;
+      currentHandicap: string | null;
+      isGuest: boolean;
+      email: string | null;
+    }[]
   >([]);
   const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -742,7 +776,12 @@ function AddRoundDialog({
   onAdded,
 }: {
   tournamentId: string;
-  courses: { id: string; name: string; location: string | null; numberOfHoles: number }[];
+  courses: {
+    id: string;
+    name: string;
+    location: string | null;
+    numberOfHoles: number;
+  }[];
   onAdded: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -799,8 +838,8 @@ function AddRoundDialog({
         <DialogHeader>
           <DialogTitle>Add Round</DialogTitle>
           <DialogDescription>
-            Select a course and optionally set a date and tee time. All
-            current tournament players will be automatically added.
+            Select a course and optionally set a date and tee time. All current
+            tournament players will be automatically added.
           </DialogDescription>
         </DialogHeader>
 
@@ -809,7 +848,7 @@ function AddRoundDialog({
             <Label htmlFor="courseSelect">Course</Label>
             <select
               id="courseSelect"
-              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
             >
@@ -885,14 +924,22 @@ function RoundsSection({
       course: { id: string; name: string } | null;
     }[];
   };
-  courses: { id: string; name: string; location: string | null; numberOfHoles: number }[];
+  courses: {
+    id: string;
+    name: string;
+    location: string | null;
+    numberOfHoles: number;
+  }[];
   isCommissioner: boolean;
   onChanged: () => void;
 }) {
   const sortedRounds = tournament.rounds;
 
   // Helper: get a comparable timestamp for a dated round
-  const getDateTime = (r: { date: string | Date | null; teeTime: string | null }) => {
+  const getDateTime = (r: {
+    date: string | Date | null;
+    teeTime: string | null;
+  }) => {
     if (!r.date) return null;
     const d = new Date(r.date);
     if (r.teeTime) {
@@ -918,8 +965,10 @@ function RoundsSection({
     // If only one has a date, check that the dated round doesn't cross another dated round
     // We need to verify all dated rounds remain in order after the swap
     const swapped = [...sortedRounds];
-    [swapped[Math.min(idxA, idxB)], swapped[Math.max(idxA, idxB)]] = 
-      [swapped[Math.max(idxA, idxB)], swapped[Math.min(idxA, idxB)]];
+    [swapped[Math.min(idxA, idxB)], swapped[Math.max(idxA, idxB)]] = [
+      swapped[Math.max(idxA, idxB)],
+      swapped[Math.min(idxA, idxB)],
+    ];
     const datedInOrder = swapped.filter((r) => r.date != null);
     for (let i = 1; i < datedInOrder.length; i++) {
       const prev = getDateTime(datedInOrder[i - 1])!;
@@ -930,7 +979,8 @@ function RoundsSection({
   };
 
   const canMoveUp = (idx: number) => idx > 0 && canSwap(idx, idx - 1);
-  const canMoveDown = (idx: number) => idx < sortedRounds.length - 1 && canSwap(idx, idx + 1);
+  const canMoveDown = (idx: number) =>
+    idx < sortedRounds.length - 1 && canSwap(idx, idx + 1);
   const showArrows = sortedRounds.length > 1;
 
   const handleMoveUp = async (index: number) => {
@@ -944,9 +994,7 @@ function RoundsSection({
       toast.success('Round order updated.');
       onChanged();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to reorder',
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to reorder');
     }
   };
 
@@ -961,13 +1009,14 @@ function RoundsSection({
       toast.success('Round order updated.');
       onChanged();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to reorder',
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to reorder');
     }
   };
 
-  const formatDateTime = (r: { date: string | Date | null; teeTime: string | null }) => {
+  const formatDateTime = (r: {
+    date: string | Date | null;
+    teeTime: string | null;
+  }) => {
     if (!r.date) return null;
     const d = new Date(r.date);
     const datePart = d.toLocaleDateString('en-AU', {
@@ -1009,16 +1058,13 @@ function RoundsSection({
         ) : (
           <div className="space-y-2">
             {sortedRounds.map((r, idx) => (
-              <div
-                key={r.id}
-                className="flex items-center gap-2"
-              >
+              <div key={r.id} className="flex items-center gap-2">
                 {/* Reorder arrows */}
                 {isCommissioner && showArrows && (
                   <div className="flex w-4 flex-col items-center">
                     <button
                       type="button"
-                      className="text-muted-foreground hover:text-foreground disabled:opacity-25 px-0.5 text-xs leading-none"
+                      className="text-muted-foreground hover:text-foreground px-0.5 text-xs leading-none disabled:opacity-25"
                       disabled={!canMoveUp(idx)}
                       onClick={() => handleMoveUp(idx)}
                       aria-label="Move up"
@@ -1027,7 +1073,7 @@ function RoundsSection({
                     </button>
                     <button
                       type="button"
-                      className="text-muted-foreground hover:text-foreground disabled:opacity-25 px-0.5 text-xs leading-none"
+                      className="text-muted-foreground hover:text-foreground px-0.5 text-xs leading-none disabled:opacity-25"
                       disabled={!canMoveDown(idx)}
                       onClick={() => handleMoveDown(idx)}
                       aria-label="Move down"
@@ -1042,10 +1088,10 @@ function RoundsSection({
                     tournamentId: tournament.id,
                     roundId: r.id,
                   }}
-                  className="group flex flex-1 items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-accent"
+                  className="hover:bg-accent group flex flex-1 items-center justify-between rounded-md border px-3 py-2 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium group-hover:text-primary">
+                    <span className="group-hover:text-primary text-sm font-medium">
                       Round {idx + 1}
                     </span>
                     {r.course && (
@@ -1118,16 +1164,26 @@ function StandingsSection({
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
-  const [participantType, setParticipantType] = useState<'individual' | 'team'>('individual');
-  const [method, setMethod] = useState<AggregationConfig['method']>('sum_stableford');
-  const [scoringBasis, setScoringBasis] = useState<'net_strokes' | 'gross_strokes'>('net_strokes');
+  const [participantType, setParticipantType] = useState<'individual' | 'team'>(
+    'individual',
+  );
+  const [method, setMethod] =
+    useState<AggregationConfig['method']>('sum_stableford');
+  const [scoringBasis, setScoringBasis] = useState<
+    'net_strokes' | 'gross_strokes'
+  >('net_strokes');
   const [pointsPerWin, setPointsPerWin] = useState('1');
   const [pointsPerHalf, setPointsPerHalf] = useState('0.5');
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   // Computed standings data (loaded on demand)
-  const [computedData, setComputedData] = useState<Record<string, ComputedStanding>>({});
+  const [computedData, setComputedData] = useState<
+    Record<string, ComputedStanding>
+  >({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
 
   // Load computed standings for each standing config
@@ -1137,7 +1193,10 @@ function StandingsSection({
       setLoading((prev) => ({ ...prev, [s.id]: true }));
       computeStandingsFn({ data: { standingId: s.id } })
         .then((result) => {
-          setComputedData((prev) => ({ ...prev, [s.id]: result as ComputedStanding }));
+          setComputedData((prev) => ({
+            ...prev,
+            [s.id]: result as ComputedStanding,
+          }));
         })
         .catch(() => {
           // Ignore computation errors
@@ -1260,21 +1319,31 @@ function StandingsSection({
                         <Label htmlFor="standingType">Type</Label>
                         <select
                           id="standingType"
-                          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                           value={participantType}
-                          onChange={(e) => setParticipantType(e.target.value as 'individual' | 'team')}
+                          onChange={(e) =>
+                            setParticipantType(
+                              e.target.value as 'individual' | 'team',
+                            )
+                          }
                         >
                           <option value="individual">Individual</option>
                           <option value="team">Team</option>
                         </select>
                       </div>
                       <div>
-                        <Label htmlFor="standingMethod">Aggregation Method</Label>
+                        <Label htmlFor="standingMethod">
+                          Aggregation Method
+                        </Label>
                         <select
                           id="standingMethod"
-                          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                           value={method}
-                          onChange={(e) => setMethod(e.target.value as AggregationConfig['method'])}
+                          onChange={(e) =>
+                            setMethod(
+                              e.target.value as AggregationConfig['method'],
+                            )
+                          }
                         >
                           {AGGREGATION_METHODS.map((m) => (
                             <option key={m} value={m}>
@@ -1290,9 +1359,15 @@ function StandingsSection({
                           <Label htmlFor="scoringBasis">Scoring Basis</Label>
                           <select
                             id="scoringBasis"
-                            className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                            className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                             value={scoringBasis}
-                            onChange={(e) => setScoringBasis(e.target.value as 'net_strokes' | 'gross_strokes')}
+                            onChange={(e) =>
+                              setScoringBasis(
+                                e.target.value as
+                                  | 'net_strokes'
+                                  | 'gross_strokes',
+                              )
+                            }
                           >
                             <option value="net_strokes">Net Strokes</option>
                             <option value="gross_strokes">Gross Strokes</option>
@@ -1314,7 +1389,9 @@ function StandingsSection({
                             />
                           </div>
                           <div>
-                            <Label htmlFor="pointsPerHalf">Points per Half</Label>
+                            <Label htmlFor="pointsPerHalf">
+                              Points per Half
+                            </Label>
                             <Input
                               id="pointsPerHalf"
                               type="number"
@@ -1328,7 +1405,10 @@ function StandingsSection({
                       )}
                     </div>
                     <DialogFooter>
-                      <Button onClick={handleCreate} disabled={creating || !name.trim()}>
+                      <Button
+                        onClick={handleCreate}
+                        disabled={creating || !name.trim()}
+                      >
                         {creating ? 'Creating…' : 'Create'}
                       </Button>
                     </DialogFooter>
@@ -1358,7 +1438,11 @@ function StandingsSection({
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium">{s.name}</h3>
                         <Badge variant="outline" className="text-xs">
-                          {PARTICIPANT_TYPE_LABELS[s.participantType as 'individual' | 'team']}
+                          {
+                            PARTICIPANT_TYPE_LABELS[
+                              s.participantType as 'individual' | 'team'
+                            ]
+                          }
                         </Badge>
                         <Badge variant="secondary" className="text-xs">
                           {AGGREGATION_METHOD_LABELS[aggConfig.method]}
@@ -1368,7 +1452,7 @@ function StandingsSection({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 text-destructive"
+                          className="text-destructive h-7"
                           onClick={() =>
                             setDeleteConfirm({ id: s.id, name: s.name })
                           }
@@ -1386,10 +1470,14 @@ function StandingsSection({
                       <div className="overflow-x-auto rounded-md border">
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="border-b bg-muted/50">
-                              <th className="px-3 py-2 text-left font-medium">#</th>
+                            <tr className="bg-muted/50 border-b">
                               <th className="px-3 py-2 text-left font-medium">
-                                {s.participantType === 'team' ? 'Team' : 'Player'}
+                                #
+                              </th>
+                              <th className="px-3 py-2 text-left font-medium">
+                                {s.participantType === 'team'
+                                  ? 'Team'
+                                  : 'Player'}
                               </th>
                               {computed.rounds.map((r) => (
                                 <th
@@ -1400,7 +1488,9 @@ function StandingsSection({
                                   R{r.roundNumber}
                                 </th>
                               ))}
-                              {computed.leaderboard.some((e) => e.bonusTotal > 0) && (
+                              {computed.leaderboard.some(
+                                (e) => e.bonusTotal > 0,
+                              ) && (
                                 <th className="px-3 py-2 text-center font-medium">
                                   Bonus
                                 </th>
@@ -1426,7 +1516,7 @@ function StandingsSection({
                                         : ''
                                   }
                                 >
-                                  <td className="px-3 py-1.5 text-muted-foreground">
+                                  <td className="text-muted-foreground px-3 py-1.5">
                                     {idx + 1}
                                   </td>
                                   <td className="px-3 py-1.5 font-medium">
@@ -1441,7 +1531,9 @@ function StandingsSection({
                                         key={r.id}
                                         className="px-3 py-1.5 text-center"
                                       >
-                                        {roundVal != null ? roundVal.value : '–'}
+                                        {roundVal != null
+                                          ? roundVal.value
+                                          : '–'}
                                       </td>
                                     );
                                   })}
@@ -1497,17 +1589,12 @@ function StandingsSection({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirm(null)}
-            >
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={() =>
-                deleteConfirm && handleDelete(deleteConfirm.id)
-              }
+              onClick={() => deleteConfirm && handleDelete(deleteConfirm.id)}
               disabled={deleting}
             >
               {deleting ? 'Deleting…' : 'Delete'}
@@ -1570,9 +1657,7 @@ function TeamsSection({
 
   // Unassigned participants (only players/markers, not spectators)
   const unassigned = tournament.participants.filter(
-    (p) =>
-      !assignedParticipantIds.has(p.id) &&
-      p.role !== 'spectator',
+    (p) => !assignedParticipantIds.has(p.id) && p.role !== 'spectator',
   );
 
   const handleCreateTeam = async () => {
@@ -1639,9 +1724,7 @@ function TeamsSection({
       onChanged();
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : 'Failed to remove from team',
+        error instanceof Error ? error.message : 'Failed to remove from team',
       );
     }
   };
@@ -1661,24 +1744,24 @@ function TeamsSection({
         <CardContent className="space-y-4">
           {/* Create team inline */}
           {isCommissioner && (
-          <div className="flex gap-2">
-            <Input
-              placeholder="New team name…"
-              value={newTeamName}
-              onChange={(e) => setNewTeamName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCreateTeam();
-              }}
-              className="max-w-xs"
-            />
-            <Button
-              size="sm"
-              onClick={handleCreateTeam}
-              disabled={creating || !newTeamName.trim()}
-            >
-              {creating ? 'Creating…' : 'Add Team'}
-            </Button>
-          </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="New team name…"
+                value={newTeamName}
+                onChange={(e) => setNewTeamName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCreateTeam();
+                }}
+                className="max-w-xs"
+              />
+              <Button
+                size="sm"
+                onClick={handleCreateTeam}
+                disabled={creating || !newTeamName.trim()}
+              >
+                {creating ? 'Creating…' : 'Add Team'}
+              </Button>
+            </div>
           )}
 
           {tournament.teams.length === 0 ? (
@@ -1688,11 +1771,11 @@ function TeamsSection({
           ) : (
             <div className="space-y-4">
               {tournament.teams.map((team) => (
-                <div key={team.id} className="rounded-lg border p-3 space-y-2">
+                <div key={team.id} className="space-y-2 rounded-lg border p-3">
                   {/* Team header */}
                   <div className="flex items-center justify-between">
                     {editingTeamId === team.id ? (
-                      <div className="flex gap-2 flex-1 mr-2">
+                      <div className="mr-2 flex flex-1 gap-2">
                         <Input
                           value={editingName}
                           onChange={(e) => setEditingName(e.target.value)}
@@ -1700,7 +1783,7 @@ function TeamsSection({
                             if (e.key === 'Enter') handleRenameTeam(team.id);
                             if (e.key === 'Escape') setEditingTeamId(null);
                           }}
-                          className="max-w-xs h-7 text-sm"
+                          className="h-7 max-w-xs text-sm"
                           autoFocus
                         />
                         <Button
@@ -1735,7 +1818,11 @@ function TeamsSection({
                     {isCommissioner && editingTeamId !== team.id && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-7 px-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                          >
                             ⋯
                           </Button>
                         </DropdownMenuTrigger>
@@ -1767,22 +1854,22 @@ function TeamsSection({
 
                   {/* Team members */}
                   {team.members.length > 0 && (
-                    <div className="space-y-1 ml-1">
+                    <div className="ml-1 space-y-1">
                       {team.members.map((m) => (
                         <div
                           key={m.id}
-                          className="flex items-center justify-between rounded px-2 py-1 text-sm hover:bg-muted/50"
+                          className="hover:bg-muted/50 flex items-center justify-between rounded px-2 py-1 text-sm"
                         >
                           <span>{m.participant.person.displayName}</span>
                           {isCommissioner && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
-                            onClick={() => handleRemoveMember(m.id)}
-                          >
-                            Remove
-                          </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-muted-foreground hover:text-destructive h-6 px-2 text-xs"
+                              onClick={() => handleRemoveMember(m.id)}
+                            >
+                              Remove
+                            </Button>
                           )}
                         </div>
                       ))}
@@ -1820,7 +1907,9 @@ function TeamsSection({
                   )}
 
                   {unassigned.length === 0 &&
-                    tournament.participants.filter((p) => p.role !== 'spectator').length > 0 &&
+                    tournament.participants.filter(
+                      (p) => p.role !== 'spectator',
+                    ).length > 0 &&
                     team.members.length === 0 && (
                       <p className="text-muted-foreground text-xs">
                         All players are assigned to teams.
@@ -1850,16 +1939,13 @@ function TeamsSection({
           <DialogHeader>
             <DialogTitle>Delete team?</DialogTitle>
             <DialogDescription>
-              This will delete <strong>{deleteConfirm?.name}</strong> and
-              remove all its member assignments. The players will remain in
-              the tournament.
+              This will delete <strong>{deleteConfirm?.name}</strong> and remove
+              all its member assignments. The players will remain in the
+              tournament.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirm(null)}
-            >
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
               Cancel
             </Button>
             <Button

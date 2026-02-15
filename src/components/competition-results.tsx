@@ -16,11 +16,7 @@ import {
 } from '@/components/ui/table';
 import type { CompetitionResult } from '@/lib/domain';
 
-export function CompetitionResults({
-  result,
-}: {
-  result: CompetitionResult;
-}) {
+export function CompetitionResults({ result }: { result: CompetitionResult }) {
   switch (result.type) {
     case 'stableford':
       return <StablefordLeaderboard result={result.result} />;
@@ -45,13 +41,13 @@ export function CompetitionResults({
 function StablefordLeaderboard({
   result,
 }: {
-  result: NonNullable<Extract<CompetitionResult, { type: 'stableford' }>['result']>;
+  result: NonNullable<
+    Extract<CompetitionResult, { type: 'stableford' }>['result']
+  >;
 }) {
   if (result.leaderboard.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
-        No scores entered yet.
-      </p>
+      <p className="text-muted-foreground text-sm">No scores entered yet.</p>
     );
   }
 
@@ -69,15 +65,13 @@ function StablefordLeaderboard({
       <TableBody>
         {result.leaderboard.map((p) => (
           <TableRow key={p.roundParticipantId}>
-            <TableCell className="font-medium">
-              {p.rank}
-            </TableCell>
+            <TableCell className="font-medium">{p.rank}</TableCell>
             <TableCell>{p.displayName}</TableCell>
             <TableCell className="text-center">{p.playingHandicap}</TableCell>
-            <TableCell className="text-center text-muted-foreground">
+            <TableCell className="text-muted-foreground text-center">
               {p.holesCompleted}
             </TableCell>
-            <TableCell className="text-center font-bold text-lg">
+            <TableCell className="text-center text-lg font-bold">
               {p.totalPoints}
             </TableCell>
           </TableRow>
@@ -94,13 +88,13 @@ function StablefordLeaderboard({
 function StrokePlayLeaderboard({
   result,
 }: {
-  result: NonNullable<Extract<CompetitionResult, { type: 'stroke_play' }>['result']>;
+  result: NonNullable<
+    Extract<CompetitionResult, { type: 'stroke_play' }>['result']
+  >;
 }) {
   if (result.leaderboard.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
-        No scores entered yet.
-      </p>
+      <p className="text-muted-foreground text-sm">No scores entered yet.</p>
     );
   }
 
@@ -114,9 +108,7 @@ function StrokePlayLeaderboard({
           <TableHead>Player</TableHead>
           <TableHead className="text-center">HC</TableHead>
           <TableHead className="text-center">Holes</TableHead>
-          {isNet && (
-            <TableHead className="text-center">Gross</TableHead>
-          )}
+          {isNet && <TableHead className="text-center">Gross</TableHead>}
           <TableHead className="text-center font-bold">
             {isNet ? 'Net' : 'Gross'}
           </TableHead>
@@ -126,20 +118,18 @@ function StrokePlayLeaderboard({
       <TableBody>
         {result.leaderboard.map((p) => (
           <TableRow key={p.roundParticipantId}>
-            <TableCell className="font-medium">
-              {p.rank}
-            </TableCell>
+            <TableCell className="font-medium">{p.rank}</TableCell>
             <TableCell>{p.displayName}</TableCell>
             <TableCell className="text-center">{p.playingHandicap}</TableCell>
-            <TableCell className="text-center text-muted-foreground">
+            <TableCell className="text-muted-foreground text-center">
               {p.holesCompleted}
             </TableCell>
             {isNet && (
-              <TableCell className="text-center text-muted-foreground">
+              <TableCell className="text-muted-foreground text-center">
                 {p.grossTotal}
               </TableCell>
             )}
-            <TableCell className="text-center font-bold text-lg">
+            <TableCell className="text-center text-lg font-bold">
               {p.rankingScore}
             </TableCell>
             <TableCell className="text-center">
@@ -164,13 +154,13 @@ function formatRelativeToPar(rel: number): string {
 function MatchPlayResults({
   result,
 }: {
-  result: NonNullable<Extract<CompetitionResult, { type: 'match_play' }>['result']>;
+  result: NonNullable<
+    Extract<CompetitionResult, { type: 'match_play' }>['result']
+  >;
 }) {
   if (result.matches.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
-        No matches configured.
-      </p>
+      <p className="text-muted-foreground text-sm">No matches configured.</p>
     );
   }
 
@@ -181,7 +171,7 @@ function MatchPlayResults({
           key={i}
           className="flex items-center justify-between rounded-md border px-4 py-3"
         >
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex flex-1 items-center gap-3">
             <span
               className={`text-sm font-medium ${match.winner === 'A' ? 'text-primary' : ''}`}
             >
@@ -195,9 +185,7 @@ function MatchPlayResults({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Badge
-              variant={match.isDecided ? 'default' : 'secondary'}
-            >
+            <Badge variant={match.isDecided ? 'default' : 'secondary'}>
               {match.resultText}
             </Badge>
             {match.isDecided && (
@@ -219,7 +207,9 @@ function MatchPlayResults({
 function BestBallResults({
   result,
 }: {
-  result: NonNullable<Extract<CompetitionResult, { type: 'best_ball' }>['result']>;
+  result: NonNullable<
+    Extract<CompetitionResult, { type: 'best_ball' }>['result']
+  >;
 }) {
   if (result.matches.length === 0) {
     return (
@@ -236,7 +226,7 @@ function BestBallResults({
           key={i}
           className="flex items-center justify-between rounded-md border px-4 py-3"
         >
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex flex-1 items-center gap-3">
             <span
               className={`text-sm font-medium ${match.winner === 'A' ? 'text-primary' : ''}`}
             >
@@ -250,9 +240,7 @@ function BestBallResults({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Badge
-              variant={match.isDecided ? 'default' : 'secondary'}
-            >
+            <Badge variant={match.isDecided ? 'default' : 'secondary'}>
               {match.resultText}
             </Badge>
             {match.isDecided && (

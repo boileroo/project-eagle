@@ -49,7 +49,7 @@ function generateScore(par: number): number {
   const r = Math.random();
   let strokes: number;
   if (r < 0.05) strokes = par - 2;
-  else if (r < 0.20) strokes = par - 1;
+  else if (r < 0.2) strokes = par - 1;
   else if (r < 0.55) strokes = par;
   else if (r < 0.85) strokes = par + 1;
   else if (r < 0.95) strokes = par + 2;
@@ -126,15 +126,11 @@ export function DevTools() {
           },
         });
 
-        toast.success(
-          `Filled scorecard for ${participant.person.displayName}`,
-        );
+        toast.success(`Filled scorecard for ${participant.person.displayName}`);
         router.invalidate();
       } catch (error) {
         toast.error(
-          error instanceof Error
-            ? error.message
-            : 'Failed to fill scorecard',
+          error instanceof Error ? error.message : 'Failed to fill scorecard',
         );
       }
       setFilling(null);
@@ -168,9 +164,7 @@ export function DevTools() {
       router.invalidate();
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : 'Failed to fill scorecards',
+        error instanceof Error ? error.message : 'Failed to fill scorecards',
       );
     }
     setFilling(null);
@@ -181,7 +175,7 @@ export function DevTools() {
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-4 left-4 z-9999 flex h-10 w-10 items-center justify-center rounded-full bg-orange-500 text-white shadow-lg transition-transform hover:scale-110 active:scale-95"
+        className="z-9999 fixed bottom-4 left-4 flex h-10 w-10 items-center justify-center rounded-full bg-orange-500 text-white shadow-lg transition-transform hover:scale-110 active:scale-95"
         title="Dev Tools"
       >
         🛠️
@@ -189,7 +183,7 @@ export function DevTools() {
 
       {/* Panel */}
       {open && (
-        <div className="fixed bottom-16 left-4 z-9999 w-72 rounded-lg border bg-white shadow-xl dark:bg-zinc-900">
+        <div className="z-9999 fixed bottom-16 left-4 w-72 rounded-lg border bg-white shadow-xl dark:bg-zinc-900">
           <div className="flex items-center justify-between border-b px-3 py-2">
             <span className="text-sm font-semibold">🛠️ Dev Tools</span>
             <Badge variant="outline" className="text-[10px]">
@@ -234,9 +228,7 @@ export function DevTools() {
                             onClick={() => handleFillScorecard(p)}
                           >
                             {filling === p.id ? (
-                              <span className="animate-pulse">
-                                Filling…
-                              </span>
+                              <span className="animate-pulse">Filling…</span>
                             ) : (
                               p.person.displayName
                             )}
@@ -255,9 +247,7 @@ export function DevTools() {
                       onClick={handleFillAll}
                     >
                       {filling === '__all__' ? (
-                        <span className="animate-pulse">
-                          Filling all…
-                        </span>
+                        <span className="animate-pulse">Filling all…</span>
                       ) : (
                         `Fill All (${roundCtx.participants.length} players)`
                       )}

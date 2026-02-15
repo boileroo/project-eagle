@@ -5,12 +5,14 @@
 Phases 1–5 are complete. The app has full auth, course library, tournament setup, score entry, round status guards, role-based permissions, and a complete competition engine with UI. Groups and group-scoped competitions are scaffolded.
 
 **Key design decisions confirmed:**
+
 - Each round: up to 1 team comp + 1 individual comp + any bonuses
 - Bonuses can be standalone or contribute to individual standings
 - Foursomes (alternate shot) deferred — see `future-additions.md`
 - Tournaments are mandatory (no standalone rounds)
 
 **What exists:**
+
 - Full auth (email + password), protected routes, session handling
 - Complete Drizzle schema: profiles, persons, courses, courseHoles, tournaments, tournamentParticipants, tournamentTeams, tournamentTeamMembers, rounds, roundGroups, roundParticipants, roundTeams, roundTeamMembers, scoreEvents, competitions, bonusAwards, tournamentStandings
 - Rounds always belong to a tournament (`tournament_id` NOT NULL)
@@ -34,6 +36,7 @@ Phases 1–5 are complete. The app has full auth, course library, tournament set
 - `tournamentStandings` table with flexible aggregation config
 
 **Key files:**
+
 - `src/db/schema.ts` — full domain schema (~770 lines)
 - `src/lib/domain/` — pure scoring engine (stableford, stroke-play, match-play, best-ball, bonus, standings)
 - `src/lib/competitions.ts` — config Zod types + aggregation config + GROUP_SCOPE_LABELS

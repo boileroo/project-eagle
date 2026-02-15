@@ -43,12 +43,14 @@ In addition, there is an individual tournament running across all 3 rounds, best
 ### 1. Tournament
 
 A Tournament contains:
+
 - Players (any number)
 - Teams (optional grouping of players)
 - Rounds (1+)
 - Competitions (1+)
 
 A tournament can run:
+
 - Team competitions
 - Individual competitions
 - Both simultaneously
@@ -65,6 +67,7 @@ Teams are just groupings. They don't define scoring — Competitions do.
 A Round represents one day/session of golf.
 
 Each round contains:
+
 - Groups (max 4 players per group)
 - Matches (optional, derived from format)
 - Individual hole scores
@@ -78,6 +81,7 @@ Each round contains:
 ### 4. Groups
 
 A Group:
+
 - Max 4 players
 - Purely logistical (who plays together)
 - Does NOT determine scoring rules
@@ -85,6 +89,7 @@ A Group:
 ### 5. Match Formats (Round-Level Concept)
 
 Each round has a Format, e.g.:
+
 - Irish Rumble
 - Foursomes
 - Fourball
@@ -93,6 +98,7 @@ Each round has a Format, e.g.:
 - Stableford
 
 The format determines:
+
 - Whether matches exist
 - Whether play is team vs team
 - Whether scoring is matchplay, aggregate score, stableford, best-ball, or alternate shot
@@ -104,6 +110,7 @@ The format determines:
 A Competition decides how winners are calculated from round data.
 
 **Each round has up to:**
+
 - **1 Team competition** — applies to all groups in the round (e.g. match play, best ball)
 - **1 Individual scoring method** — stableford, stroke play, etc.
 - **Bonus competitions** — NTP, LD (0 or more)
@@ -113,6 +120,7 @@ This is the natural unit: one day of golf has one team format, one individual fo
 #### Team Competition
 
 Properties:
+
 - Scope: Team
 - Scoring source: per match, per round result, or per player result
 - Points per win
@@ -122,6 +130,7 @@ Properties:
 #### Individual Competition
 
 Properties:
+
 - Scope: Player
 - Scoring source: aggregated stableford, strokeplay total, best N rounds
 
@@ -139,16 +148,17 @@ The commissioner chooses the mode when setting up the bonus. Both modes can coex
 ## Scenario 1 — Worked Example
 
 ### Structure
+
 - 8 players, 2 teams of 4, 3 rounds, 2 groups per round
 
 ### Team Competition
 
-| Round | Format | Matches | Points/Win | Total Available |
-|-------|--------|---------|------------|-----------------|
-| 1 | Irish Rumble | 1 (group vs group) | 2 | 2 |
-| 2 | Fourball Matchplay | 2 (pair vs pair) | 2 | 4 |
-| 3 | Singles | 4 | 1 | 8 |
-| **Total** | | | | **14** |
+| Round     | Format             | Matches            | Points/Win | Total Available |
+| --------- | ------------------ | ------------------ | ---------- | --------------- |
+| 1         | Irish Rumble       | 1 (group vs group) | 2          | 2               |
+| 2         | Fourball Matchplay | 2 (pair vs pair)   | 2          | 4               |
+| 3         | Singles            | 4                  | 1          | 8               |
+| **Total** |                    |                    |            | **14**          |
 
 ### Individual Competition
 
@@ -163,16 +173,17 @@ The commissioner chooses the mode when setting up the bonus. Both modes can coex
 ## Scenario 2 — Worked Example
 
 ### Structure
+
 - 16 players, 2 teams of 8, 3 rounds, 4 groups per round
 
 ### Team Competition
 
-| Round | Format | Matches | Points/Win | Total Available |
-|-------|--------|---------|------------|-----------------|
-| 1 | Foursomes | 4 | 1 | 4 |
-| 2 | Fourball | 4 | 1 | 4 |
-| 3 | Singles | 8 | 1 | 8 |
-| **Total** | | | | **16** |
+| Round     | Format    | Matches | Points/Win | Total Available |
+| --------- | --------- | ------- | ---------- | --------------- |
+| 1         | Foursomes | 4       | 1          | 4               |
+| 2         | Fourball  | 4       | 1          | 4               |
+| 3         | Singles   | 8       | 1          | 8               |
+| **Total** |           |         |            | **16**          |
 
 ### Individual Competition
 
@@ -185,15 +196,15 @@ The commissioner chooses the mode when setting up the bonus. Both modes can coex
 
 ### What aligns well
 
-| Their concept | Our model |
-|---|---|
-| Tournament, Players, Teams | `tournaments`, `tournamentParticipants`, `tournamentTeams` |
-| Rounds, Groups | `rounds`, `roundGroups`, `roundParticipants` (with `roundGroupId`) |
-| Individual hole scores | `scoreEvents` (append-only) |
-| Individual competition (aggregate stableford) | `tournamentStandings` with `sum_stableford` aggregation |
-| Team competition (match wins) | `tournamentStandings` with `match_wins` aggregation |
-| Points per win / per half | `pointsPerWin` / `pointsPerHalf` on match configs |
-| Multiple competitions simultaneously | Multiple `competitions` per round + multiple `tournamentStandings` |
+| Their concept                                 | Our model                                                          |
+| --------------------------------------------- | ------------------------------------------------------------------ |
+| Tournament, Players, Teams                    | `tournaments`, `tournamentParticipants`, `tournamentTeams`         |
+| Rounds, Groups                                | `rounds`, `roundGroups`, `roundParticipants` (with `roundGroupId`) |
+| Individual hole scores                        | `scoreEvents` (append-only)                                        |
+| Individual competition (aggregate stableford) | `tournamentStandings` with `sum_stableford` aggregation            |
+| Team competition (match wins)                 | `tournamentStandings` with `match_wins` aggregation                |
+| Points per win / per half                     | `pointsPerWin` / `pointsPerHalf` on match configs                  |
+| Multiple competitions simultaneously          | Multiple `competitions` per round + multiple `tournamentStandings` |
 
 ### Conceptual gaps / new work needed
 

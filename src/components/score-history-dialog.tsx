@@ -86,17 +86,19 @@ export function ScoreHistoryDialog({
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-muted-foreground text-xs">
                       {entry.recordedByName}
                     </span>
                     <Badge
-                      variant={roleBadgeVariant[entry.recordedByRole] ?? 'outline'}
-                      className="text-[10px] px-1.5 py-0"
+                      variant={
+                        roleBadgeVariant[entry.recordedByRole] ?? 'outline'
+                      }
+                      className="px-1.5 py-0 text-[10px]"
                     >
                       {entry.recordedByRole}
                     </Badge>
                   </div>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-muted-foreground text-[10px]">
                     {new Date(entry.createdAt).toLocaleString('en-AU', {
                       day: 'numeric',
                       month: 'short',

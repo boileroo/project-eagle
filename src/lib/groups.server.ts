@@ -83,9 +83,7 @@ export const deleteRoundGroupFn = createServerFn({ method: 'POST' })
 
     await requireCommissioner(group.round.tournamentId);
 
-    await db
-      .delete(roundGroups)
-      .where(eq(roundGroups.id, data.roundGroupId));
+    await db.delete(roundGroups).where(eq(roundGroups.id, data.roundGroupId));
 
     return { success: true };
   });
@@ -154,9 +152,7 @@ export const autoAssignGroupsFn = createServerFn({ method: 'POST' })
     }
 
     // Delete existing groups (CASCADE will null out roundGroupId)
-    await db
-      .delete(roundGroups)
-      .where(eq(roundGroups.roundId, data.roundId));
+    await db.delete(roundGroups).where(eq(roundGroups.roundId, data.roundId));
 
     const groupSize = data.groupSize ?? 4;
     const numGroups = Math.ceil(participants.length / groupSize);
@@ -210,10 +206,8 @@ export interface DerivedTeamPairing {
 
 export const deriveGroupPairingsFn = createServerFn({ method: 'GET' })
   .inputValidator(
-    (data: {
-      roundGroupId: string;
-      format: 'match_play' | 'best_ball';
-    }) => data,
+    (data: { roundGroupId: string; format: 'match_play' | 'best_ball' }) =>
+      data,
   )
   .handler(async ({ data }) => {
     const group = await db.query.roundGroups.findFirst({
@@ -240,8 +234,7 @@ export const deriveGroupPairingsFn = createServerFn({ method: 'GET' })
       const unteamed: string[] = [];
 
       for (const p of participants) {
-        const memberships =
-          p.tournamentParticipant?.teamMemberships ?? [];
+        const memberships = p.tournamentParticipant?.teamMemberships ?? [];
         if (memberships.length > 0) {
           const teamId = memberships[0].teamId;
           const list = teamMap.get(teamId) ?? [];
@@ -259,10 +252,7 @@ export const deriveGroupPairingsFn = createServerFn({ method: 'GET' })
         // Cross-team pairing: zip players from the two largest teams
         const [, teamAPlayers] = teams[0];
         const [, teamBPlayers] = teams[1];
-        const pairCount = Math.min(
-          teamAPlayers.length,
-          teamBPlayers.length,
-        );
+        const pairCount = Math.min(teamAPlayers.length, teamBPlayers.length);
         for (let i = 0; i < pairCount; i++) {
           matchPairings.push({
             playerA: teamAPlayers[i],

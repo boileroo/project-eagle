@@ -153,10 +153,16 @@ export type { BestBallResult, BestBallMatchResult } from './best-ball';
 
 export function calculateGroupedResults(
   input: CompetitionInput,
-): { scope: 'all'; result: CompetitionResult } | { scope: 'within_group'; results: GroupCompetitionResult[] } {
+):
+  | { scope: 'all'; result: CompetitionResult }
+  | { scope: 'within_group'; results: GroupCompetitionResult[] } {
   const { competition, groups } = input;
 
-  if (competition.groupScope !== 'within_group' || !groups || groups.length === 0) {
+  if (
+    competition.groupScope !== 'within_group' ||
+    !groups ||
+    groups.length === 0
+  ) {
     return { scope: 'all', result: calculateCompetitionResults(input) };
   }
 

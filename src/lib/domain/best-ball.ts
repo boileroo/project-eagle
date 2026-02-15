@@ -58,9 +58,7 @@ export function calculateBestBall(
     (a, b) => a.holeNumber - b.holeNumber,
   );
 
-  const teamMap = new Map(
-    (input.teams ?? []).map((t) => [t.roundTeamId, t]),
-  );
+  const teamMap = new Map((input.teams ?? []).map((t) => [t.roundTeamId, t]));
   const participantMap = new Map(
     input.participants.map((p) => [p.roundParticipantId, p]),
   );
@@ -130,7 +128,8 @@ function calculateBestBallMatch(
     const teamAPlayerPoints = teamAMembers.map((p) => {
       const key = `${p.roundParticipantId}:${hole.holeNumber}`;
       const strokes = scoreLookup.get(key);
-      if (strokes === undefined) return { roundParticipantId: p.roundParticipantId, points: 0 };
+      if (strokes === undefined)
+        return { roundParticipantId: p.roundParticipantId, points: 0 };
       const received = getStrokesOnHole(p.playingHandicap, hole.strokeIndex);
       return {
         roundParticipantId: p.roundParticipantId,
@@ -141,7 +140,8 @@ function calculateBestBallMatch(
     const teamBPlayerPoints = teamBMembers.map((p) => {
       const key = `${p.roundParticipantId}:${hole.holeNumber}`;
       const strokes = scoreLookup.get(key);
-      if (strokes === undefined) return { roundParticipantId: p.roundParticipantId, points: 0 };
+      if (strokes === undefined)
+        return { roundParticipantId: p.roundParticipantId, points: 0 };
       const received = getStrokesOnHole(p.playingHandicap, hole.strokeIndex);
       return {
         roundParticipantId: p.roundParticipantId,
@@ -154,11 +154,11 @@ function calculateBestBallMatch(
     const teamBBest = Math.max(...teamBPlayerPoints.map((p) => p.points));
 
     // Check if at least one player from each team has actually scored
-    const teamAHasScore = teamAMembers.some(
-      (p) => scoreLookup.has(`${p.roundParticipantId}:${hole.holeNumber}`),
+    const teamAHasScore = teamAMembers.some((p) =>
+      scoreLookup.has(`${p.roundParticipantId}:${hole.holeNumber}`),
     );
-    const teamBHasScore = teamBMembers.some(
-      (p) => scoreLookup.has(`${p.roundParticipantId}:${hole.holeNumber}`),
+    const teamBHasScore = teamBMembers.some((p) =>
+      scoreLookup.has(`${p.roundParticipantId}:${hole.holeNumber}`),
     );
 
     if (!teamAHasScore || !teamBHasScore) {

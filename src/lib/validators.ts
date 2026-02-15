@@ -4,7 +4,10 @@
 // This file is for app-level validation schemas (forms, API inputs, etc.)
 
 import { z } from 'zod';
-import { competitionConfigSchema, aggregationConfigSchema } from './competitions';
+import {
+  competitionConfigSchema,
+  aggregationConfigSchema,
+} from './competitions';
 
 // ──────────────────────────────────────────────
 // Auth schemas
@@ -103,7 +106,9 @@ export type UpdateTournamentInput = z.infer<typeof updateTournamentSchema>;
 export const addParticipantSchema = z.object({
   tournamentId: z.string().uuid(),
   personId: z.string().uuid(),
-  role: z.enum(['commissioner', 'marker', 'player', 'spectator']).default('player'),
+  role: z
+    .enum(['commissioner', 'marker', 'player', 'spectator'])
+    .default('player'),
   handicapOverride: z
     .number()
     .min(-10)
