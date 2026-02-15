@@ -7,6 +7,7 @@ import {
   rounds,
   scoreEvents,
   tournamentStandings,
+  tournamentTeams,
 } from '@/db/schema';
 import { requireAuth, requireCommissioner } from './auth.helpers';
 import { competitionConfigSchema, aggregationConfigSchema, isBonusFormat } from './competitions';
@@ -367,7 +368,17 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
       standing.aggregationConfig,
     );
 
-    // 2. Load all rounds with participants, scores, groups, teams, competitions
+    // 2. Load tournament-level teams (fallback when rounds have no round_teams)
+    let tTeams: { id: string; name: string; members: { participantId: string }[] }[] = [];
+    if (standing.participantType === 'team') {
+      tTeams = await db.query.tournamentTeams.findMany({
+        where: eq(tournamentTeams.tournamentId, standing.tournamentId),
+        columns: { id: true, name: true },
+        with: { members: { columns: { participantId: true } } },
+      });
+    }
+
+    // 3. Load all rounds with participants, scores, groups, teams, competitions
     const tournamentRounds = await db.query.rounds.findMany({
       where: eq(rounds.tournamentId, standing.tournamentId),
       orderBy: (r, { asc }) => [asc(r.roundNumber)],
@@ -401,7 +412,7 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
       },
     });
 
-    // 3. Build RoundCompetitionData[] for the engine
+    // 4. Build RoundCompetitionData[] for the engine
     const roundDatas: RoundCompetitionData[] = [];
     const allContributorBonuses: ContributorBonusAward[] = [];
 
@@ -459,12 +470,32 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
           .map((rp) => rp.id),
       }));
 
-      const teams: TeamData[] = round.teams.map((t) => ({
-        roundTeamId: t.id,
-        name: t.name,
-        tournamentTeamId: t.tournamentTeamId,
-        memberParticipantIds: t.members.map((m) => m.roundParticipantId),
-      }));
+      let teams: TeamData[];
+      if (round.teams.length > 0) {
+        teams = round.teams.map((t) => ({
+          roundTeamId: t.id,
+          name: t.name,
+          tournamentTeamId: t.tournamentTeamId,
+          memberParticipantIds: t.members.map((m) => m.roundParticipantId),
+        }));
+      } else {
+        // Fallback: build teams from tournament-level teams
+        // Map tournamentParticipantId → roundParticipantId
+        const tpToRp = new Map<string, string>();
+        for (const rp of round.participants) {
+          if (rp.tournamentParticipantId) {
+            tpToRp.set(rp.tournamentParticipantId, rp.id);
+          }
+        }
+        teams = tTeams.map((tt) => ({
+          roundTeamId: tt.id, // use tournament team id as key
+          name: tt.name,
+          tournamentTeamId: tt.id,
+          memberParticipantIds: tt.members
+            .map((m) => tpToRp.get(m.participantId))
+            .filter((id): id is string => id != null),
+        }));
+      }
 
       // Build CompetitionInput for each non-bonus competition
       const competitionInputs: CompetitionInput[] = round.competitions
@@ -510,7 +541,7 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
       }
     }
 
-    // 4. Run the pure standings engine
+    // 5. Run the pure standings engine
     const result: StandingsResult = calculateStandings(
       aggregationConfig,
       roundDatas,
@@ -518,7 +549,7 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
       allContributorBonuses,
     );
 
-    // 5. Return standings data with round info for column headers
+    // 6. Return standings data with round info for column headers
     return {
       standing: {
         id: standing.id,

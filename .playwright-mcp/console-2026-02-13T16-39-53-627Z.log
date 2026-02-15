@@ -1,2 +1,0 @@
-[     257ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:3000/favicon.ico:0
-[   46120ms] [ERROR] WebSocket connection to 'ws://localhost:3000/?token=mQ4jSUuboUEk' failed:  @ http://localhost:3000/@vite/client:744

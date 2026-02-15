@@ -31,3 +31,4 @@ yarn-error.log*
 
 # drizzle
 src/db/migrations/meta/
+.playwright-mcp/

@@ -97,36 +97,98 @@ function aggregateSumStableford(
       for (const result of results) {
         if (result.type !== 'stableford') continue;
 
-        for (const entry of result.result.leaderboard) {
-          if (participantType === 'team') continue; // stableford is individual-only for now
+        if (participantType === 'team') {
+          // Map individual stableford points to teams
+          const inputTeams = input.teams ?? [];
+          const playerTeamMap = new Map<string, { teamId: string; teamName: string }>();
+          for (const team of inputTeams) {
+            for (const memberId of team.memberParticipantIds) {
+              playerTeamMap.set(memberId, {
+                teamId: team.roundTeamId,
+                teamName: team.name,
+              });
+            }
+          }
 
-          const existing = totals.get(entry.roundParticipantId) ?? {
-            displayName: entry.displayName,
-            total: 0,
-            roundsPlayed: 0,
-            perRound: [],
-            bonusTotal: 0,
-          };
-          existing.total += entry.totalPoints;
-          existing.roundsPlayed += 1;
-          existing.perRound.push({
-            roundId: round.roundId,
-            roundNumber: round.roundNumber,
-            value: entry.totalPoints,
-          });
-          totals.set(entry.roundParticipantId, existing);
+          for (const entry of result.result.leaderboard) {
+            const team = playerTeamMap.get(entry.roundParticipantId);
+            if (!team) continue;
+
+            const existing = totals.get(team.teamId) ?? {
+              displayName: team.teamName,
+              total: 0,
+              roundsPlayed: 0,
+              perRound: [],
+              bonusTotal: 0,
+            };
+
+            existing.total += entry.totalPoints;
+            const existingRound = existing.perRound.find(
+              (pr) => pr.roundId === round.roundId,
+            );
+            if (existingRound) {
+              existingRound.value += entry.totalPoints;
+            } else {
+              existing.roundsPlayed += 1;
+              existing.perRound.push({
+                roundId: round.roundId,
+                roundNumber: round.roundNumber,
+                value: entry.totalPoints,
+              });
+            }
+            totals.set(team.teamId, existing);
+          }
+        } else {
+          for (const entry of result.result.leaderboard) {
+            const existing = totals.get(entry.roundParticipantId) ?? {
+              displayName: entry.displayName,
+              total: 0,
+              roundsPlayed: 0,
+              perRound: [],
+              bonusTotal: 0,
+            };
+            existing.total += entry.totalPoints;
+            existing.roundsPlayed += 1;
+            existing.perRound.push({
+              roundId: round.roundId,
+              roundNumber: round.roundNumber,
+              value: entry.totalPoints,
+            });
+            totals.set(entry.roundParticipantId, existing);
+          }
         }
       }
     }
   }
 
-  // Add contributor bonus points to individual totals
+  // Add contributor bonus points
   if (participantType === 'individual') {
     for (const bonus of contributorBonuses) {
       const existing = totals.get(bonus.roundParticipantId);
       if (existing) {
         existing.total += bonus.bonusPoints;
         existing.bonusTotal += bonus.bonusPoints;
+      }
+    }
+  } else {
+    // For team standings, map contributor bonuses to teams
+    // We need to find which team each bonus recipient belongs to
+    for (const bonus of contributorBonuses) {
+      const bonusRound = rounds.find((r) => r.roundId === bonus.roundId);
+      if (!bonusRound) continue;
+      for (const input of bonusRound.competitionInputs) {
+        const inputTeams = input.teams ?? [];
+        for (const team of inputTeams) {
+          if (team.memberParticipantIds.includes(bonus.roundParticipantId)) {
+            const existing = totals.get(team.roundTeamId);
+            if (existing) {
+              existing.total += bonus.bonusPoints;
+              existing.bonusTotal += bonus.bonusPoints;
+            }
+            break;
+          }
+        }
+        break; // Only need one input's team data
       }
     }
   }
@@ -165,29 +227,75 @@ function aggregateLowestStrokes(
       for (const result of results) {
         if (result.type !== 'stroke_play') continue;
 
-        if (participantType === 'team') continue; // stroke play is individual-only
+        if (participantType === 'team') {
+          // Map individual stroke play results to teams
+          const inputTeams = input.teams ?? [];
+          const playerTeamMap = new Map<string, { teamId: string; teamName: string }>();
+          for (const team of inputTeams) {
+            for (const memberId of team.memberParticipantIds) {
+              playerTeamMap.set(memberId, {
+                teamId: team.roundTeamId,
+                teamName: team.name,
+              });
+            }
+          }
 
-        for (const entry of result.result.leaderboard) {
-          const value =
-            config.scoringBasis === 'net_strokes'
-              ? entry.rankingScore
-              : entry.grossTotal;
+          for (const entry of result.result.leaderboard) {
+            const team = playerTeamMap.get(entry.roundParticipantId);
+            if (!team) continue;
 
-          const existing = totals.get(entry.roundParticipantId) ?? {
-            displayName: entry.displayName,
-            total: 0,
-            roundsPlayed: 0,
-            perRound: [],
-            bonusTotal: 0,
-          };
-          existing.total += value;
-          existing.roundsPlayed += 1;
-          existing.perRound.push({
-            roundId: round.roundId,
-            roundNumber: round.roundNumber,
-            value,
-          });
-          totals.set(entry.roundParticipantId, existing);
+            const value =
+              config.scoringBasis === 'net_strokes'
+                ? entry.rankingScore
+                : entry.grossTotal;
+
+            const existing = totals.get(team.teamId) ?? {
+              displayName: team.teamName,
+              total: 0,
+              roundsPlayed: 0,
+              perRound: [],
+              bonusTotal: 0,
+            };
+
+            existing.total += value;
+            const existingRound = existing.perRound.find(
+              (pr) => pr.roundId === round.roundId,
+            );
+            if (existingRound) {
+              existingRound.value += value;
+            } else {
+              existing.roundsPlayed += 1;
+              existing.perRound.push({
+                roundId: round.roundId,
+                roundNumber: round.roundNumber,
+                value,
+              });
+            }
+            totals.set(team.teamId, existing);
+          }
+        } else {
+          for (const entry of result.result.leaderboard) {
+            const value =
+              config.scoringBasis === 'net_strokes'
+                ? entry.rankingScore
+                : entry.grossTotal;
+
+            const existing = totals.get(entry.roundParticipantId) ?? {
+              displayName: entry.displayName,
+              total: 0,
+              roundsPlayed: 0,
+              perRound: [],
+              bonusTotal: 0,
+            };
+            existing.total += value;
+            existing.roundsPlayed += 1;
+            existing.perRound.push({
+              roundId: round.roundId,
+              roundNumber: round.roundNumber,
+              value,
+            });
+            totals.set(entry.roundParticipantId, existing);
+          }
         }
       }
     }
