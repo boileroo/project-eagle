@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   createTournamentStandingFn,
   deleteTournamentStandingFn,
-  computeStandingsFn,
 } from '@/lib/competitions.server';
 import {
   AGGREGATION_METHOD_LABELS,
@@ -31,11 +30,13 @@ import type { StandingConfig, ComputedStanding } from './types';
 export function StandingsSection({
   tournamentId,
   standings,
+  computedStandings,
   isCommissioner,
   onChanged,
 }: {
   tournamentId: string;
   standings: StandingConfig[];
+  computedStandings: Record<string, ComputedStanding>;
   isCommissioner: boolean;
   onChanged: () => void;
 }) {
@@ -57,31 +58,6 @@ export function StandingsSection({
     name: string;
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  const [computedData, setComputedData] = useState<
-    Record<string, ComputedStanding>
-  >({});
-  const [loading, setLoading] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    for (const s of standings) {
-      if (computedData[s.id] || loading[s.id]) continue;
-      setLoading((prev) => ({ ...prev, [s.id]: true }));
-      computeStandingsFn({ data: { standingId: s.id } })
-        .then((result) => {
-          setComputedData((prev) => ({
-            ...prev,
-            [s.id]: result as ComputedStanding,
-          }));
-        })
-        .catch(() => {
-          // Ignore computation errors
-        })
-        .finally(() => {
-          setLoading((prev) => ({ ...prev, [s.id]: false }));
-        });
-    }
-  }, [standings]);
 
   const buildAggregationConfig = (): AggregationConfig => {
     switch (method) {
@@ -303,8 +279,7 @@ export function StandingsSection({
           ) : (
             <div className="space-y-6">
               {standings.map((s) => {
-                const computed = computedData[s.id];
-                const isLoading = loading[s.id];
+                const computed = computedStandings[s.id];
                 const aggConfig = s.aggregationConfig as AggregationConfig;
 
                 return (
@@ -337,11 +312,7 @@ export function StandingsSection({
                       )}
                     </div>
 
-                    {isLoading ? (
-                      <p className="text-muted-foreground text-sm">
-                        Computing standings…
-                      </p>
-                    ) : computed && computed.leaderboard.length > 0 ? (
+                    {computed && computed.leaderboard.length > 0 ? (
                       <div className="overflow-x-auto rounded-md border">
                         <table className="w-full text-sm">
                           <thead>

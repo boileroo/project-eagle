@@ -38,7 +38,10 @@ import {
   StandingsSection,
   TeamsSection,
 } from '@/components/tournament-detail';
-import type { StandingConfig } from '@/components/tournament-detail/types';
+import type {
+  StandingConfig,
+  ComputedStanding,
+} from '@/components/tournament-detail/types';
 
 // ──────────────────────────────────────────────
 // Types
@@ -55,6 +58,7 @@ export function TournamentDetailPage({
   myPerson,
   courses,
   standings,
+  computedStandings,
   userId,
 }: {
   tournament: TournamentLoaderData;
@@ -66,6 +70,7 @@ export function TournamentDetailPage({
     numberOfHoles: number;
   }[];
   standings: StandingConfig[];
+  computedStandings: Record<string, ComputedStanding>;
   userId: string;
 }) {
   const navigate = useNavigate();
@@ -454,6 +459,7 @@ export function TournamentDetailPage({
       <StandingsSection
         tournamentId={tournament.id}
         standings={standings}
+        computedStandings={computedStandings}
         isCommissioner={isCommissioner}
         onChanged={() => router.invalidate()}
       />

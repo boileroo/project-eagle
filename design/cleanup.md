@@ -27,7 +27,7 @@ Tech debt and structural improvements to existing code. Check off and remove ite
 ## Query Performance
 
 - [x] Fix N+1 in `computeStandingsFn` — currently loops rounds sequentially with a separate `scoreEvents` query per round. Batch into a single `WHERE roundId IN (...)` query
-- [ ] Move `StandingsSection` computation from client-side `useEffect` into the route loader to eliminate the waterfall after initial render
+- [x] Move `StandingsSection` computation from client-side `useEffect` into the route loader to eliminate the waterfall after initial render
 
 ## Dead Code
 
