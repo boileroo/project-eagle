@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { and, eq } from 'drizzle-orm';
+import { z } from 'zod';
 import { db } from '@/db';
 import {
   tournamentTeams,
@@ -8,10 +9,10 @@ import {
   tournaments,
 } from '@/db/schema';
 import { requireCommissioner } from './auth.helpers';
-import type {
-  CreateTeamInput,
-  UpdateTeamInput,
-  AddTeamMemberInput,
+import {
+  createTeamSchema,
+  updateTeamSchema,
+  addTeamMemberSchema,
 } from './validators';
 
 // ──────────────────────────────────────────────
@@ -19,7 +20,7 @@ import type {
 // ──────────────────────────────────────────────
 
 export const createTeamFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: CreateTeamInput) => data)
+  .inputValidator(createTeamSchema)
   .handler(async ({ data }) => {
     await requireCommissioner(data.tournamentId);
 
@@ -45,7 +46,7 @@ export const createTeamFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const updateTeamFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: UpdateTeamInput) => data)
+  .inputValidator(updateTeamSchema)
   .handler(async ({ data }) => {
     const existing = await db.query.tournamentTeams.findFirst({
       where: eq(tournamentTeams.id, data.teamId),
@@ -67,7 +68,7 @@ export const updateTeamFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const deleteTeamFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { teamId: string }) => data)
+  .inputValidator(z.object({ teamId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const existing = await db.query.tournamentTeams.findFirst({
       where: eq(tournamentTeams.id, data.teamId),
@@ -86,7 +87,7 @@ export const deleteTeamFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const addTeamMemberFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: AddTeamMemberInput) => data)
+  .inputValidator(addTeamMemberSchema)
   .handler(async ({ data }) => {
     // Verify team exists
     const team = await db.query.tournamentTeams.findFirst({
@@ -147,7 +148,7 @@ export const addTeamMemberFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const removeTeamMemberFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { memberId: string }) => data)
+  .inputValidator(z.object({ memberId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const existing = await db.query.tournamentTeamMembers.findFirst({
       where: eq(tournamentTeamMembers.id, data.memberId),

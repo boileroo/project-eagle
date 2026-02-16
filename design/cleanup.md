@@ -12,7 +12,7 @@ Tech debt and structural improvements to existing code. Check off and remove ite
 
 ## Server Validation
 
-- [ ] Replace all passthrough `.inputValidator((data: T) => data)` calls with Zod `.parse()` — currently ~30+ server functions across 8 files do zero runtime validation
+- [x] Replace all passthrough `.inputValidator((data: T) => data)` calls with Zod `.parse()` — currently ~30+ server functions across 8 files do zero runtime validation
 - [ ] Repurpose the 64 unused drizzle-zod schemas in `schema.ts` (lines 627–767) for this, or remove them if hand-written validators in `validators.ts` are preferred
 
 ## Database Indexes

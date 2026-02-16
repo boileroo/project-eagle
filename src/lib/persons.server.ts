@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { persons, profiles } from '@/db/schema';
 import { requireAuth } from './auth.helpers';
-import type { UpdateAccountInput } from './validators';
+import { updateAccountSchema } from './validators';
 
 // ──────────────────────────────────────────────
 // Get the current user's person record + profile
@@ -35,7 +35,7 @@ export const getMyAccountFn = createServerFn({ method: 'GET' }).handler(
 // ──────────────────────────────────────────────
 
 export const updateMyAccountFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: UpdateAccountInput) => data)
+  .inputValidator(updateAccountSchema)
   .handler(async ({ data }) => {
     const user = await requireAuth();
 

@@ -1,9 +1,10 @@
 import { createServerFn } from '@tanstack/react-start';
 import { eq } from 'drizzle-orm';
+import { z } from 'zod';
 import { db } from '@/db';
 import { courses, courseHoles } from '@/db/schema';
 import { requireAuth } from './auth.helpers';
-import type { CreateCourseInput, UpdateCourseInput } from './validators';
+import { createCourseSchema, updateCourseSchema } from './validators';
 
 // ──────────────────────────────────────────────
 // List all courses
@@ -23,7 +24,7 @@ export const getCoursesFn = createServerFn({ method: 'GET' }).handler(
 // ──────────────────────────────────────────────
 
 export const getCourseFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { courseId: string }) => data)
+  .inputValidator(z.object({ courseId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const course = await db.query.courses.findFirst({
       where: eq(courses.id, data.courseId),
@@ -42,7 +43,7 @@ export const getCourseFn = createServerFn({ method: 'GET' })
 // ──────────────────────────────────────────────
 
 export const createCourseFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: CreateCourseInput) => data)
+  .inputValidator(createCourseSchema)
   .handler(async ({ data }) => {
     const user = await requireAuth();
 
@@ -76,7 +77,7 @@ export const createCourseFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const updateCourseFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: UpdateCourseInput) => data)
+  .inputValidator(updateCourseSchema)
   .handler(async ({ data }) => {
     const user = await requireAuth();
 
@@ -123,7 +124,7 @@ export const updateCourseFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const deleteCourseFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { courseId: string }) => data)
+  .inputValidator(z.object({ courseId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const user = await requireAuth();
 

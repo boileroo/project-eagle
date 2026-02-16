@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { and, eq, count, asc, lt } from 'drizzle-orm';
+import { z } from 'zod';
 import { db } from '@/db';
 import {
   courses,
@@ -12,10 +13,10 @@ import {
   profiles,
 } from '@/db/schema';
 import { requireAuth, requireCommissioner } from './auth.helpers';
-import type {
-  CreateRoundInput,
-  CreateSingleRoundInput,
-  UpdateRoundInput,
+import {
+  createRoundSchema,
+  createSingleRoundSchema,
+  updateRoundSchema,
 } from './validators';
 
 // ──────────────────────────────────────────────
@@ -96,7 +97,7 @@ export const getSingleRoundsFn = createServerFn({ method: 'GET' }).handler(
 // ──────────────────────────────────────────────
 
 export const getRoundFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { roundId: string }) => data)
+  .inputValidator(z.object({ roundId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const round = await db.query.rounds.findFirst({
       where: eq(rounds.id, data.roundId),
@@ -141,7 +142,7 @@ export const getRoundFn = createServerFn({ method: 'GET' })
 // ──────────────────────────────────────────────
 
 export const createRoundFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: CreateRoundInput) => data)
+  .inputValidator(createRoundSchema)
   .handler(async ({ data }) => {
     const user = await requireCommissioner(data.tournamentId);
 
@@ -219,7 +220,7 @@ export const createRoundFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const updateRoundFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: UpdateRoundInput) => data)
+  .inputValidator(updateRoundSchema)
   .handler(async ({ data }) => {
     const existing = await db.query.rounds.findFirst({
       where: eq(rounds.id, data.id),
@@ -253,7 +254,7 @@ export const updateRoundFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const deleteRoundFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { roundId: string }) => data)
+  .inputValidator(z.object({ roundId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const existing = await db.query.rounds.findFirst({
       where: eq(rounds.id, data.roundId),
@@ -275,7 +276,7 @@ export const deleteRoundFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const reorderRoundsFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { tournamentId: string; roundIds: string[] }) => data)
+  .inputValidator(z.object({ tournamentId: z.string().uuid(), roundIds: z.array(z.string().uuid()) }))
   .handler(async ({ data }) => {
     await requireCommissioner(data.tournamentId);
 
@@ -323,7 +324,7 @@ const validTransitions: Record<string, string[]> = {
 };
 
 export const transitionRoundFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { roundId: string; newStatus: string }) => data)
+  .inputValidator(z.object({ roundId: z.string().uuid(), newStatus: z.string() }))
   .handler(async ({ data }) => {
     const existing = await db.query.rounds.findFirst({
       where: eq(rounds.id, data.roundId),
@@ -386,12 +387,12 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
 
 export const addRoundParticipantFn = createServerFn({ method: 'POST' })
   .inputValidator(
-    (data: {
-      roundId: string;
-      personId: string;
-      tournamentParticipantId?: string;
-      handicapSnapshot: string;
-    }) => data,
+    z.object({
+      roundId: z.string().uuid(),
+      personId: z.string().uuid(),
+      tournamentParticipantId: z.string().uuid().optional(),
+      handicapSnapshot: z.string(),
+    }),
   )
   .handler(async ({ data }) => {
     // Only allow adding participants in draft or open status
@@ -443,7 +444,7 @@ export const addRoundParticipantFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const removeRoundParticipantFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { roundParticipantId: string }) => data)
+  .inputValidator(z.object({ roundParticipantId: z.string().uuid() }))
   .handler(async ({ data }) => {
     // Only allow removal in draft or open status
     const rp = await db.query.roundParticipants.findFirst({
@@ -470,8 +471,7 @@ export const removeRoundParticipantFn = createServerFn({ method: 'POST' })
 
 export const updateRoundParticipantFn = createServerFn({ method: 'POST' })
   .inputValidator(
-    (data: { roundParticipantId: string; handicapOverride: number | null }) =>
-      data,
+    z.object({ roundParticipantId: z.string().uuid(), handicapOverride: z.number().nullable() }),
   )
   .handler(async ({ data }) => {
     const rp = await db.query.roundParticipants.findFirst({
@@ -497,7 +497,7 @@ export const updateRoundParticipantFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────────
 
 export const createSingleRoundFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: CreateSingleRoundInput) => data)
+  .inputValidator(createSingleRoundSchema)
   .handler(async ({ data }) => {
     const user = await requireAuth();
 

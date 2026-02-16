@@ -1,16 +1,17 @@
 import { createServerFn } from '@tanstack/react-start';
 import { eq, and, desc } from 'drizzle-orm';
+import { z } from 'zod';
 import { db } from '@/db';
 import { scoreEvents, rounds, roundParticipants, persons } from '@/db/schema';
 import { requireAuth } from './auth.helpers';
-import type { SubmitScoreInput } from './validators';
+import { submitScoreSchema } from './validators';
 
 // ──────────────────────────────────────────────
 // Submit a score event (append-only)
 // ──────────────────────────────────────────────
 
 export const submitScoreFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: SubmitScoreInput) => data)
+  .inputValidator(submitScoreSchema)
   .handler(async ({ data }) => {
     const user = await requireAuth();
 
@@ -69,7 +70,7 @@ export const submitScoreFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const getScorecardFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { roundId: string }) => data)
+  .inputValidator(z.object({ roundId: z.string().uuid() }))
   .handler(async ({ data }) => {
     // Fetch all events ordered by createdAt DESC so first-seen = latest
     const events = await db.query.scoreEvents.findMany({
@@ -119,11 +120,11 @@ export const getScorecardFn = createServerFn({ method: 'GET' })
 
 export const bulkSubmitScoresFn = createServerFn({ method: 'POST' })
   .inputValidator(
-    (data: {
-      roundId: string;
-      roundParticipantId: string;
-      scores: Array<{ holeNumber: number; strokes: number }>;
-    }) => data,
+    z.object({
+      roundId: z.string().uuid(),
+      roundParticipantId: z.string().uuid(),
+      scores: z.array(z.object({ holeNumber: z.number().int().min(1).max(18), strokes: z.number().int().min(1).max(20) })),
+    }),
   )
   .handler(async ({ data }) => {
     const user = await requireAuth();
@@ -166,7 +167,7 @@ export const bulkSubmitScoresFn = createServerFn({ method: 'POST' })
 
 export const getScoreHistoryFn = createServerFn({ method: 'GET' })
   .inputValidator(
-    (data: { roundParticipantId: string; holeNumber: number }) => data,
+    z.object({ roundParticipantId: z.string().uuid(), holeNumber: z.number().int().min(1).max(18) }),
   )
   .handler(async ({ data }) => {
     const events = await db.query.scoreEvents.findMany({

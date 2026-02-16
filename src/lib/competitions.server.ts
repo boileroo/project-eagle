@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { eq, and, desc } from 'drizzle-orm';
+import { z } from 'zod';
 import { db } from '@/db';
 import {
   competitions,
@@ -31,12 +32,12 @@ import type {
   GroupData,
   TeamData,
 } from './domain/index';
-import type {
-  CreateCompetitionInput,
-  UpdateCompetitionInput,
-  AwardBonusInput,
-  CreateTournamentStandingInput,
-  UpdateTournamentStandingInput,
+import {
+  createCompetitionSchema,
+  updateCompetitionSchema,
+  awardBonusSchema,
+  createTournamentStandingSchema,
+  updateTournamentStandingSchema,
 } from './validators';
 
 // ──────────────────────────────────────────────
@@ -44,7 +45,7 @@ import type {
 // ──────────────────────────────────────────────
 
 export const getCompetitionsFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { tournamentId: string }) => data)
+  .inputValidator(z.object({ tournamentId: z.string().uuid() }))
   .handler(async ({ data }) => {
     return db.query.competitions.findMany({
       where: eq(competitions.tournamentId, data.tournamentId),
@@ -66,7 +67,7 @@ export const getCompetitionsFn = createServerFn({ method: 'GET' })
 // ──────────────────────────────────────────────
 
 export const getRoundCompetitionsFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { roundId: string }) => data)
+  .inputValidator(z.object({ roundId: z.string().uuid() }))
   .handler(async ({ data }) => {
     return db.query.competitions.findMany({
       where: eq(competitions.roundId, data.roundId),
@@ -88,7 +89,7 @@ export const getRoundCompetitionsFn = createServerFn({ method: 'GET' })
 // ──────────────────────────────────────────────
 
 export const getCompetitionFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { competitionId: string }) => data)
+  .inputValidator(z.object({ competitionId: z.string().uuid() }))
   .handler(async ({ data }) => {
     return db.query.competitions.findFirst({
       where: eq(competitions.id, data.competitionId),
@@ -109,7 +110,7 @@ export const getCompetitionFn = createServerFn({ method: 'GET' })
 // ──────────────────────────────────────────────
 
 export const createCompetitionFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: CreateCompetitionInput) => data)
+  .inputValidator(createCompetitionSchema)
   .handler(async ({ data }) => {
     await requireCommissioner(data.tournamentId);
 
@@ -164,7 +165,7 @@ export const createCompetitionFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const updateCompetitionFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: UpdateCompetitionInput) => data)
+  .inputValidator(updateCompetitionSchema)
   .handler(async ({ data }) => {
     const existing = await db.query.competitions.findFirst({
       where: eq(competitions.id, data.id),
@@ -197,7 +198,7 @@ export const updateCompetitionFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const deleteCompetitionFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { competitionId: string }) => data)
+  .inputValidator(z.object({ competitionId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const existing = await db.query.competitions.findFirst({
       where: eq(competitions.id, data.competitionId),
@@ -217,7 +218,7 @@ export const deleteCompetitionFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const awardBonusFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: AwardBonusInput) => data)
+  .inputValidator(awardBonusSchema)
   .handler(async ({ data }) => {
     const user = await requireAuth();
 
@@ -254,7 +255,7 @@ export const awardBonusFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const removeBonusAwardFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { competitionId: string }) => data)
+  .inputValidator(z.object({ competitionId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const comp = await db.query.competitions.findFirst({
       where: eq(competitions.id, data.competitionId),
@@ -279,7 +280,7 @@ export const removeBonusAwardFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const getTournamentStandingsFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { tournamentId: string }) => data)
+  .inputValidator(z.object({ tournamentId: z.string().uuid() }))
   .handler(async ({ data }) => {
     return db.query.tournamentStandings.findMany({
       where: eq(tournamentStandings.tournamentId, data.tournamentId),
@@ -292,7 +293,7 @@ export const getTournamentStandingsFn = createServerFn({ method: 'GET' })
 // ──────────────────────────────────────────────
 
 export const createTournamentStandingFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: CreateTournamentStandingInput) => data)
+  .inputValidator(createTournamentStandingSchema)
   .handler(async ({ data }) => {
     await requireCommissioner(data.tournamentId);
 
@@ -316,7 +317,7 @@ export const createTournamentStandingFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const updateTournamentStandingFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: UpdateTournamentStandingInput) => data)
+  .inputValidator(updateTournamentStandingSchema)
   .handler(async ({ data }) => {
     const existing = await db.query.tournamentStandings.findFirst({
       where: eq(tournamentStandings.id, data.id),
@@ -348,7 +349,7 @@ export const updateTournamentStandingFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const deleteTournamentStandingFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { standingId: string }) => data)
+  .inputValidator(z.object({ standingId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const existing = await db.query.tournamentStandings.findFirst({
       where: eq(tournamentStandings.id, data.standingId),
@@ -373,7 +374,7 @@ export const deleteTournamentStandingFn = createServerFn({ method: 'POST' })
 // ══════════════════════════════════════════════
 
 export const computeStandingsFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { standingId: string }) => data)
+  .inputValidator(z.object({ standingId: z.string().uuid() }))
   .handler(async ({ data }) => {
     // 1. Load the standing config
     const standing = await db.query.tournamentStandings.findFirst({

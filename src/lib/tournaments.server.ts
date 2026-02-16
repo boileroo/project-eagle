@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { and, eq, ilike } from 'drizzle-orm';
+import { z } from 'zod';
 import { db } from '@/db';
 import {
   persons,
@@ -11,12 +12,12 @@ import {
   tournaments,
 } from '@/db/schema';
 import { requireAuth, requireCommissioner } from './auth.helpers';
-import type {
-  AddParticipantInput,
-  CreateGuestInput,
-  CreateTournamentInput,
-  UpdateParticipantInput,
-  UpdateTournamentInput,
+import {
+  addParticipantSchema,
+  createGuestSchema,
+  createTournamentSchema,
+  updateParticipantSchema,
+  updateTournamentSchema,
 } from './validators';
 
 // ──────────────────────────────────────────────
@@ -42,7 +43,7 @@ export const getTournamentsFn = createServerFn({ method: 'GET' }).handler(
 // ──────────────────────────────────────────────
 
 export const getTournamentFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { tournamentId: string }) => data)
+  .inputValidator(z.object({ tournamentId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const tournament = await db.query.tournaments.findFirst({
       where: eq(tournaments.id, data.tournamentId),
@@ -82,7 +83,7 @@ export const getTournamentFn = createServerFn({ method: 'GET' })
 // ──────────────────────────────────────────────
 
 export const createTournamentFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: CreateTournamentInput) => data)
+  .inputValidator(createTournamentSchema)
   .handler(async ({ data }) => {
     const user = await requireAuth();
 
@@ -115,7 +116,7 @@ export const createTournamentFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const updateTournamentFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: UpdateTournamentInput) => data)
+  .inputValidator(updateTournamentSchema)
   .handler(async ({ data }) => {
     await requireCommissioner(data.id);
 
@@ -141,7 +142,7 @@ export const updateTournamentFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const deleteTournamentFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { tournamentId: string }) => data)
+  .inputValidator(z.object({ tournamentId: z.string().uuid() }))
   .handler(async ({ data }) => {
     await requireCommissioner(data.tournamentId);
 
@@ -161,7 +162,7 @@ export const deleteTournamentFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const searchPersonsFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { query: string; tournamentId: string }) => data)
+  .inputValidator(z.object({ query: z.string(), tournamentId: z.string().uuid() }))
   .handler(async ({ data }) => {
     await requireAuth();
 
@@ -198,7 +199,7 @@ export const searchPersonsFn = createServerFn({ method: 'GET' })
 // ──────────────────────────────────────────────
 
 export const createGuestPersonFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: CreateGuestInput) => data)
+  .inputValidator(createGuestSchema)
   .handler(async ({ data }) => {
     const user = await requireAuth();
 
@@ -220,7 +221,7 @@ export const createGuestPersonFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const addParticipantFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: AddParticipantInput) => data)
+  .inputValidator(addParticipantSchema)
   .handler(async ({ data }) => {
     const user = await requireAuth();
 
@@ -340,7 +341,7 @@ export const addParticipantFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const updateParticipantFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: UpdateParticipantInput) => data)
+  .inputValidator(updateParticipantSchema)
   .handler(async ({ data }) => {
     const existing = await db.query.tournamentParticipants.findFirst({
       where: eq(tournamentParticipants.id, data.participantId),
@@ -392,7 +393,7 @@ export const updateParticipantFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const removeParticipantFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { participantId: string }) => data)
+  .inputValidator(z.object({ participantId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const existing = await db.query.tournamentParticipants.findFirst({
       where: eq(tournamentParticipants.id, data.participantId),

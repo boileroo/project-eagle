@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { eq, and } from 'drizzle-orm';
+import { z } from 'zod';
 import { db } from '@/db';
 import {
   roundGroups,
@@ -8,10 +9,10 @@ import {
   roundTeamMembers,
 } from '@/db/schema';
 import { requireCommissioner } from './auth.helpers';
-import type {
-  CreateRoundGroupInput,
-  AssignParticipantToGroupInput,
-  AutoAssignGroupsInput,
+import {
+  createRoundGroupSchema,
+  assignParticipantToGroupSchema,
+  autoAssignGroupsSchema,
 } from './validators';
 
 // ──────────────────────────────────────────────
@@ -19,7 +20,7 @@ import type {
 // ──────────────────────────────────────────────
 
 export const getRoundGroupsFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { roundId: string }) => data)
+  .inputValidator(z.object({ roundId: z.string().uuid() }))
   .handler(async ({ data }) => {
     return db.query.roundGroups.findMany({
       where: eq(roundGroups.roundId, data.roundId),
@@ -40,7 +41,7 @@ export const getRoundGroupsFn = createServerFn({ method: 'GET' })
 // ──────────────────────────────────────────────
 
 export const createRoundGroupFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: CreateRoundGroupInput) => data)
+  .inputValidator(createRoundGroupSchema)
   .handler(async ({ data }) => {
     const round = await db.query.rounds.findFirst({
       where: eq(rounds.id, data.roundId),
@@ -70,7 +71,7 @@ export const createRoundGroupFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const deleteRoundGroupFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { roundGroupId: string }) => data)
+  .inputValidator(z.object({ roundGroupId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const group = await db.query.roundGroups.findFirst({
       where: eq(roundGroups.id, data.roundGroupId),
@@ -93,7 +94,7 @@ export const deleteRoundGroupFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const assignParticipantToGroupFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: AssignParticipantToGroupInput) => data)
+  .inputValidator(assignParticipantToGroupSchema)
   .handler(async ({ data }) => {
     const rp = await db.query.roundParticipants.findFirst({
       where: eq(roundParticipants.id, data.roundParticipantId),
@@ -129,7 +130,7 @@ export const assignParticipantToGroupFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const autoAssignGroupsFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: AutoAssignGroupsInput) => data)
+  .inputValidator(autoAssignGroupsSchema)
   .handler(async ({ data }) => {
     const round = await db.query.rounds.findFirst({
       where: eq(rounds.id, data.roundId),
@@ -206,8 +207,7 @@ export interface DerivedTeamPairing {
 
 export const deriveGroupPairingsFn = createServerFn({ method: 'GET' })
   .inputValidator(
-    (data: { roundGroupId: string; format: 'match_play' | 'best_ball' }) =>
-      data,
+    z.object({ roundGroupId: z.string().uuid(), format: z.enum(['match_play', 'best_ball']) }),
   )
   .handler(async ({ data }) => {
     const group = await db.query.roundGroups.findFirst({
