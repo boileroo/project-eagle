@@ -7,13 +7,20 @@ import {
   Scripts,
 } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Toaster } from '@/components/ui/sonner';
 import { DevTools } from '@/components/dev-tools';
 import { getAuthUser } from '@/lib/auth.server';
 import appCss from '@/styles/globals.css?url';
+import {
+  getQueryClient,
+  queryPersister,
+  dehydrateOptions,
+} from '@/lib/query-client';
 
 export interface RouterContext {
   user: { id: string; email: string } | null;
+  queryClient: ReturnType<typeof getQueryClient>;
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -33,10 +40,20 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 });
 
 function RootComponent() {
+  const { queryClient } = Route.useRouteContext();
   return (
-    <RootDocument>
-      <Outlet />
-    </RootDocument>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: queryPersister,
+        dehydrateOptions,
+      }}
+      onSuccess={() => queryClient.resumePausedMutations()}
+    >
+      <RootDocument>
+        <Outlet />
+      </RootDocument>
+    </PersistQueryClientProvider>
   );
 }
 

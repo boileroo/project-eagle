@@ -4,9 +4,13 @@ import {
   Outlet,
   Link,
   useRouter,
+  useMatchRoute,
 } from '@tanstack/react-router';
+import { useIsMutating } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { signOutFn } from '@/lib/auth.server';
+import { useOnlineStatus } from '@/hooks';
+import { OfflineFallback } from '@/components/offline-fallback';
 
 // Protected layout — all child routes require authentication
 export const Route = createFileRoute('/_app')({
@@ -29,6 +33,18 @@ const navLinks = [
 function AppLayout() {
   const { user } = Route.useRouteContext();
   const router = useRouter();
+  const isOnline = useOnlineStatus();
+  const matchRoute = useMatchRoute();
+  const roundMatch = matchRoute({
+    to: '/tournaments/$tournamentId/rounds/$roundId',
+    fuzzy: true,
+  });
+  const roundId = roundMatch ? roundMatch.roundId : null;
+  const tournamentId = roundMatch ? roundMatch.tournamentId : null;
+  const isRoundRoute = roundMatch !== false;
+  const pendingScoreMutations = useIsMutating({
+    mutationKey: ['submit-score'],
+  });
 
   return (
     <div className="bg-background min-h-screen">
@@ -52,6 +68,16 @@ function AppLayout() {
             </nav>
           </div>
           <div className="flex items-center gap-4">
+            {pendingScoreMutations > 0 && (
+              <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-medium">
+                Syncing…
+              </span>
+            )}
+            {!isOnline && (
+              <span className="bg-destructive/10 text-destructive rounded-full px-2 py-0.5 text-xs font-medium">
+                Offline
+              </span>
+            )}
             <Link
               to="/account"
               className="text-muted-foreground hover:text-foreground text-sm transition-colors"
@@ -72,7 +98,11 @@ function AppLayout() {
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <Outlet />
+        {!isOnline && !isRoundRoute ? (
+          <OfflineFallback roundId={roundId} tournamentId={tournamentId} />
+        ) : (
+          <Outlet />
+        )}
       </main>
     </div>
   );

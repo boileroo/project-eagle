@@ -45,21 +45,21 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Scripts
 
-| Command              | Description                              |
-| -------------------- | ---------------------------------------- |
-| `yarn dev`           | Start dev server on port 3000            |
-| `yarn build`         | Production build                         |
-| `yarn preview`       | Preview production build                 |
-| `yarn db:generate`   | Generate Drizzle migrations              |
-| `yarn db:migrate`    | Run migrations                           |
-| `yarn db:push`       | Push schema directly (dev)               |
-| `yarn db:studio`     | Open Drizzle Studio                      |
-| `yarn db:seed`       | Seed the database                        |
-| `yarn lint`          | Run ESLint                               |
-| `yarn lint:fix`      | Fix ESLint errors                        |
-| `yarn format`        | Format with Prettier                     |
-| `yarn format:check`  | Check formatting                         |
-| `yarn typecheck`     | Run TypeScript type checking             |
+| Command             | Description                   |
+| ------------------- | ----------------------------- |
+| `yarn dev`          | Start dev server on port 3000 |
+| `yarn build`        | Production build              |
+| `yarn preview`      | Preview production build      |
+| `yarn db:generate`  | Generate Drizzle migrations   |
+| `yarn db:migrate`   | Run migrations                |
+| `yarn db:push`      | Push schema directly (dev)    |
+| `yarn db:studio`    | Open Drizzle Studio           |
+| `yarn db:seed`      | Seed the database             |
+| `yarn lint`         | Run ESLint                    |
+| `yarn lint:fix`     | Fix ESLint errors             |
+| `yarn format`       | Format with Prettier          |
+| `yarn format:check` | Check formatting              |
+| `yarn typecheck`    | Run TypeScript type checking  |
 
 ## Project Structure
 
@@ -92,8 +92,8 @@ src/
 ## Adding shadcn Components
 
 ```bash
-npx shadcn@latest add button
-npx shadcn@latest add card
-npx shadcn@latest add input
+yarn dlx shadcn@latest add button
+yarn dlx shadcn@latest add card
+yarn dlx shadcn@latest add input
 # etc.
 ```

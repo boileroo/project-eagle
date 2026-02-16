@@ -1,6 +1,7 @@
 import { createRouter } from '@tanstack/react-router';
 import { routeTree } from './routeTree.gen';
 import type { RouterContext } from './routes/__root';
+import { getQueryClient } from './lib/query-client';
 
 // Must export getRouter — TanStack Start calls this
 // to create a new router instance per request
@@ -18,6 +19,7 @@ export function getRouter() {
     ),
     context: {
       user: null,
+      queryClient: getQueryClient(),
     } satisfies RouterContext,
   });
 

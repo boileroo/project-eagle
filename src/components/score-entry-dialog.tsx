@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -10,8 +11,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { submitScoreFn } from '@/lib/scores.server';
 import { toast } from 'sonner';
+import { useOnlineStatus } from '@/hooks';
+import type { ScorecardData } from '@/components/round-detail/types';
+import type { SubmitScoreInput } from '@/lib/validators';
 
 type ScoreEntryDialogProps = {
   open: boolean;
@@ -39,7 +42,55 @@ export function ScoreEntryDialog({
   onSaved,
 }: ScoreEntryDialogProps) {
   const [strokes, setStrokes] = useState<number | null>(currentStrokes ?? null);
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+  const isOnline = useOnlineStatus();
+  const scorecardQueryKey = ['round', roundId, 'scorecard'] as const;
+  const scoreMutation = useMutation({
+    mutationKey: ['submit-score'],
+    onMutate: async (
+      variables: SubmitScoreInput & { clientMeta?: { savedOffline?: boolean } },
+    ) => {
+      const savedOffline = typeof window === 'undefined' ? false : !isOnline;
+      await queryClient.cancelQueries({ queryKey: scorecardQueryKey });
+      const previousScorecard =
+        queryClient.getQueryData<ScorecardData>(scorecardQueryKey);
+
+      const nextScorecard: ScorecardData = previousScorecard
+        ? structuredClone(previousScorecard)
+        : {};
+      const participantScores = {
+        ...nextScorecard[variables.roundParticipantId],
+      };
+      const existing = participantScores[variables.holeNumber];
+      participantScores[variables.holeNumber] = {
+        strokes: variables.strokes,
+        recordedByRole: variables.recordedByRole,
+        eventCount: (existing?.eventCount ?? 0) + 1,
+      };
+      nextScorecard[variables.roundParticipantId] = participantScores;
+
+      queryClient.setQueryData(scorecardQueryKey, nextScorecard);
+
+      if (savedOffline) {
+        toast.info(
+          `Hole ${variables.holeNumber}: ${variables.strokes} stroke${variables.strokes !== 1 ? 's' : ''} saved offline.`,
+        );
+      }
+
+      return {
+        previousScorecard: savedOffline ? undefined : previousScorecard,
+        savedOffline,
+      };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousScorecard) {
+        queryClient.setQueryData(scorecardQueryKey, context.previousScorecard);
+      } else {
+        void queryClient.invalidateQueries({ queryKey: scorecardQueryKey });
+      }
+      toast.error('Failed to save score.');
+    },
+  });
 
   // Sync strokes state when the target hole/participant changes
   const targetKey = `${roundParticipantId}:${holeNumber}`;
@@ -51,29 +102,23 @@ export function ScoreEntryDialog({
 
   const handleSave = async () => {
     if (strokes == null) return;
-    setSaving(true);
-    try {
-      await submitScoreFn({
-        data: {
-          roundId,
-          roundParticipantId,
-          holeNumber,
-          strokes,
-          recordedByRole: recordedByRole,
-        },
-      });
-      toast.success(
-        `Hole ${holeNumber}: ${strokes} stroke${strokes !== 1 ? 's' : ''} saved.`,
-      );
-      onOpenChange(false);
-      onSaved();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to save score',
-      );
-    }
-    setSaving(false);
+    const variables: SubmitScoreInput & {
+      clientMeta?: { savedOffline?: boolean };
+    } = {
+      roundId,
+      roundParticipantId,
+      holeNumber,
+      strokes,
+      recordedByRole,
+      clientMeta: { savedOffline: !isOnline },
+    };
+    scoreMutation.mutate(variables);
+    onOpenChange(false);
+    onSaved();
   };
+
+  const disableSave =
+    strokes == null || (scoreMutation.isPending && !scoreMutation.isPaused);
 
   // Reset state when dialog opens
   const handleOpenChange = (next: boolean) => {
@@ -184,8 +229,10 @@ export function ScoreEntryDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving || strokes == null}>
-            {saving ? 'Saving…' : 'Save'}
+          <Button onClick={handleSave} disabled={disableSave}>
+            {scoreMutation.isPending && !scoreMutation.isPaused
+              ? 'Saving…'
+              : 'Save'}
           </Button>
         </DialogFooter>
       </DialogContent>

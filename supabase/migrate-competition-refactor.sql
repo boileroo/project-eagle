@@ -1,5 +1,5 @@
 -- Competition refactor: drop scope, add participantType, add tournamentStandings
--- Run this manually, then run `npx drizzle-kit push` to verify schema is in sync.
+-- Run this manually, then run `yarn drizzle-kit push` to verify schema is in sync.
 
 -- 1. Create the new participant_type enum
 CREATE TYPE participant_type AS ENUM ('individual', 'team');

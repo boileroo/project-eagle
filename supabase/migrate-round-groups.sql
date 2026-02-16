@@ -1,5 +1,5 @@
 -- Migration: Add round groups, groupScope on competitions, make rounds.tournament_id NOT NULL
--- Run via: npx tsx scripts/run-sql.ts supabase/migrate-round-groups.sql
+-- Run via: yarn tsx scripts/run-sql.ts supabase/migrate-round-groups.sql
 
 -- 1. Create group_scope enum
 CREATE TYPE group_scope AS ENUM ('all', 'within_group');
