@@ -74,23 +74,18 @@ If Irish Rumble is handled via Option B (all-scope team competition), this may n
 
 ---
 
-## Standalone Rounds
+## Standalone Rounds ✅ Implemented
 
-Allow rounds to exist outside tournaments for casual play (weekend 18 with mates).
+~~Allow rounds to exist outside tournaments for casual play (weekend 18 with mates).~~
 
-### Why deferred
+**Implemented** via the "Quick Round" approach: `createSingleRoundFn` auto-creates a tournament with `isSingleRound: true` behind the scenes. The UI hides the tournament abstraction -- round detail page shows a simplified layout when `isSingleRound` is detected (no tournament breadcrumb, dashboard back link, inline player management). Schema unchanged: `rounds.tournamentId` remains NOT NULL.
 
-The current model requires `rounds.tournamentId` NOT NULL. Standalone rounds were originally planned (see design.md "Design Decisions") but were deprioritised when tournaments became mandatory. The schema changes are known:
+Key files:
 
-- `rounds.tournamentId` → nullable
-- `rounds.createdByUserId` → new FK for standalone round ownership
-- `roundParticipants.tournamentParticipantId` → nullable
-- `roundParticipants.personId` → direct FK (always set)
-
-### Possible approach
-
-- A "Quick Round" flow that auto-creates a 1-round tournament behind the scenes, OR
-- Restore nullable `tournamentId` and handle the two paths in the UI
+- `src/lib/rounds.server.ts` -- `createSingleRoundFn`
+- `src/db/schema.ts` -- `isSingleRound` column on `tournaments`
+- `src/components/pages/round-detail-page.tsx` -- conditional single-round UI
+- `src/routes/_app/tournaments/$tournamentId/rounds/$roundId/index.tsx` -- conditional tournament/person data loading
 
 ---
 

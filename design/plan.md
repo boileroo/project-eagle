@@ -2,20 +2,22 @@
 
 ## Current State
 
-Phases 1–5 are complete. The app has full auth, course library, tournament setup, score entry, round status guards, role-based permissions, and a complete competition engine with UI. Groups and group-scoped competitions are scaffolded.
+Phases 1-5 are complete. Phase 6 is partially complete: offline-first scoring (6.1 + 6.2) is done, Supabase Realtime (6.3) and conflict verification testing (6.4) are not started.
+
+The app has full auth, course library, tournament setup, score entry, round status guards, role-based permissions, a complete competition engine with UI, and offline-first score entry with persistence, optimistic updates, and automatic sync.
 
 **Key design decisions confirmed:**
 
 - Each round: up to 1 team comp + 1 individual comp + any bonuses
 - Bonuses can be standalone or contribute to individual standings
 - Foursomes (alternate shot) deferred — see `future-additions.md`
-- Tournaments are mandatory (no standalone rounds)
+- Standalone rounds implemented via auto-tournament pattern (`isSingleRound` flag)
 
 **What exists:**
 
 - Full auth (email + password), protected routes, session handling
 - Complete Drizzle schema: profiles, persons, courses, courseHoles, tournaments, tournamentParticipants, tournamentTeams, tournamentTeamMembers, rounds, roundGroups, roundParticipants, roundTeams, roundTeamMembers, scoreEvents, competitions, bonusAwards, tournamentStandings
-- Rounds always belong to a tournament (`tournament_id` NOT NULL)
+- Rounds always belong to a tournament (`tournament_id` NOT NULL); standalone rounds use an auto-created tournament with `isSingleRound: true`
 - Round groups: playing fourballs (1–4 players), auto-assign, manual assign
 - Competitions have `groupScope` (`all` | `within_group`) and `participantType` (individual | team)
 - RLS policies across all tables
@@ -34,6 +36,9 @@ Phases 1–5 are complete. The app has full auth, course library, tournament set
 - Bonus award UI: NTP/LD dropdown on round page
 - Tournament standings: aggregation engine (sum stableford, lowest strokes, match wins) + CRUD server functions
 - `tournamentStandings` table with flexible aggregation config
+- Offline-first scoring: IndexedDB query persistence (`idb-keyval`), `PersistQueryClientProvider`, mutation persistence via `setMutationDefaults` + `mutationKey`, optimistic updates with rollback, `resumePausedMutations` on hydration
+- Offline UX: "Offline" badge, "Syncing..." badge, offline fallback page for non-round routes, `useOnlineStatus` hook, `localStorage` active round tracking
+- Offline toast behavior: `toast.info` for offline saves, batched `toast.success` for sync (debounced 750ms), contextual `toast.error` with server error mapping for failures
 
 **Key files:**
 
@@ -44,6 +49,12 @@ Phases 1–5 are complete. The app has full auth, course library, tournament set
 - `src/lib/groups.server.ts` — group CRUD, auto-assign, pairing derivation
 - `src/lib/auth.helpers.ts` — shared requireAuth + requireCommissioner
 - `src/lib/validators.ts` — all app-level Zod schemas
+- `src/lib/query-client.ts` — QueryClient factory, IndexedDB persister, mutation defaults, dehydrate options, batched sync toast
+- `src/routes/__root.tsx` — `PersistQueryClientProvider` setup, `resumePausedMutations` on hydration
+- `src/components/score-entry-dialog.tsx` — `useMutation` with optimistic updates, offline toast, error handling
+- `src/components/offline-fallback.tsx` — offline landing page with active round redirect
+- `src/hooks/use-online-status.ts` — online/offline status hook
+- `src/routes/_app.tsx` — app layout with offline/syncing badges, offline fallback routing
 
 ---
 
@@ -327,14 +338,34 @@ Pure domain logic + the read-side projections.
 
 Polish for real-world on-course use.
 
-### 6.1 TanStack Query Persister
+### 6.1 TanStack Query Persister ✅
 
-- Wire up IndexedDB persistence so queries survive page reloads and offline periods
+- IndexedDB persistence via `idb-keyval` with throttled writes (1s) and 24h expiry
+- `PersistQueryClientProvider` wrapping the app in `__root.tsx`
+- Selective `dehydrateOptions`: only persist `round`, `tournament`, `competition`, `course` query keys
+- `resumePausedMutations()` called on hydration success
 
-### 6.2 Offline Mutation Queue
+### 6.2 Offline Mutation Queue ✅
 
-- Score entry writes locally first, syncs when back online
-- UI shows pending/synced state per score event
+- `setMutationDefaults` for `['submit-score']` with `mutationFn`, `onSuccess`, `onSettled`, `retry: 3`
+- Split pattern: `mutationFn` + `onSuccess` + `onSettled` in defaults (survive reload), `onMutate` + `onError` in component (optimistic updates + rollback)
+- `clientMeta.savedOffline` persists across reloads, used by `onSuccess` to trigger sync toast
+- `mutationFn` strips `clientMeta` before sending to server
+- Batched sync toast: debounced 750ms, "Score synced." / "Synced N scores."
+- `networkMode: 'online'` (default) pauses mutations while offline
+- Save button shows "Saving..." only when `isPending && !isPaused`
+- Route-level data fetching refactored to `queryOptions` + `ensureQueryData`
+- `localStorage` stores active round ID for offline fallback redirect
+- Redundant `onSaved`/`router.invalidate()` removed from scoring path
+
+### 6.2.1 Offline UX ✅
+
+- `useOnlineStatus` hook
+- "Offline" badge in app layout when disconnected
+- "Syncing..." badge when `useIsMutating` for `['submit-score']` is non-zero
+- `OfflineFallback` for non-round routes with "Return to Active Round" button
+- Round routes render normally offline from persisted cache
+- Contextual error toasts for failed mutations with server error mapping and offline/online prefixing
 
 ### 6.3 Supabase Realtime
 
@@ -372,7 +403,9 @@ Polish for real-world on-course use.
 
 ### Standalone Rounds
 
-**Decision:** Deferred. See `future-additions.md`. Tournaments are mandatory — every round belongs to a tournament.
+**Decision:** Implemented via auto-tournament pattern. A "Quick Round" creates a hidden tournament with `isSingleRound: true`. The round detail page detects this flag and shows a simplified UI (no tournament breadcrumb, dashboard back link, inline player management).
+
+**Rationale:** Keeps `rounds.tournamentId` NOT NULL, avoiding nullable FK complexity. The UI hides the tournament abstraction so the experience feels like a standalone round.
 
 ---
 
