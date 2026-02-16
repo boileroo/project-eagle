@@ -7,7 +7,7 @@ Tech debt and structural improvements to existing code. Check off and remove ite
 ## Monolith Components
 
 - [x] Extract `round-detail-page.tsx` (3,400 lines, ~13 inline sub-components) into `src/components/round-detail/` with individual files per component and a barrel re-export
-- [ ] Extract `tournament-detail-page.tsx` (1,960 lines, ~7 inline sub-components) into `src/components/tournament-detail/` with the same pattern
+- [x] Extract `tournament-detail-page.tsx` (1,960 lines, ~7 inline sub-components) into `src/components/tournament-detail/` with the same pattern
 - [ ] Extract shared `PersonSearchDialog` from the near-identical `AddParticipantDialog` in both pages (search + create guest tabs)
 
 ## Server Validation
