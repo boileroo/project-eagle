@@ -32,7 +32,11 @@ import {
   CompetitionsSection,
   SingleRoundPlayersSection,
 } from '@/components/round-detail';
-import { statusColors, statusLabels, nextTransitions } from '@/components/round-detail/constants';
+import {
+  statusColors,
+  statusLabels,
+  nextTransitions,
+} from '@/components/round-detail/constants';
 
 // ──────────────────────────────────────────────
 // Types
@@ -309,9 +313,7 @@ export function RoundDetailPage({
         round.participants.length > 0 &&
         (() => {
           const groups = round.groups ?? [];
-          const ungrouped = round.participants.filter(
-            (rp) => !rp.roundGroupId,
-          );
+          const ungrouped = round.participants.filter((rp) => !rp.roundGroupId);
 
           const sections: {
             label: string;

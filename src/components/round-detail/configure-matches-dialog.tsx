@@ -32,7 +32,9 @@ export function ConfigureMatchesDialog({
 
   const existingConfig = comp.configJson as Record<string, unknown> | null;
   const existingPairings: { playerA: string; playerB: string }[] =
-    (existingConfig?.pairings as { playerA: string; playerB: string }[] | undefined) ?? [];
+    (existingConfig?.pairings as
+      | { playerA: string; playerB: string }[]
+      | undefined) ?? [];
 
   const [pairings, setPairings] = useState(existingPairings);
 

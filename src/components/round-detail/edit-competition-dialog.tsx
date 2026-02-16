@@ -42,7 +42,10 @@ export function EditCompetitionDialog({
   );
   const [scoringBasis, setScoringBasis] = useState<
     'net_strokes' | 'gross_strokes'
-  >((existingConfig.scoringBasis as 'net_strokes' | 'gross_strokes') ?? 'net_strokes');
+  >(
+    (existingConfig.scoringBasis as 'net_strokes' | 'gross_strokes') ??
+      'net_strokes',
+  );
   const [pointsPerWin, setPointsPerWin] = useState<number>(
     (existingConfig.pointsPerWin as number) ?? 1,
   );
@@ -63,11 +66,17 @@ export function EditCompetitionDialog({
     setName(comp.name);
     setGroupScope((comp.groupScope as 'all' | 'within_group') ?? 'all');
     setCountBack((existingConfig.countBack as boolean) ?? true);
-    setScoringBasis((existingConfig.scoringBasis as 'net_strokes' | 'gross_strokes') ?? 'net_strokes');
+    setScoringBasis(
+      (existingConfig.scoringBasis as 'net_strokes' | 'gross_strokes') ??
+        'net_strokes',
+    );
     setPointsPerWin((existingConfig.pointsPerWin as number) ?? 1);
     setPointsPerHalf((existingConfig.pointsPerHalf as number) ?? 0.5);
     setHoleNumber((existingConfig.holeNumber as number) ?? 1);
-    setBonusMode((existingConfig.bonusMode as 'standalone' | 'contributor') ?? 'standalone');
+    setBonusMode(
+      (existingConfig.bonusMode as 'standalone' | 'contributor') ??
+        'standalone',
+    );
     setBonusPoints((existingConfig.bonusPoints as number) ?? 1);
   };
 
@@ -83,7 +92,11 @@ export function EditCompetitionDialog({
           config: {
             pointsPerWin,
             pointsPerHalf,
-            pairings: (existingConfig.pairings as { playerA: string; playerB: string }[]) ?? [],
+            pairings:
+              (existingConfig.pairings as {
+                playerA: string;
+                playerB: string;
+              }[]) ?? [],
           },
         };
       case 'best_ball':
@@ -92,7 +105,9 @@ export function EditCompetitionDialog({
           config: {
             pointsPerWin,
             pointsPerHalf,
-            pairings: (existingConfig.pairings as { teamA: string; teamB: string }[]) ?? [],
+            pairings:
+              (existingConfig.pairings as { teamA: string; teamB: string }[]) ??
+              [],
           },
         };
       case 'nearest_pin':
@@ -284,7 +299,8 @@ export function EditCompetitionDialog({
                     }
                   />
                   <p className="text-muted-foreground text-xs">
-                    Points added to the winner&apos;s individual tournament standing.
+                    Points added to the winner&apos;s individual tournament
+                    standing.
                   </p>
                 </div>
               )}

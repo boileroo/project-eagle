@@ -1,7 +1,5 @@
 import { useState, useMemo } from 'react';
-import {
-  removeRoundParticipantFn,
-} from '@/lib/rounds.server';
+import { removeRoundParticipantFn } from '@/lib/rounds.server';
 import {
   createRoundGroupFn,
   deleteRoundGroupFn,

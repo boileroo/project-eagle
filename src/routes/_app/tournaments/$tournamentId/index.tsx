@@ -29,11 +29,12 @@ export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
     }
 
     // Pre-compute all standings in parallel to eliminate client waterfall
-    const computedStandings: Record<string, Awaited<ReturnType<typeof computeStandingsFn>>> = {};
+    const computedStandings: Record<
+      string,
+      Awaited<ReturnType<typeof computeStandingsFn>>
+    > = {};
     const standingResults = await Promise.allSettled(
-      standings.map((s) =>
-        computeStandingsFn({ data: { standingId: s.id } }),
-      ),
+      standings.map((s) => computeStandingsFn({ data: { standingId: s.id } })),
     );
     for (let i = 0; i < standings.length; i++) {
       const result = standingResults[i];

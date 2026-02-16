@@ -66,7 +66,9 @@ export const signUpFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const signInFn = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ email: z.string().email(), password: z.string().min(1) }))
+  .inputValidator(
+    z.object({ email: z.string().email(), password: z.string().min(1) }),
+  )
   .handler(async ({ data }) => {
     const request = getRequest();
     const { supabase } = createSupabaseServerClient(request);

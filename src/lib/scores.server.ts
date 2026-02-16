@@ -140,7 +140,12 @@ export const bulkSubmitScoresFn = createServerFn({ method: 'POST' })
     z.object({
       roundId: z.string().uuid(),
       roundParticipantId: z.string().uuid(),
-      scores: z.array(z.object({ holeNumber: z.number().int().min(1).max(18), strokes: z.number().int().min(1).max(20) })),
+      scores: z.array(
+        z.object({
+          holeNumber: z.number().int().min(1).max(18),
+          strokes: z.number().int().min(1).max(20),
+        }),
+      ),
     }),
   )
   .handler(async ({ data }) => {
@@ -184,7 +189,10 @@ export const bulkSubmitScoresFn = createServerFn({ method: 'POST' })
 
 export const getScoreHistoryFn = createServerFn({ method: 'GET' })
   .inputValidator(
-    z.object({ roundParticipantId: z.string().uuid(), holeNumber: z.number().int().min(1).max(18) }),
+    z.object({
+      roundParticipantId: z.string().uuid(),
+      holeNumber: z.number().int().min(1).max(18),
+    }),
   )
   .handler(async ({ data }) => {
     const events = await db.query.scoreEvents.findMany({

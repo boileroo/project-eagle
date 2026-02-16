@@ -276,7 +276,12 @@ export const deleteRoundFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const reorderRoundsFn = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ tournamentId: z.string().uuid(), roundIds: z.array(z.string().uuid()) }))
+  .inputValidator(
+    z.object({
+      tournamentId: z.string().uuid(),
+      roundIds: z.array(z.string().uuid()),
+    }),
+  )
   .handler(async ({ data }) => {
     await requireCommissioner(data.tournamentId);
 
@@ -324,7 +329,9 @@ const validTransitions: Record<string, string[]> = {
 };
 
 export const transitionRoundFn = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ roundId: z.string().uuid(), newStatus: z.string() }))
+  .inputValidator(
+    z.object({ roundId: z.string().uuid(), newStatus: z.string() }),
+  )
   .handler(async ({ data }) => {
     const existing = await db.query.rounds.findFirst({
       where: eq(rounds.id, data.roundId),
@@ -471,7 +478,10 @@ export const removeRoundParticipantFn = createServerFn({ method: 'POST' })
 
 export const updateRoundParticipantFn = createServerFn({ method: 'POST' })
   .inputValidator(
-    z.object({ roundParticipantId: z.string().uuid(), handicapOverride: z.number().nullable() }),
+    z.object({
+      roundParticipantId: z.string().uuid(),
+      handicapOverride: z.number().nullable(),
+    }),
   )
   .handler(async ({ data }) => {
     const rp = await db.query.roundParticipants.findFirst({

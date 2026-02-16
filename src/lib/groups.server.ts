@@ -207,7 +207,10 @@ export interface DerivedTeamPairing {
 
 export const deriveGroupPairingsFn = createServerFn({ method: 'GET' })
   .inputValidator(
-    z.object({ roundGroupId: z.string().uuid(), format: z.enum(['match_play', 'best_ball']) }),
+    z.object({
+      roundGroupId: z.string().uuid(),
+      format: z.enum(['match_play', 'best_ball']),
+    }),
   )
   .handler(async ({ data }) => {
     const group = await db.query.roundGroups.findFirst({

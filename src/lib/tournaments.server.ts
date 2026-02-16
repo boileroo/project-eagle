@@ -162,7 +162,9 @@ export const deleteTournamentFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 export const searchPersonsFn = createServerFn({ method: 'GET' })
-  .inputValidator(z.object({ query: z.string(), tournamentId: z.string().uuid() }))
+  .inputValidator(
+    z.object({ query: z.string(), tournamentId: z.string().uuid() }),
+  )
   .handler(async ({ data }) => {
     await requireAuth();
 

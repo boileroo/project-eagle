@@ -41,7 +41,11 @@ export function AddPlayerDialog({
 }: {
   tournamentId: string;
   onAddPerson: (person: PersonSearchResult) => Promise<void>;
-  onAddGuest: (personId: string, name: string, handicap: string) => Promise<void>;
+  onAddGuest: (
+    personId: string,
+    name: string,
+    handicap: string,
+  ) => Promise<void>;
   triggerLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
