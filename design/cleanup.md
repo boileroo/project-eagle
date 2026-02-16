@@ -17,7 +17,7 @@ Tech debt and structural improvements to existing code. Check off and remove ite
 
 ## Database Indexes
 
-- [ ] Add indexes on high-traffic FK columns — none exist today. Priority: `scoreEvents(roundId)`, `scoreEvents(roundParticipantId)`, `roundParticipants(roundId)`, `rounds(tournamentId)`, `competitions(roundId)`, `tournamentParticipants(tournamentId)`, `bonusAwards(competitionId)`
+- [x] Add indexes on high-traffic FK columns — none exist today. Priority: `scoreEvents(roundId)`, `scoreEvents(roundParticipantId)`, `roundParticipants(roundId)`, `rounds(tournamentId)`, `competitions(roundId)`, `tournamentParticipants(tournamentId)`, `bonusAwards(competitionId)`
 
 ## Duplicated Logic
 
