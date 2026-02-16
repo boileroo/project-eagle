@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
 import {
@@ -435,18 +435,31 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
       },
     });
 
-    // 4. Build RoundCompetitionData[] for the engine
+    // 4. Batch-load all score events for all rounds in one query
+    const allRoundIds = tournamentRounds.map((r) => r.id);
+    const allEvents =
+      allRoundIds.length > 0
+        ? await db.query.scoreEvents.findMany({
+            where: inArray(scoreEvents.roundId, allRoundIds),
+            orderBy: [desc(scoreEvents.createdAt)],
+          })
+        : [];
+
+    // Group events by roundId
+    const eventsByRound = new Map<string, (typeof allEvents)[number][]>();
+    for (const event of allEvents) {
+      const arr = eventsByRound.get(event.roundId) ?? [];
+      arr.push(event);
+      eventsByRound.set(event.roundId, arr);
+    }
+
+    // 5. Build RoundCompetitionData[] for the engine
     const roundDatas: RoundCompetitionData[] = [];
     const allContributorBonuses: ContributorBonusAward[] = [];
 
     for (const round of tournamentRounds) {
-      // Load scores for this round
-      const events = await db.query.scoreEvents.findMany({
-        where: eq(scoreEvents.roundId, round.id),
-        orderBy: [desc(scoreEvents.createdAt)],
-      });
-
       // Resolve scores (latest event per participant+hole)
+      const events = eventsByRound.get(round.id) ?? [];
       const resolvedScores: ResolvedScore[] = resolveLatestScores(events).map(
         (e) => ({
           roundParticipantId: e.roundParticipantId,
@@ -566,7 +579,7 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
       }
     }
 
-    // 5. Run the pure standings engine
+    // 6. Run the pure standings engine
     const result: StandingsResult = calculateStandings(
       aggregationConfig,
       roundDatas,
@@ -574,7 +587,7 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
       allContributorBonuses,
     );
 
-    // 6. Return standings data with round info for column headers
+    // 7. Return standings data with round info for column headers
     return {
       standing: {
         id: standing.id,

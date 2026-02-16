@@ -22,11 +22,11 @@ Tech debt and structural improvements to existing code. Check off and remove ite
 ## Duplicated Logic
 
 - [x] Extract shared `resolveLatestScores()` helper — the "iterate events DESC, skip seen via Set" pattern is duplicated between `scores.server.ts` (getScorecardFn) and `competitions.server.ts` (computeStandingsFn)
-- [ ] Consolidate the three `aggregate*` functions in `domain/standings.ts` that share team-mapping, totals-accumulation, and sorting boilerplate into a generic `aggregateStandings()` parameterized by a per-round extractor
+- [x] ~~Consolidate the three `aggregate*` functions in `domain/standings.ts`~~ — reviewed; each function has fundamentally different extraction logic (stableford points vs strokes vs match wins). Shared boilerplate (person lookup, team mapping) is already extracted into `buildPersonLookup` and `expandByGroup` helpers. Forcing a generic `aggregateStandings()` would hurt readability without meaningful DRY benefit.
 
 ## Query Performance
 
-- [ ] Fix N+1 in `computeStandingsFn` — currently loops rounds sequentially with a separate `scoreEvents` query per round. Batch into a single `WHERE roundId IN (...)` query
+- [x] Fix N+1 in `computeStandingsFn` — currently loops rounds sequentially with a separate `scoreEvents` query per round. Batch into a single `WHERE roundId IN (...)` query
 - [ ] Move `StandingsSection` computation from client-side `useEffect` into the route loader to eliminate the waterfall after initial render
 
 ## Dead Code
