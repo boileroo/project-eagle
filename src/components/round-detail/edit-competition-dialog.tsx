@@ -30,7 +30,7 @@ export function EditCompetitionDialog({
   const [saving, setSaving] = useState(false);
 
   const formatType = comp.formatType as CompetitionConfig['formatType'];
-  const existingConfig = (comp.configJson ?? {}) as Record<string, any>;
+  const existingConfig = (comp.configJson ?? {}) as Record<string, unknown>;
   const isBonus = isBonusFormat(formatType);
 
   const [name, setName] = useState(comp.name);
@@ -38,37 +38,37 @@ export function EditCompetitionDialog({
     (comp.groupScope as 'all' | 'within_group') ?? 'all',
   );
   const [countBack, setCountBack] = useState<boolean>(
-    existingConfig.countBack ?? true,
+    (existingConfig.countBack as boolean) ?? true,
   );
   const [scoringBasis, setScoringBasis] = useState<
     'net_strokes' | 'gross_strokes'
-  >(existingConfig.scoringBasis ?? 'net_strokes');
+  >((existingConfig.scoringBasis as 'net_strokes' | 'gross_strokes') ?? 'net_strokes');
   const [pointsPerWin, setPointsPerWin] = useState<number>(
-    existingConfig.pointsPerWin ?? 1,
+    (existingConfig.pointsPerWin as number) ?? 1,
   );
   const [pointsPerHalf, setPointsPerHalf] = useState<number>(
-    existingConfig.pointsPerHalf ?? 0.5,
+    (existingConfig.pointsPerHalf as number) ?? 0.5,
   );
   const [holeNumber, setHoleNumber] = useState<number>(
-    existingConfig.holeNumber ?? 1,
+    (existingConfig.holeNumber as number) ?? 1,
   );
   const [bonusMode, setBonusMode] = useState<'standalone' | 'contributor'>(
-    existingConfig.bonusMode ?? 'standalone',
+    (existingConfig.bonusMode as 'standalone' | 'contributor') ?? 'standalone',
   );
   const [bonusPoints, setBonusPoints] = useState<number>(
-    existingConfig.bonusPoints ?? 1,
+    (existingConfig.bonusPoints as number) ?? 1,
   );
 
   const resetForm = () => {
     setName(comp.name);
     setGroupScope((comp.groupScope as 'all' | 'within_group') ?? 'all');
-    setCountBack(existingConfig.countBack ?? true);
-    setScoringBasis(existingConfig.scoringBasis ?? 'net_strokes');
-    setPointsPerWin(existingConfig.pointsPerWin ?? 1);
-    setPointsPerHalf(existingConfig.pointsPerHalf ?? 0.5);
-    setHoleNumber(existingConfig.holeNumber ?? 1);
-    setBonusMode(existingConfig.bonusMode ?? 'standalone');
-    setBonusPoints(existingConfig.bonusPoints ?? 1);
+    setCountBack((existingConfig.countBack as boolean) ?? true);
+    setScoringBasis((existingConfig.scoringBasis as 'net_strokes' | 'gross_strokes') ?? 'net_strokes');
+    setPointsPerWin((existingConfig.pointsPerWin as number) ?? 1);
+    setPointsPerHalf((existingConfig.pointsPerHalf as number) ?? 0.5);
+    setHoleNumber((existingConfig.holeNumber as number) ?? 1);
+    setBonusMode((existingConfig.bonusMode as 'standalone' | 'contributor') ?? 'standalone');
+    setBonusPoints((existingConfig.bonusPoints as number) ?? 1);
   };
 
   const buildConfig = (): CompetitionConfig => {
@@ -83,7 +83,7 @@ export function EditCompetitionDialog({
           config: {
             pointsPerWin,
             pointsPerHalf,
-            pairings: existingConfig.pairings ?? [],
+            pairings: (existingConfig.pairings as { playerA: string; playerB: string }[]) ?? [],
           },
         };
       case 'best_ball':
@@ -92,7 +92,7 @@ export function EditCompetitionDialog({
           config: {
             pointsPerWin,
             pointsPerHalf,
-            pairings: existingConfig.pairings ?? [],
+            pairings: (existingConfig.pairings as { teamA: string; teamB: string }[]) ?? [],
           },
         };
       case 'nearest_pin':
@@ -284,7 +284,7 @@ export function EditCompetitionDialog({
                     }
                   />
                   <p className="text-muted-foreground text-xs">
-                    Points added to the winner's individual tournament standing.
+                    Points added to the winner&apos;s individual tournament standing.
                   </p>
                 </div>
               )}

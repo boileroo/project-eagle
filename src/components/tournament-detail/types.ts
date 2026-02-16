@@ -7,7 +7,7 @@ export type StandingConfig = {
   id: string;
   name: string;
   participantType: string;
-  aggregationConfig: Record<string, any>;
+  aggregationConfig: Record<string, unknown>;
 };
 
 export type ComputedStanding = {

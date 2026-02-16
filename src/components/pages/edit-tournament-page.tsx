@@ -37,6 +37,13 @@ export function EditTournamentPage({
 }) {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const form = useForm<CreateTournamentInput>({
+    resolver: zodResolver(createTournamentSchema),
+    defaultValues: {
+      name: tournament.name,
+      description: tournament.description ?? '',
+    },
+  });
 
   if (!isOwner) {
     return (
@@ -47,14 +54,6 @@ export function EditTournamentPage({
       </div>
     );
   }
-
-  const form = useForm<CreateTournamentInput>({
-    resolver: zodResolver(createTournamentSchema),
-    defaultValues: {
-      name: tournament.name,
-      description: tournament.description ?? '',
-    },
-  });
 
   const handleSubmit = async (data: CreateTournamentInput) => {
     setSubmitting(true);

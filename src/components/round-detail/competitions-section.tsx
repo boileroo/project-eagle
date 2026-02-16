@@ -147,7 +147,7 @@ export function CompetitionsSection({
                 const config: CompetitionConfig = {
                   formatType:
                     comp.formatType as CompetitionConfig['formatType'],
-                  config: (comp.configJson ?? {}) as Record<string, any>,
+                  config: (comp.configJson ?? {}) as CompetitionConfig['config'],
                 } as CompetitionConfig;
 
                 let result;

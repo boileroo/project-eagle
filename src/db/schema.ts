@@ -11,6 +11,15 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
+/** JSON-safe value type for jsonb columns (avoids `any` while remaining assignable to `{}`) */
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
 // ──────────────────────────────────────────────
 // Enums
 // ──────────────────────────────────────────────
@@ -337,8 +346,7 @@ export const competitions = pgTable('competitions', {
     .default('individual'),
   groupScope: groupScopeEnum('group_scope').notNull().default('all'),
   formatType: text('format_type').notNull(),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  configJson: jsonb('config_json').$type<Record<string, any>>(),
+  configJson: jsonb('config_json').$type<Record<string, JsonValue>>(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -359,9 +367,8 @@ export const tournamentStandings = pgTable('tournament_standings', {
   name: text('name').notNull(),
   participantType: participantTypeEnum('participant_type').notNull(),
   /** Aggregation method + config */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   aggregationConfig: jsonb('aggregation_config')
-    .$type<Record<string, any>>()
+    .$type<Record<string, JsonValue>>()
     .notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()

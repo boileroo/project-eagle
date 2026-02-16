@@ -183,7 +183,7 @@ export function AddBonusCompDialog({
                 }
               />
               <p className="text-muted-foreground text-xs">
-                Points added to the winner's individual tournament standing.
+                Points added to the winner&apos;s individual tournament standing.
               </p>
             </div>
           )}

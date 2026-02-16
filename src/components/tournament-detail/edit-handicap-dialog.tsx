@@ -54,7 +54,7 @@ export function EditHandicapDialog({
         <DialogHeader>
           <DialogTitle>Handicap Override</DialogTitle>
           <DialogDescription>
-            Set a tournament-specific handicap. Leave blank to use the player's
+            Set a tournament-specific handicap. Leave blank to use the player&apos;s
             current handicap.
           </DialogDescription>
         </DialogHeader>

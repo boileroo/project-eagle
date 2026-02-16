@@ -56,15 +56,16 @@ export function PlayersAndGroupsSection({
   const groups = round.groups ?? [];
 
   const groupParticipantsMap = useMemo(() => {
+    const g = round.groups ?? [];
     const map = new Map<string, RoundData['participants']>();
-    for (const g of groups) {
+    for (const group of g) {
       map.set(
-        g.id,
-        round.participants.filter((rp) => rp.roundGroupId === g.id),
+        group.id,
+        round.participants.filter((rp) => rp.roundGroupId === group.id),
       );
     }
     return map;
-  }, [groups, round.participants]);
+  }, [round.groups, round.participants]);
 
   const handleAssignToGroup = async (
     roundParticipantId: string,
