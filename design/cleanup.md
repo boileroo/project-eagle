@@ -31,4 +31,4 @@ Tech debt and structural improvements to existing code. Check off and remove ite
 
 ## Dead Code
 
-- [ ] Delete `src/lib/collections.ts` — empty stub (`export {}`) left over from TanStack DB setup
+- [x] Delete `src/lib/collections.ts` — empty stub (`export {}`) left over from TanStack DB setup
