@@ -18,6 +18,7 @@ import {
 } from './competitions';
 import type { CompetitionConfig } from './competitions';
 import { resolveEffectiveHandicap, getPlayingHandicap } from './handicaps';
+import { resolveLatestScores } from './scores.server';
 import { calculateStandings } from './domain/standings';
 import type {
   RoundCompetitionData,
@@ -446,18 +447,13 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
       });
 
       // Resolve scores (latest event per participant+hole)
-      const resolvedScores: ResolvedScore[] = [];
-      const seen = new Set<string>();
-      for (const event of events) {
-        const key = `${event.roundParticipantId}:${event.holeNumber}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        resolvedScores.push({
-          roundParticipantId: event.roundParticipantId,
-          holeNumber: event.holeNumber,
-          strokes: event.strokes,
-        });
-      }
+      const resolvedScores: ResolvedScore[] = resolveLatestScores(events).map(
+        (e) => ({
+          roundParticipantId: e.roundParticipantId,
+          holeNumber: e.holeNumber,
+          strokes: e.strokes,
+        }),
+      );
 
       const holes: HoleData[] = round.course.holes.map((h) => ({
         holeNumber: h.holeNumber,

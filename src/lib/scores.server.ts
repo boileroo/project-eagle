@@ -7,6 +7,28 @@ import { requireAuth } from './auth.helpers';
 import { submitScoreSchema } from './validators';
 
 // ──────────────────────────────────────────────
+// Shared: resolve latest score per (participant, hole)
+// ──────────────────────────────────────────────
+
+/**
+ * Given a list of score events ordered by createdAt DESC,
+ * returns only the latest event per (roundParticipantId, holeNumber).
+ */
+export function resolveLatestScores<
+  T extends { roundParticipantId: string; holeNumber: number },
+>(events: T[]): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const event of events) {
+    const key = `${event.roundParticipantId}:${event.holeNumber}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(event);
+  }
+  return result;
+}
+
+// ──────────────────────────────────────────────
 // Submit a score event (append-only)
 // ──────────────────────────────────────────────
 
@@ -78,6 +100,13 @@ export const getScorecardFn = createServerFn({ method: 'GET' })
       orderBy: [desc(scoreEvents.createdAt)],
     });
 
+    // Count all events per cell first
+    const eventCounts = new Map<string, number>();
+    for (const event of events) {
+      const key = `${event.roundParticipantId}:${event.holeNumber}`;
+      eventCounts.set(key, (eventCounts.get(key) ?? 0) + 1);
+    }
+
     // Resolve: latest event per (roundParticipantId, holeNumber)
     const scorecard: Record<
       string,
@@ -87,20 +116,8 @@ export const getScorecardFn = createServerFn({ method: 'GET' })
       >
     > = {};
 
-    // Count all events per cell first
-    const eventCounts = new Map<string, number>();
-    for (const event of events) {
+    for (const event of resolveLatestScores(events)) {
       const key = `${event.roundParticipantId}:${event.holeNumber}`;
-      eventCounts.set(key, (eventCounts.get(key) ?? 0) + 1);
-    }
-
-    // Take only the latest (first in DESC order)
-    const seen = new Set<string>();
-    for (const event of events) {
-      const key = `${event.roundParticipantId}:${event.holeNumber}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-
       if (!scorecard[event.roundParticipantId]) {
         scorecard[event.roundParticipantId] = {};
       }

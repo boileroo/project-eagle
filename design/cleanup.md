@@ -21,7 +21,7 @@ Tech debt and structural improvements to existing code. Check off and remove ite
 
 ## Duplicated Logic
 
-- [ ] Extract shared `resolveLatestScores()` helper — the "iterate events DESC, skip seen via Set" pattern is duplicated between `scores.server.ts` (getScorecardFn) and `competitions.server.ts` (computeStandingsFn)
+- [x] Extract shared `resolveLatestScores()` helper — the "iterate events DESC, skip seen via Set" pattern is duplicated between `scores.server.ts` (getScorecardFn) and `competitions.server.ts` (computeStandingsFn)
 - [ ] Consolidate the three `aggregate*` functions in `domain/standings.ts` that share team-mapping, totals-accumulation, and sorting boilerplate into a generic `aggregateStandings()` parameterized by a per-round extractor
 
 ## Query Performance
