@@ -402,7 +402,6 @@ export function RoundDetailPage({
           par={scoreTarget.par}
           currentStrokes={scoreTarget.currentStrokes}
           recordedByRole={getRecordingRole(scoreTarget.roundParticipantId)}
-          onSaved={() => router.invalidate()}
         />
       )}
 

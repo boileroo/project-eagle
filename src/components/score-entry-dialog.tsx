@@ -26,7 +26,6 @@ type ScoreEntryDialogProps = {
   par: number;
   currentStrokes?: number;
   recordedByRole: 'player' | 'marker' | 'commissioner';
-  onSaved: () => void;
 };
 
 export function ScoreEntryDialog({
@@ -39,7 +38,6 @@ export function ScoreEntryDialog({
   par,
   currentStrokes,
   recordedByRole,
-  onSaved,
 }: ScoreEntryDialogProps) {
   const [strokes, setStrokes] = useState<number | null>(currentStrokes ?? null);
   const queryClient = useQueryClient();
@@ -82,13 +80,33 @@ export function ScoreEntryDialog({
         savedOffline,
       };
     },
-    onError: (_error, _variables, context) => {
+    onError: (error, variables, context) => {
       if (context?.previousScorecard) {
         queryClient.setQueryData(scorecardQueryKey, context.previousScorecard);
       } else {
         void queryClient.invalidateQueries({ queryKey: scorecardQueryKey });
       }
-      toast.error('Failed to save score.');
+      const rawMessage = error instanceof Error ? error.message : '';
+      const normalizedMessage = rawMessage.toLowerCase();
+      const message = rawMessage
+        ? normalizedMessage.includes('round must be open')
+          ? 'Round is closed.'
+          : normalizedMessage.includes('round not found')
+            ? 'Round no longer exists.'
+            : normalizedMessage.includes('participant not in this round')
+              ? 'Player is no longer in this round.'
+              : normalizedMessage.includes('failed to fetch')
+                ? 'Network error. Check your connection.'
+                : rawMessage
+        : 'Failed to save score.';
+      const wasSavedOffline = variables?.clientMeta?.savedOffline ?? false;
+      const prefix = wasSavedOffline
+        ? 'Offline score could not be synced.'
+        : 'Score could not be saved.';
+      const holeLabel = variables?.holeNumber ?? holeNumber;
+      toast.error(
+        `${participantName} · Hole ${holeLabel}: ${prefix} ${message}`,
+      );
     },
   });
 
@@ -114,7 +132,6 @@ export function ScoreEntryDialog({
     };
     scoreMutation.mutate(variables);
     onOpenChange(false);
-    onSaved();
   };
 
   const disableSave =
