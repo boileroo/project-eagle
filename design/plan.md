@@ -367,11 +367,14 @@ Polish for real-world on-course use.
 - Round routes render normally offline from persisted cache
 - Contextual error toasts for failed mutations with server error mapping and offline/online prefixing
 
-### 6.3 Supabase Realtime
+### 6.3 Supabase Realtime ✅
 
-- Subscribe to `score_events` inserts
-- When another device enters a score, the leaderboard updates live
-- Handle subscription lifecycle (connect, disconnect, reconnect)
+- `score_events` added to `supabase_realtime` publication
+- `useScoreRealtime(roundId, userId)` hook subscribes to INSERT events filtered by `round_id`
+- Skips own events to avoid double invalidation with optimistic update path
+- Debounced query invalidation (500ms) batches rapid inserts
+- Reconnect invalidates to catch missed events
+- Channel cleanup on route unmount
 
 ### 6.4 Conflict Verification
 

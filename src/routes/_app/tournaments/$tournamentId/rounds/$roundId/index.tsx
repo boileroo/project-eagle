@@ -11,6 +11,7 @@ import { getCoursesFn } from '@/lib/courses.server';
 import { getScorecardFn } from '@/lib/scores.server';
 import { getRoundCompetitionsFn } from '@/lib/competitions.server';
 import { useAuth } from '@/hooks/use-auth';
+import { useScoreRealtime } from '@/hooks/use-score-realtime';
 import { RoundDetailPage } from '@/components/pages';
 
 const roundQueryOptions = (roundId: string) =>
@@ -92,6 +93,8 @@ function RouteComponent() {
     enabled: shouldLoadTournament,
   });
   const { user } = useAuth();
+
+  useScoreRealtime(roundId, user!.id);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
