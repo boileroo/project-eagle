@@ -10,7 +10,6 @@ import { getScorecardFn } from '@/lib/scores.server';
 import { getRoundCompetitionsFn } from '@/lib/competitions.server';
 import { Scorecard } from '@/components/scorecard';
 import { ScoreEntryDialog } from '@/components/score-entry-dialog';
-import { ScoreHistoryDialog } from '@/components/score-history-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -85,14 +84,6 @@ export function RoundDetailPage({
     currentStrokes?: number;
     participantName: string;
     par: number;
-  } | null>(null);
-
-  // Score history dialog state
-  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-  const [historyTarget, setHistoryTarget] = useState<{
-    roundParticipantId: string;
-    holeNumber: number;
-    participantName: string;
   } | null>(null);
 
   // Determine if current user is commissioner of this tournament
@@ -304,6 +295,7 @@ export function RoundDetailPage({
         <PlayersAndGroupsSection
           round={round}
           isCommissioner={isCommissioner}
+          userId={userId}
           onChanged={() => router.invalidate()}
         />
       )}
@@ -360,17 +352,6 @@ export function RoundDetailPage({
             setScoreDialogOpen(true);
           };
 
-          const handleHistoryClick = (rpId: string, holeNumber: number) => {
-            const rp = round.participants.find((p) => p.id === rpId);
-            if (!rp) return;
-            setHistoryTarget({
-              roundParticipantId: rpId,
-              holeNumber,
-              participantName: rp.person.displayName,
-            });
-            setHistoryDialogOpen(true);
-          };
-
           return sections.map((section) => (
             <Card key={section.label}>
               <CardHeader>
@@ -383,7 +364,6 @@ export function RoundDetailPage({
                   scores={scorecard}
                   roundStatus={round.status}
                   onScoreClick={handleScoreClick}
-                  onHistoryClick={handleHistoryClick}
                 />
               </CardContent>
             </Card>
@@ -402,17 +382,6 @@ export function RoundDetailPage({
           par={scoreTarget.par}
           currentStrokes={scoreTarget.currentStrokes}
           recordedByRole={getRecordingRole(scoreTarget.roundParticipantId)}
-        />
-      )}
-
-      {/* Score history dialog */}
-      {historyTarget && (
-        <ScoreHistoryDialog
-          open={historyDialogOpen}
-          onOpenChange={setHistoryDialogOpen}
-          roundParticipantId={historyTarget.roundParticipantId}
-          holeNumber={historyTarget.holeNumber}
-          participantName={historyTarget.participantName}
         />
       )}
 

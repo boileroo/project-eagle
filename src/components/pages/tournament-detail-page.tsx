@@ -7,6 +7,7 @@ import {
   updateParticipantFn,
   ensureMyPersonFn,
 } from '@/lib/tournaments.server';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -296,20 +297,22 @@ export function TournamentDetailPage({
           <CardTitle className="flex items-center justify-between">
             <span>Players</span>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5">
-                <Switch
-                  id="tournament-teams-toggle"
-                  checked={showTeams}
-                  onCheckedChange={setShowTeams}
-                  className="scale-75"
-                />
-                <Label
-                  htmlFor="tournament-teams-toggle"
-                  className="text-muted-foreground cursor-pointer text-xs font-normal"
-                >
-                  Teams
-                </Label>
-              </div>
+              {isCommissioner && (
+                <div className="flex items-center gap-1.5">
+                  <Switch
+                    id="tournament-teams-toggle"
+                    checked={showTeams}
+                    onCheckedChange={setShowTeams}
+                    className="scale-75"
+                  />
+                  <Label
+                    htmlFor="tournament-teams-toggle"
+                    className="text-muted-foreground cursor-pointer text-xs font-normal"
+                  >
+                    Teams
+                  </Label>
+                </div>
+              )}
               <Badge variant="secondary">
                 {tournament.participants.length} player
                 {tournament.participants.length !== 1 ? 's' : ''}
@@ -338,12 +341,19 @@ export function TournamentDetailPage({
               {tournament.participants.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2"
+                  className={cn(
+                    'flex items-center justify-between rounded-md border px-3 py-2',
+                    p.person.userId === userId && 'bg-primary/5',
+                    p.person.userId == null && 'border-dashed',
+                  )}
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">
                       {p.person.displayName}
                     </span>
+                    {p.person.userId === userId && (
+                      <Badge className="text-xs">You</Badge>
+                    )}
                     {p.person.userId == null && (
                       <Badge variant="outline" className="text-xs">
                         Guest

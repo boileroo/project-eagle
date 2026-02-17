@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { removeRoundParticipantFn } from '@/lib/rounds.server';
+import { cn } from '@/lib/utils';
 import {
   createRoundGroupFn,
   deleteRoundGroupFn,
@@ -33,10 +34,12 @@ import type { RoundData } from './types';
 export function PlayersAndGroupsSection({
   round,
   isCommissioner,
+  userId,
   onChanged,
 }: {
   round: RoundData;
   isCommissioner: boolean;
+  userId: string;
   onChanged: () => void;
 }) {
   const [assigning, setAssigning] = useState<string | null>(null);
@@ -157,9 +160,16 @@ export function PlayersAndGroupsSection({
     rp: RoundData['participants'][number];
     showGroupAssign?: boolean;
   }) => (
-    <div className="flex items-center justify-between rounded-md border px-3 py-2">
+    <div
+      className={cn(
+        'flex items-center justify-between rounded-md border px-3 py-2',
+        rp.person.userId === userId && 'bg-primary/5',
+        rp.person.userId == null && 'border-dashed',
+      )}
+    >
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium">{rp.person.displayName}</span>
+        {rp.person.userId === userId && <Badge className="text-xs">You</Badge>}
         {rp.person.userId == null && (
           <Badge variant="outline" className="text-xs">
             Guest

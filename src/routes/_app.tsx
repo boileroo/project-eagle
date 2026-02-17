@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   createFileRoute,
   redirect,
@@ -45,6 +46,22 @@ function AppLayout() {
   const pendingScoreMutations = useIsMutating({
     mutationKey: ['submit-score'],
   });
+  const [showOfflineFallback, setShowOfflineFallback] = useState(false);
+
+  useEffect(() => {
+    if (isOnline || isRoundRoute) {
+      setShowOfflineFallback(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setShowOfflineFallback(true);
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [isOnline, isRoundRoute]);
 
   return (
     <div className="bg-background min-h-screen">
@@ -98,7 +115,7 @@ function AppLayout() {
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6">
-        {!isOnline && !isRoundRoute ? (
+        {showOfflineFallback ? (
           <OfflineFallback roundId={roundId} tournamentId={tournamentId} />
         ) : (
           <Outlet />

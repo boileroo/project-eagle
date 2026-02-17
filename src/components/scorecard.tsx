@@ -44,7 +44,6 @@ type ScorecardProps = {
     holeNumber: number,
     currentStrokes?: number,
   ) => void;
-  onHistoryClick?: (roundParticipantId: string, holeNumber: number) => void;
 };
 
 // ──────────────────────────────────────────────
@@ -84,7 +83,6 @@ export function Scorecard({
   scores,
   roundStatus,
   onScoreClick,
-  onHistoryClick,
 }: ScorecardProps) {
   const canEdit = roundStatus === 'open';
 
@@ -152,7 +150,7 @@ export function Scorecard({
         )}
         {/* Stroke dots — show strokes received on this hole */}
         {strokesReceived > 0 && (
-          <span className="absolute right-0.5 top-0.5 flex gap-px">
+          <span className="absolute top-0.5 right-0.5 flex gap-px">
             {Array.from({ length: strokesReceived }).map((_, i) => (
               <span
                 key={i}
@@ -160,25 +158,6 @@ export function Scorecard({
               />
             ))}
           </span>
-        )}
-        {/* Commissioner override indicator */}
-        {cell?.recordedByRole === 'commissioner' && (
-          <span className="absolute bottom-0.5 right-0.5 text-[8px] opacity-50">
-            ⚙
-          </span>
-        )}
-        {/* History indicator — multiple events */}
-        {cell && cell.eventCount > 1 && onHistoryClick && (
-          <button
-            type="button"
-            className="text-muted-foreground absolute left-0.5 top-0.5 text-[8px] opacity-60 hover:opacity-100"
-            onClick={(e) => {
-              e.stopPropagation();
-              onHistoryClick(participant.id, hole.holeNumber);
-            }}
-          >
-            ✎
-          </button>
         )}
       </td>
     );

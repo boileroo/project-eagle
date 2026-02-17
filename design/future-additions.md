@@ -89,9 +89,9 @@ Key files:
 
 ---
 
-## Private Tournaments & Invite System
+## Private Tournaments & Join via Code
 
-Tournaments should be private by default. The tournaments dashboard should only show tournaments the user is a participant in (or created). Joining a tournament requires either an invite code or being added by a commissioner.
+Tournaments are private by default. The dashboard only shows tournaments the user participates in (or created). Joining a tournament requires entering a join code or being added directly by a commissioner.
 
 ### Why deferred
 
@@ -101,23 +101,23 @@ The current model has no visibility/access control on tournaments — `getTourna
 
 **Schema changes:**
 
-- Add `inviteCode` column to `tournaments` (a short, human-friendly code like `EAGLE-7X3K`)
+- Add `joinCode` column to `tournaments` (a short, human-friendly code like `EAGLE-7X3K`)
 - Auto-generate on tournament creation
 
 **Query changes:**
 
 - `getTournamentsFn` (dashboard list) — filter to tournaments where the user is a participant OR the creator
-- `getTournamentFn` (detail page) — allow access if participant, creator, or valid invite code provided
+- `getTournamentFn` (detail page) — allow access if participant, creator, or valid join code provided
 
 **Join flow:**
 
-- New "Join Tournament" UI (enter invite code → preview tournament → join)
+- New "Join Tournament" UI (enter join code → preview tournament → confirm join)
 - Commissioner can still add players directly (existing flow)
-- Commissioner can regenerate/revoke the invite code
+- Commissioner can regenerate/revoke the join code
 
 **UI changes:**
 
-- Tournament detail page: show invite code to commissioners (with copy button)
+- Tournament detail page: show join code to commissioners (with copy button)
 - Dashboard: only shows "my tournaments"
 - New join route (e.g., `/tournaments/join` or `/tournaments/join/:code`)
 
@@ -126,7 +126,7 @@ The current model has no visibility/access control on tournaments — `getTourna
 - Schema: minor (1 new column on `tournaments`)
 - Migration: simple (add column, backfill codes for existing tournaments)
 - Queries: minor (`getTournamentsFn` adds a WHERE clause)
-- UI: moderate (join flow, invite code display, share button)
+- UI: moderate (join flow, join code display, share button)
 - Auth: no changes (existing participant/commissioner checks are sufficient)
 
 ### Key decisions
@@ -134,6 +134,114 @@ The current model has no visibility/access control on tournaments — `getTourna
 1. **Code format** — short alphanumeric (e.g., `EAGLE-7X3K`) vs UUID-based URL. Short codes are easier to share verbally on the golf course.
 2. **Code expiry** — codes could optionally expire or be single-use. Simplest v1: codes are permanent until regenerated.
 3. **Deep link** — `/tournaments/join/EAGLE-7X3K` could auto-fill the code from the URL, making it shareable as a link too.
+
+---
+
+## Friends System
+
+A social layer that lets users connect with other golfers. Friends can be quickly added to tournaments by commissioners without needing a join code, making it easy to organise regular groups.
+
+### Why deferred
+
+The current system has no user-to-user relationships — participants are added by searching all persons or creating guests. A friends system introduces a new schema domain (friendships, requests), new UI surfaces (friend list, requests, search), and a friend-code sharing mechanism. It's a significant feature that benefits from the private tournaments work being done first.
+
+### Sub-features
+
+1. **Friend code** — each user has a unique, permanent code (e.g., `EAGLE-TOM1`) displayed on their profile. Share it verbally on the course, via text, or as a link (`/friends/add/EAGLE-TOM1`).
+2. **Send friend request** — enter a friend code (or follow a link) to send a request. The sender sees a confirmation with the recipient's display name.
+3. **Friend request notifications** — incoming requests surface as a badge/indicator in the app header or nav. A dedicated requests page lists pending incoming and outgoing requests.
+4. **Accept / decline requests** — recipient can accept (creates the friendship) or decline (discards the request). Optionally: a declined request can be re-sent after a cooldown.
+5. **Friends list** — view all current friends with display name, handicap, and online/last-seen indicators (if available). Search/filter within the list.
+6. **Remove friend** — either party can remove the friendship at any time. Removing is silent (no notification to the other party).
+7. **Commissioner quick-add from friends** — when adding participants to a tournament, the commissioner sees a "My Friends" tab alongside the existing person search. Selecting a friend adds them as a participant directly (no join code needed). This extends the existing `addParticipantFn` flow.
+8. **Block user** (optional, v2) — prevent a specific user from sending friend requests. Blocked users cannot find you via friend code.
+
+### Proposed schema
+
+**`friendships` table:**
+
+| Column         | Type                                    | Notes                                                            |
+| -------------- | --------------------------------------- | ---------------------------------------------------------------- |
+| `id`           | uuid PK                                 |                                                                  |
+| `userId`       | uuid, not null                          | FK -> `profiles.id`, cascade. The user who sent the request.     |
+| `friendUserId` | uuid, not null                          | FK -> `profiles.id`, cascade. The user who received the request. |
+| `status`       | enum(`pending`, `accepted`, `declined`) |                                                                  |
+| `createdAt`    | timestamptz                             | When the request was sent                                        |
+| `respondedAt`  | timestamptz, nullable                   | When accepted/declined                                           |
+
+- **Unique constraint** on `(userId, friendUserId)` — only one active request/friendship between any two users.
+- **Check constraint**: `userId != friendUserId` — cannot befriend yourself.
+- A friendship is **symmetrical**: once `status = 'accepted'`, both users appear in each other's friends list. Only one row exists per pair (the direction records who initiated).
+- Querying "my friends" means: `WHERE (userId = me OR friendUserId = me) AND status = 'accepted'`.
+
+**`profiles` table changes:**
+
+| Column       | Type                   | Notes                                                                     |
+| ------------ | ---------------------- | ------------------------------------------------------------------------- |
+| `friendCode` | text, unique, not null | Auto-generated on signup (e.g., `EAGLE-TOM1`). Displayed on profile page. |
+
+### Query patterns
+
+- **Get friends list**: `SELECT * FROM friendships WHERE (userId = $me OR friendUserId = $me) AND status = 'accepted'` — join to `profiles` and `persons` for display info.
+- **Get pending requests (incoming)**: `WHERE friendUserId = $me AND status = 'pending'`
+- **Get pending requests (outgoing)**: `WHERE userId = $me AND status = 'pending'`
+- **Send request**: `INSERT INTO friendships (userId, friendUserId, status) VALUES ($me, $them, 'pending')` — reject if row already exists.
+- **Accept request**: `UPDATE friendships SET status = 'accepted', respondedAt = now() WHERE id = $id AND friendUserId = $me`
+- **Decline request**: `UPDATE friendships SET status = 'declined', respondedAt = now() WHERE id = $id AND friendUserId = $me`
+- **Remove friend**: `DELETE FROM friendships WHERE id = $id AND (userId = $me OR friendUserId = $me)`
+- **Lookup by friend code**: `SELECT * FROM profiles WHERE friendCode = $code` — used when entering a code to send a request.
+
+### Server functions
+
+| Function                   | Purpose                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| `sendFriendRequestFn`      | Look up friend code -> validate target exists and isn't self -> insert `pending` friendship |
+| `respondToFriendRequestFn` | Accept or decline an incoming request                                                       |
+| `removeFriendFn`           | Delete an accepted friendship                                                               |
+| `getFriendsFn`             | Return accepted friends for the current user (with person/profile info)                     |
+| `getFriendRequestsFn`      | Return pending incoming and outgoing requests                                               |
+| `getFriendCodeFn`          | Return the current user's friend code (for display/sharing)                                 |
+
+### Routes
+
+| Route                | Purpose                                                                     |
+| -------------------- | --------------------------------------------------------------------------- |
+| `/friends`           | Friends list + pending request count badge                                  |
+| `/friends/requests`  | Incoming and outgoing friend requests with accept/decline actions           |
+| `/friends/add`       | Enter a friend code to send a request                                       |
+| `/friends/add/:code` | Deep link — auto-fills the code, shows target user preview, confirm to send |
+
+### Integration with tournaments
+
+The `addParticipantFn` in `tournaments.server.ts` currently lets commissioners search all persons by name. With the friends system:
+
+- The "Add Participant" UI gains a **"Friends" tab** showing the commissioner's friends list (filtered to those not already in the tournament).
+- Selecting a friend calls the existing `addParticipantFn` with their `personId` — no schema change needed, just a UI shortcut.
+- The person search tab remains available for adding non-friends or guests.
+
+### RLS considerations
+
+- `friendships` rows should be visible only to the two users involved: `WHERE userId = auth.uid() OR friendUserId = auth.uid()`.
+- Insert: any authenticated user can insert with `userId = auth.uid()` (cannot impersonate).
+- Update: only `friendUserId = auth.uid()` can accept/decline.
+- Delete: either party (`userId = auth.uid() OR friendUserId = auth.uid()`).
+
+### Impact
+
+- Schema: moderate (1 new table, 1 new column on `profiles`, new RLS policies)
+- Migration: simple (new table, backfill friend codes for existing profiles)
+- Server functions: moderate (6 new functions)
+- Routes: moderate (4 new routes)
+- UI: significant (friends list page, requests page, add-friend flow, friend-code display on profile, "Friends" tab in add-participant modal)
+- Existing code changes: minor (add "Friends" tab to tournament participant add flow)
+
+### Key decisions
+
+1. **Friend code format** — same style as tournament join codes (`EAGLE-XXXX`) vs name-derived (`EAGLE-TOM1`). Name-derived codes are more memorable but require uniqueness handling.
+2. **Re-requesting after decline** — allow immediately, after a cooldown period, or never (requires the other party to initiate). Recommended: allow re-request after the existing row is deleted (manual cleanup or auto-expire declined requests after 30 days).
+3. **Friend code regeneration** — should users be able to change their friend code? Useful if they want to stop receiving requests. If yes, old codes should become invalid immediately.
+4. **Notifications** — friend requests need visibility. Options: badge count in nav (polling or realtime), push notifications (requires native wrapper or web push), or email. Simplest v1: badge count via polling on the app layout loader.
+5. **Mutual friends visibility** — should users see if they share mutual friends with someone? Nice-to-have but adds query complexity. Defer to v2.
 
 ---
 

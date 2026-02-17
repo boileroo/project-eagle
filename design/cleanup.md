@@ -32,3 +32,10 @@ Tech debt and structural improvements to existing code. Check off and remove ite
 ## Dead Code
 
 - [x] Delete `src/lib/collections.ts` — empty stub (`export {}`) left over from TanStack DB setup
+
+## Smoke Test Issues
+
+- [x] ![issue 1](image.png) Teams toggle should not be visible to non-commissioners
+- [x] It would be nice to highlight the User vs other players vs guests more clearly in the players / teams panel
+- [x] The pen / cog icons are annoying on the scorecard, please remove ![alt text](image-1.png)
+- [x] app flickers into the 'offline' placeholder screen when loading / refreshing
