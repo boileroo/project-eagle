@@ -26,8 +26,16 @@ type JsonValue =
 
 export const roundStatusEnum = pgEnum('round_status', [
   'draft',
+  'scheduled',
   'open',
   'finalized',
+]);
+
+export const tournamentStatusEnum = pgEnum('tournament_status', [
+  'setup',
+  'scheduled',
+  'underway',
+  'complete',
 ]);
 
 export const participantTypeEnum = pgEnum('participant_type', [
@@ -47,7 +55,6 @@ export const tournamentRoleEnum = pgEnum('tournament_role', [
   'commissioner',
   'marker',
   'player',
-  'spectator',
 ]);
 
 // ──────────────────────────────────────────────
@@ -133,6 +140,7 @@ export const tournaments = pgTable('tournaments', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   description: text('description'),
+  status: tournamentStatusEnum('status').notNull().default('setup'),
   isSingleRound: boolean('is_single_round').notNull().default(false),
   createdByUserId: uuid('created_by_user_id')
     .references(() => profiles.id, { onDelete: 'set null' })

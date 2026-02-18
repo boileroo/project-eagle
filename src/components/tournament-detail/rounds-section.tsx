@@ -1,13 +1,14 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { reorderRoundsFn } from '@/lib/rounds.server';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { AddRoundDialog } from './add-round-dialog';
+import {
+  statusColors,
+  statusLabels,
+} from '@/components/round-detail/constants';
 
 export function RoundsSection({
   tournament,
-  courses,
   isCommissioner,
   onChanged,
 }: {
@@ -22,16 +23,11 @@ export function RoundsSection({
       course: { id: string; name: string } | null;
     }[];
   };
-  courses: {
-    id: string;
-    name: string;
-    location: string | null;
-    numberOfHoles: number;
-  }[];
   isCommissioner: boolean;
   onChanged: () => void;
 }) {
   const sortedRounds = tournament.rounds;
+  const navigate = useNavigate();
 
   const getDateTime = (r: {
     date: string | Date | null;
@@ -121,90 +117,79 @@ export function RoundsSection({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Rounds</span>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">
-              {sortedRounds.length} round
-              {sortedRounds.length !== 1 ? 's' : ''}
-            </Badge>
-            {isCommissioner && (
-              <AddRoundDialog
-                tournamentId={tournament.id}
-                courses={courses}
-                onAdded={onChanged}
-              />
-            )}
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {sortedRounds.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            No rounds yet. Add a round to get started.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {sortedRounds.map((r, idx) => (
-              <div key={r.id} className="flex items-center gap-2">
-                {isCommissioner && showArrows && (
-                  <div className="flex w-4 flex-col items-center">
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground px-0.5 text-xs leading-none disabled:opacity-25"
-                      disabled={!canMoveUp(idx)}
-                      onClick={() => handleMoveUp(idx)}
-                      aria-label="Move up"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground px-0.5 text-xs leading-none disabled:opacity-25"
-                      disabled={!canMoveDown(idx)}
-                      onClick={() => handleMoveDown(idx)}
-                      aria-label="Move down"
-                    >
-                      ▼
-                    </button>
-                  </div>
-                )}
-                <Link
-                  to="/tournaments/$tournamentId/rounds/$roundId"
-                  params={{
-                    tournamentId: tournament.id,
-                    roundId: r.id,
-                  }}
-                  className="hover:bg-accent group flex flex-1 items-center justify-between rounded-md border px-3 py-2 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="group-hover:text-primary text-sm font-medium">
-                      Round {idx + 1}
-                    </span>
-                    {r.course && (
-                      <span className="text-muted-foreground text-sm">
-                        @ {r.course.name}
-                      </span>
-                    )}
-                    {formatDateTime(r) && (
-                      <span className="text-muted-foreground text-xs">
-                        · {formatDateTime(r)}
-                      </span>
-                    )}
-                  </div>
-                  <Badge
-                    variant={r.status === 'finalized' ? 'default' : 'outline'}
+    <>
+      {sortedRounds.length === 0 ? (
+        <p className="text-muted-foreground text-sm">
+          No rounds yet. Add a round to get started.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {sortedRounds.map((r, idx) => (
+            <div key={r.id} className="flex items-center gap-2">
+              {isCommissioner && showArrows && (
+                <div className="flex w-4 flex-col items-center">
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground px-0.5 text-xs leading-none disabled:opacity-25"
+                    disabled={!canMoveUp(idx)}
+                    onClick={() => handleMoveUp(idx)}
+                    aria-label="Move up"
                   >
-                    {r.status}
-                  </Badge>
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground px-0.5 text-xs leading-none disabled:opacity-25"
+                    disabled={!canMoveDown(idx)}
+                    onClick={() => handleMoveDown(idx)}
+                    aria-label="Move down"
+                  >
+                    ▼
+                  </button>
+                </div>
+              )}
+              <Link
+                to="/tournaments/$tournamentId/rounds/$roundId"
+                params={{
+                  tournamentId: tournament.id,
+                  roundId: r.id,
+                }}
+                className="hover:bg-accent group flex flex-1 items-center justify-between rounded-md border px-3 py-2 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="group-hover:text-primary text-sm font-medium">
+                    Round {idx + 1}
+                  </span>
+                  {r.course && (
+                    <span
+                      role="link"
+                      className="text-muted-foreground hover:text-primary cursor-pointer text-sm hover:underline"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        void navigate({
+                          to: '/courses/$courseId',
+                          params: { courseId: r.course!.id },
+                        });
+                      }}
+                    >
+                      @ {r.course.name}
+                    </span>
+                  )}
+                  {formatDateTime(r) && (
+                    <span className="text-muted-foreground text-xs">
+                      · {formatDateTime(r)}
+                    </span>
+                  )}
+                </div>
+                <Badge variant={statusColors[r.status] ?? 'outline'}>
+                  {statusLabels[r.status] ?? r.status}
+                </Badge>
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   );
 }

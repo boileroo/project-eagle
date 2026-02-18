@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { updateParticipantFn } from '@/lib/tournaments.server';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,15 +11,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
 export function EditHandicapDialog({
   participant,
   onSaved,
+  trigger,
 }: {
   participant: { id: string; handicapOverride: string | null };
   onSaved: () => void;
+  trigger: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(participant.handicapOverride ?? '');
@@ -45,11 +46,7 @@ export function EditHandicapDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-          Set Handicap Override
-        </DropdownMenuItem>
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Handicap Override</DialogTitle>

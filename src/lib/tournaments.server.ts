@@ -19,6 +19,25 @@ import {
   updateParticipantSchema,
   updateTournamentSchema,
 } from './validators';
+import { isTournamentInSetup } from './tournament-status';
+
+// ──────────────────────────────────────────────
+// Helper: require tournament to be in setup status
+// ──────────────────────────────────────────────
+
+async function requireSetup(tournamentId: string) {
+  const tournament = await db.query.tournaments.findFirst({
+    where: eq(tournaments.id, tournamentId),
+    columns: { status: true },
+  });
+  if (!tournament) throw new Error('Tournament not found');
+  if (!isTournamentInSetup(tournament.status)) {
+    throw new Error(
+      'This action is only available while the tournament is in setup',
+    );
+  }
+  return tournament;
+}
 
 // ──────────────────────────────────────────────
 // List all tournaments
@@ -145,6 +164,7 @@ export const deleteTournamentFn = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ tournamentId: z.string().uuid() }))
   .handler(async ({ data }) => {
     await requireCommissioner(data.tournamentId);
+    await requireSetup(data.tournamentId);
 
     const existing = await db.query.tournaments.findFirst({
       where: eq(tournaments.id, data.tournamentId),
@@ -235,11 +255,16 @@ export const addParticipantFn = createServerFn({ method: 'POST' })
 
     const isSelfJoin = person.userId === user.id;
 
-    // Verify tournament exists
+    // Verify tournament exists and is in setup
     const tournament = await db.query.tournaments.findFirst({
       where: eq(tournaments.id, data.tournamentId),
     });
     if (!tournament) throw new Error('Tournament not found');
+    if (!isTournamentInSetup(tournament.status)) {
+      throw new Error(
+        'Cannot add participants once the tournament has left setup',
+      );
+    }
 
     const isCreator = tournament.createdByUserId === user.id;
 
@@ -272,12 +297,12 @@ export const addParticipantFn = createServerFn({ method: 'POST' })
 
     const role = isSelfJoin ? 'player' : (data.role ?? 'player');
 
-    // Guests can only be player or spectator
+    // Guests can only be players
     if (
       person.userId == null &&
       (role === 'commissioner' || role === 'marker')
     ) {
-      throw new Error('Guests can only be assigned player or spectator roles');
+      throw new Error('Guests can only be assigned the player role');
     }
 
     // If adding as commissioner, demote any existing commissioner to player
@@ -352,27 +377,20 @@ export const updateParticipantFn = createServerFn({ method: 'POST' })
     if (!existing) throw new Error('Participant not found');
 
     await requireCommissioner(existing.tournamentId);
+    await requireSetup(existing.tournamentId);
 
-    // Guest role restriction
+    // Cannot change the role of a commissioner
+    if (data.role !== undefined && existing.role === 'commissioner') {
+      throw new Error('The commissioner role cannot be changed');
+    }
+
+    // Guests can only be players
     if (
       data.role !== undefined &&
       existing.person.userId == null &&
-      (data.role === 'commissioner' || data.role === 'marker')
+      data.role === 'marker'
     ) {
-      throw new Error('Guests can only be assigned player or spectator roles');
-    }
-
-    // If promoting to commissioner, demote existing commissioner to player
-    if (data.role === 'commissioner' && existing.role !== 'commissioner') {
-      await db
-        .update(tournamentParticipants)
-        .set({ role: 'player' })
-        .where(
-          and(
-            eq(tournamentParticipants.tournamentId, existing.tournamentId),
-            eq(tournamentParticipants.role, 'commissioner'),
-          ),
-        );
+      throw new Error('Guests can only be assigned the player role');
     }
 
     const updates: Record<string, unknown> = {};
@@ -403,6 +421,7 @@ export const removeParticipantFn = createServerFn({ method: 'POST' })
     if (!existing) throw new Error('Participant not found');
 
     await requireCommissioner(existing.tournamentId);
+    await requireSetup(existing.tournamentId);
 
     await db
       .delete(tournamentParticipants)
@@ -458,3 +477,91 @@ export const ensureMyPersonFn = createServerFn({ method: 'POST' }).handler(
     return person;
   },
 );
+
+// ──────────────────────────────────────────────
+// Lock tournament (setup → scheduled)
+// Bulk-transitions all draft rounds to scheduled
+// ──────────────────────────────────────────────
+
+export const lockTournamentFn = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ tournamentId: z.string().uuid() }))
+  .handler(async ({ data }) => {
+    await requireCommissioner(data.tournamentId);
+
+    const tournament = await db.query.tournaments.findFirst({
+      where: eq(tournaments.id, data.tournamentId),
+    });
+    if (!tournament) throw new Error('Tournament not found');
+    if (tournament.status !== 'setup') {
+      throw new Error('Tournament is already locked');
+    }
+
+    // Require at least one round to lock
+    const tournamentRounds = await db.query.rounds.findMany({
+      where: eq(rounds.tournamentId, data.tournamentId),
+    });
+    if (tournamentRounds.length === 0) {
+      throw new Error(
+        'Cannot lock a tournament with no rounds. Add at least one round first.',
+      );
+    }
+
+    // Bulk-transition all draft rounds to scheduled
+    await db
+      .update(rounds)
+      .set({ status: 'scheduled', updatedAt: new Date() })
+      .where(
+        and(
+          eq(rounds.tournamentId, data.tournamentId),
+          eq(rounds.status, 'draft'),
+        ),
+      );
+
+    // Update tournament status
+    await db
+      .update(tournaments)
+      .set({ status: 'scheduled', updatedAt: new Date() })
+      .where(eq(tournaments.id, data.tournamentId));
+
+    return { success: true };
+  });
+
+// ──────────────────────────────────────────────
+// Unlock tournament (scheduled → setup)
+// Reverts all scheduled rounds back to draft
+// ──────────────────────────────────────────────
+
+export const unlockTournamentFn = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ tournamentId: z.string().uuid() }))
+  .handler(async ({ data }) => {
+    await requireCommissioner(data.tournamentId);
+
+    const tournament = await db.query.tournaments.findFirst({
+      where: eq(tournaments.id, data.tournamentId),
+    });
+    if (!tournament) throw new Error('Tournament not found');
+    if (tournament.status !== 'scheduled') {
+      throw new Error(
+        'Can only unlock a tournament that is in scheduled status',
+      );
+    }
+
+    // Revert all scheduled rounds to draft
+    await db
+      .update(rounds)
+      .set({ status: 'draft', updatedAt: new Date() })
+      .where(
+        and(
+          eq(rounds.tournamentId, data.tournamentId),
+          eq(rounds.status, 'scheduled'),
+        ),
+      );
+
+    // Update tournament status
+    await db
+      .update(tournaments)
+      .set({ status: 'setup', updatedAt: new Date() })
+      .where(eq(tournaments.id, data.tournamentId));
+
+    return { success: true };
+  });

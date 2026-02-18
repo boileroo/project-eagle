@@ -113,9 +113,7 @@ export type CreateSingleRoundInput = z.infer<typeof createSingleRoundSchema>;
 export const addParticipantSchema = z.object({
   tournamentId: z.string().uuid(),
   personId: z.string().uuid(),
-  role: z
-    .enum(['commissioner', 'marker', 'player', 'spectator'])
-    .default('player'),
+  role: z.enum(['commissioner', 'marker', 'player']).default('player'),
   handicapOverride: z
     .number()
     .min(-10)
@@ -128,7 +126,7 @@ export type AddParticipantInput = z.infer<typeof addParticipantSchema>;
 
 export const updateParticipantSchema = z.object({
   participantId: z.string().uuid(),
-  role: z.enum(['commissioner', 'marker', 'player', 'spectator']).optional(),
+  role: z.enum(['marker', 'player']).optional(),
   handicapOverride: z
     .number()
     .min(-10)

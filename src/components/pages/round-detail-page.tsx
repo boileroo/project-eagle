@@ -1,5 +1,4 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useRouter } from '@tanstack/react-router';
 import {
   getRoundFn,
   deleteRoundFn,
@@ -8,6 +7,7 @@ import {
 import { deleteTournamentFn, getTournamentFn } from '@/lib/tournaments.server';
 import { getScorecardFn } from '@/lib/scores.server';
 import { getRoundCompetitionsFn } from '@/lib/competitions.server';
+import { useQueryClient } from '@tanstack/react-query';
 import { Scorecard } from '@/components/scorecard';
 import { ScoreEntryDialog } from '@/components/score-entry-dialog';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   EditRoundDialog,
@@ -70,10 +70,24 @@ export function RoundDetailPage({
   userId: string;
 }) {
   const navigate = useNavigate();
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  const invalidateRoundData = () => {
+    void queryClient.invalidateQueries({ queryKey: ['round', round.id] });
+    void queryClient.invalidateQueries({
+      queryKey: ['competition', 'round', round.id],
+    });
+    if (isSingleRound) {
+      void queryClient.invalidateQueries({
+        queryKey: ['tournament', round.tournamentId],
+      });
+    }
+  };
+
+  const isDraft = round.status === 'draft';
+  const isScheduled = round.status === 'scheduled';
   const isSingleRound = round.tournament?.isSingleRound ?? false;
 
   // Score entry dialog state
@@ -97,10 +111,35 @@ export function RoundDetailPage({
   const getRecordingRole = (
     roundParticipantId: string,
   ): 'player' | 'marker' | 'commissioner' => {
+    if (isCommissioner) return 'commissioner';
     const rp = round.participants.find((p) => p.id === roundParticipantId);
     if (rp?.person.userId === userId) return 'player';
     return 'marker';
   };
+
+  // Compute which participants the current user can edit scores for
+  const editableParticipantIds = useMemo(() => {
+    const set = new Set<string>();
+    if (round.status !== 'open') return set;
+
+    // Find the current user's tournament role
+    const myRoundParticipant = round.participants.find(
+      (rp) => rp.person.userId === userId,
+    );
+    const myTournamentRole = myRoundParticipant?.tournamentParticipant?.role;
+
+    if (myTournamentRole === 'commissioner' || myTournamentRole === 'marker') {
+      // Commissioners and markers can score everyone
+      for (const rp of round.participants) {
+        set.add(rp.id);
+      }
+    } else if (myRoundParticipant) {
+      // Regular players can only score their own card
+      set.add(myRoundParticipant.id);
+    }
+    // Non-participants get an empty set (no editing)
+    return set;
+  }, [round.participants, round.status, userId]);
 
   const tournamentId = round.tournamentId;
 
@@ -132,7 +171,7 @@ export function RoundDetailPage({
     try {
       await transitionRoundFn({ data: { roundId: round.id, newStatus } });
       toast.success(`Round status changed to ${statusLabels[newStatus]}.`);
-      router.invalidate();
+      invalidateRoundData();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to change status',
@@ -171,7 +210,13 @@ export function RoundDetailPage({
               : `Round ${round.roundNumber ?? '—'}`}
           </h1>
           <div className="text-muted-foreground mt-1 flex items-center gap-3">
-            <span>@ {round.course.name}</span>
+            <Link
+              to="/courses/$courseId"
+              params={{ courseId: round.course.id }}
+              className="hover:text-primary hover:underline"
+            >
+              @ {round.course.name}
+            </Link>
             {round.date && (
               <span>
                 {new Date(round.date).toLocaleDateString('en-AU', {
@@ -191,11 +236,11 @@ export function RoundDetailPage({
         </div>
 
         <div className="flex items-center gap-2">
-          {isCommissioner && round.status === 'draft' && (
+          {isCommissioner && isDraft && (
             <EditRoundDialog
               round={round}
               courses={courses}
-              onSaved={() => router.invalidate()}
+              onSaved={() => invalidateRoundData()}
             />
           )}
 
@@ -254,30 +299,6 @@ export function RoundDetailPage({
 
       <Separator />
 
-      {/* Course info — hidden for single rounds since the course name is in the title */}
-      {!isSingleRound && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Course</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{round.course.name}</p>
-                {round.course.location && (
-                  <p className="text-muted-foreground text-sm">
-                    {round.course.location}
-                  </p>
-                )}
-              </div>
-              <Badge variant="secondary">
-                {round.course.numberOfHoles} holes
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* For single rounds: show tournament-level Players panel */}
       {isSingleRound && tournament && (
         <SingleRoundPlayersSection
@@ -286,7 +307,8 @@ export function RoundDetailPage({
           isCommissioner={isCommissioner}
           userId={userId}
           myPerson={myPerson}
-          onChanged={() => router.invalidate()}
+          onChanged={() => invalidateRoundData()}
+          defaultOpen={isDraft || isScheduled}
         />
       )}
 
@@ -296,12 +318,14 @@ export function RoundDetailPage({
           round={round}
           isCommissioner={isCommissioner}
           userId={userId}
-          onChanged={() => router.invalidate()}
+          onChanged={() => invalidateRoundData()}
+          defaultOpen={isDraft || isScheduled}
         />
       )}
 
-      {/* Scorecards — one per group, visible when round is not draft */}
+      {/* Scorecards — one per group, visible when round is open or finalized */}
       {round.status !== 'draft' &&
+        round.status !== 'scheduled' &&
         round.participants.length > 0 &&
         (() => {
           const groups = round.groups ?? [];
@@ -364,6 +388,7 @@ export function RoundDetailPage({
                   scores={scorecard}
                   roundStatus={round.status}
                   onScoreClick={handleScoreClick}
+                  editableParticipantIds={editableParticipantIds}
                 />
               </CardContent>
             </Card>
@@ -399,7 +424,7 @@ export function RoundDetailPage({
                   (rp.tournamentParticipant?.teamMemberships?.length ?? 0) > 0,
               )
         }
-        onChanged={() => router.invalidate()}
+        onChanged={() => invalidateRoundData()}
       />
     </div>
   );

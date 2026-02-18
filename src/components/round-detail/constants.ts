@@ -3,24 +3,30 @@ import type { CompetitionConfig } from '@/lib/competitions';
 export const statusColors: Record<string, 'default' | 'secondary' | 'outline'> =
   {
     draft: 'outline',
+    scheduled: 'secondary',
     open: 'secondary',
     finalized: 'default',
   };
 
 export const statusLabels: Record<string, string> = {
   draft: 'Draft',
-  open: 'Open',
-  finalized: 'Finalized',
+  scheduled: 'Awaiting Start',
+  open: 'In Play',
+  finalized: 'Finished',
 };
 
 export const nextTransitions: Record<
   string,
   { label: string; status: string }[]
 > = {
-  draft: [{ label: 'Open Round', status: 'open' }],
-  open: [
-    { label: 'Finalize', status: 'finalized' },
+  draft: [{ label: 'Mark Awaiting Start', status: 'scheduled' }],
+  scheduled: [
+    { label: 'Start Round', status: 'open' },
     { label: 'Back to Draft', status: 'draft' },
+  ],
+  open: [
+    { label: 'Finish Round', status: 'finalized' },
+    { label: 'Back to Awaiting Start', status: 'scheduled' },
   ],
   finalized: [{ label: 'Reopen for Corrections', status: 'open' }],
 };

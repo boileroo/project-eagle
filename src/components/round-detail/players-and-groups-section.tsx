@@ -7,11 +7,17 @@ import {
   assignParticipantToGroupFn,
   autoAssignGroupsFn,
 } from '@/lib/groups.server';
+import { X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +30,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
@@ -36,11 +41,13 @@ export function PlayersAndGroupsSection({
   isCommissioner,
   userId,
   onChanged,
+  defaultOpen = true,
 }: {
   round: RoundData;
   isCommissioner: boolean;
   userId: string;
   onChanged: () => void;
+  defaultOpen?: boolean;
 }) {
   const [assigning, setAssigning] = useState<string | null>(null);
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
@@ -48,6 +55,7 @@ export function PlayersAndGroupsSection({
   const [autoAssigning, setAutoAssigning] = useState(false);
   const [addingGroup, setAddingGroup] = useState(false);
   const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
+  const [sectionOpen, setSectionOpen] = useState(defaultOpen);
 
   const isDraft = round.status === 'draft';
   const canEditGroups = isCommissioner && isDraft;
@@ -159,196 +167,240 @@ export function PlayersAndGroupsSection({
   }: {
     rp: RoundData['participants'][number];
     showGroupAssign?: boolean;
-  }) => (
-    <div
-      className={cn(
-        'flex items-center justify-between rounded-md border px-3 py-2',
-        rp.person.userId === userId && 'bg-primary/5',
-        rp.person.userId == null && 'border-dashed',
-      )}
-    >
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">{rp.person.displayName}</span>
-        {rp.person.userId === userId && <Badge className="text-xs">You</Badge>}
-        {rp.person.userId == null && (
-          <Badge variant="outline" className="text-xs">
-            Guest
-          </Badge>
+  }) => {
+    const isMe = rp.person.userId === userId;
+    const canEditHc = isDraft && (isCommissioner || isMe);
+    const canRemove = isCommissioner && isDraft && !isMe;
+    const canMoveGroup =
+      canEditGroups && showGroupAssign && showGroups && groups.length > 0;
+    const hcValue = rp.handicapOverride ?? rp.handicapSnapshot;
+
+    return (
+      <div
+        className={cn(
+          'flex items-center justify-between rounded-md border px-3 py-2',
+          isMe && 'bg-primary/5',
+          rp.person.userId == null && 'border-dashed',
         )}
-        {rp.tournamentParticipant?.teamMemberships?.[0]?.team && (
-          <Badge variant="secondary" className="text-xs">
-            {rp.tournamentParticipant.teamMemberships[0].team.name}
-          </Badge>
-        )}
-      </div>
-      <div className="flex items-center gap-2">
-        <Badge variant="outline">
-          HC {rp.handicapOverride ?? rp.handicapSnapshot}
-        </Badge>
-        {rp.handicapOverride && (
-          <span className="text-muted-foreground text-xs">
-            (snap: {rp.handicapSnapshot})
-          </span>
-        )}
-        {round.status === 'draft' && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                ⋯
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <EditRoundHandicapDialog
-                roundParticipant={rp}
-                onSaved={onChanged}
-              />
-              {showGroupAssign &&
-                canEditGroups &&
-                showGroups &&
-                groups.length > 0 && (
-                  <>
-                    <DropdownMenuSeparator />
-                    {groups
-                      .filter((g) => g.id !== rp.roundGroupId)
-                      .map((g) => (
-                        <DropdownMenuItem
-                          key={g.id}
-                          disabled={assigning === rp.id}
-                          onClick={() => handleAssignToGroup(rp.id, g.id)}
-                        >
-                          Move to {g.name || `Group ${g.groupNumber}`}
-                        </DropdownMenuItem>
-                      ))}
-                    {rp.roundGroupId && (
-                      <DropdownMenuItem
-                        disabled={assigning === rp.id}
-                        onClick={() => handleAssignToGroup(rp.id, null)}
-                      >
-                        Unassign from Group
-                      </DropdownMenuItem>
-                    )}
-                  </>
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">{rp.person.displayName}</span>
+          {isMe && <Badge className="text-xs">You</Badge>}
+          {rp.person.userId == null && (
+            <Badge variant="outline" className="text-xs">
+              Guest
+            </Badge>
+          )}
+          {rp.tournamentParticipant?.teamMemberships?.[0]?.team && (
+            <Badge variant="secondary" className="text-xs">
+              {rp.tournamentParticipant.teamMemberships[0].team.name}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
+          {/* ── HC pill ────────────────────── */}
+          {canEditHc ? (
+            <EditRoundHandicapDialog
+              roundParticipant={rp}
+              onSaved={onChanged}
+              trigger={
+                <button type="button" className="cursor-pointer">
+                  <Badge variant="outline" className="hover:bg-accent">
+                    HC {hcValue}
+                  </Badge>
+                </button>
+              }
+            />
+          ) : (
+            <Badge variant="outline">HC {hcValue}</Badge>
+          )}
+          {rp.handicapOverride && (
+            <span className="text-muted-foreground text-xs">
+              (snap: {rp.handicapSnapshot})
+            </span>
+          )}
+
+          {/* ── Group pill (commissioner only) ── */}
+          {canMoveGroup && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="cursor-pointer">
+                  <Badge
+                    variant="secondary"
+                    className="hover:bg-accent text-xs"
+                  >
+                    {rp.roundGroupId
+                      ? (groups.find((g) => g.id === rp.roundGroupId)?.name ??
+                        'Group')
+                      : 'No group'}
+                  </Badge>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {groups
+                  .filter((g) => g.id !== rp.roundGroupId)
+                  .map((g) => (
+                    <DropdownMenuItem
+                      key={g.id}
+                      disabled={assigning === rp.id}
+                      onClick={() => handleAssignToGroup(rp.id, g.id)}
+                    >
+                      Move to {g.name || `Group ${g.groupNumber}`}
+                    </DropdownMenuItem>
+                  ))}
+                {rp.roundGroupId && (
+                  <DropdownMenuItem
+                    disabled={assigning === rp.id}
+                    onClick={() => handleAssignToGroup(rp.id, null)}
+                  >
+                    Unassign from Group
+                  </DropdownMenuItem>
                 )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={() =>
-                  handleRemoveParticipant(rp.id, rp.person.displayName)
-                }
-              >
-                Remove from Round
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* ── Remove button ──────────────── */}
+          {canRemove && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive h-6 w-6"
+              onClick={() =>
+                handleRemoveParticipant(rp.id, rp.person.displayName)
+              }
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between text-lg">
-          <span>{showGroups ? 'Players & Groups' : 'Players'}</span>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">
-              {round.participants.length} player
-              {round.participants.length !== 1 ? 's' : ''}
-            </Badge>
-            {canEditGroups && showGroups && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAutoAssignOpen(true)}
-                  disabled={round.participants.length === 0}
-                >
-                  Auto-assign
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddGroup}
-                  disabled={addingGroup}
-                >
-                  {addingGroup ? '…' : '+ Group'}
-                </Button>
-              </>
-            )}
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {round.participants.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            No players in this round.
-          </p>
-        ) : !showGroups || groups.length === 0 ? (
-          <div className="space-y-2">
-            {round.participants.map((rp) => (
-              <PlayerRow key={rp.id} rp={rp} showGroupAssign={false} />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {groups.map((group) => {
-              const members = groupParticipantsMap.get(group.id) ?? [];
-              return (
-                <div key={group.id} className="rounded-lg border">
-                  <div className="bg-muted/50 flex items-center justify-between rounded-t-lg px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">
-                        {group.name || `Group ${group.groupNumber}`}
+    <Collapsible open={sectionOpen} onOpenChange={setSectionOpen}>
+      <Card>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="cursor-pointer select-none">
+            <CardTitle className="flex items-center justify-between text-lg">
+              <span>{showGroups ? 'Players & Groups' : 'Players'}</span>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">
+                  {round.participants.length} player
+                  {round.participants.length !== 1 ? 's' : ''}
+                </Badge>
+                {canEditGroups && showGroups && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ')
+                        e.stopPropagation();
+                    }}
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAutoAssignOpen(true)}
+                      disabled={round.participants.length === 0}
+                    >
+                      Auto-assign
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddGroup}
+                      disabled={addingGroup}
+                      className="ml-2"
+                    >
+                      {addingGroup ? '…' : '+ Group'}
+                    </Button>
+                  </div>
+                )}
+                <ChevronDown
+                  className={cn(
+                    'text-muted-foreground h-4 w-4 shrink-0 transition-transform duration-200',
+                    sectionOpen && 'rotate-180',
+                  )}
+                />
+              </div>
+            </CardTitle>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent>
+            {round.participants.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                No players in this round.
+              </p>
+            ) : !showGroups || groups.length === 0 ? (
+              <div className="space-y-2">
+                {round.participants.map((rp) => (
+                  <PlayerRow key={rp.id} rp={rp} showGroupAssign={false} />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {groups.map((group) => {
+                  const members = groupParticipantsMap.get(group.id) ?? [];
+                  return (
+                    <div key={group.id} className="rounded-lg border">
+                      <div className="bg-muted/50 flex items-center justify-between rounded-t-lg px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold">
+                            {group.name || `Group ${group.groupNumber}`}
+                          </span>
+                          <Badge variant="secondary" className="text-xs">
+                            {members.length}
+                          </Badge>
+                        </div>
+                        {canEditGroups && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive h-7 text-xs"
+                            disabled={deletingGroupId === group.id}
+                            onClick={() => handleDeleteGroup(group.id)}
+                          >
+                            {deletingGroupId === group.id ? '…' : 'Delete'}
+                          </Button>
+                        )}
+                      </div>
+                      <div className="space-y-1 p-2">
+                        {members.length === 0 ? (
+                          <p className="text-muted-foreground px-2 py-1 text-sm">
+                            No players assigned.
+                          </p>
+                        ) : (
+                          members.map((rp) => <PlayerRow key={rp.id} rp={rp} />)
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {ungrouped.length > 0 && (
+                  <div className="rounded-lg border border-dashed">
+                    <div className="flex items-center gap-2 px-4 py-2">
+                      <span className="text-muted-foreground text-sm font-semibold">
+                        Unassigned
                       </span>
-                      <Badge variant="secondary" className="text-xs">
-                        {members.length}
+                      <Badge variant="outline" className="text-xs">
+                        {ungrouped.length}
                       </Badge>
                     </div>
-                    {canEditGroups && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive h-7 text-xs"
-                        disabled={deletingGroupId === group.id}
-                        onClick={() => handleDeleteGroup(group.id)}
-                      >
-                        {deletingGroupId === group.id ? '…' : 'Delete'}
-                      </Button>
-                    )}
+                    <div className="space-y-1 p-2">
+                      {ungrouped.map((rp) => (
+                        <PlayerRow key={rp.id} rp={rp} />
+                      ))}
+                    </div>
                   </div>
-                  <div className="space-y-1 p-2">
-                    {members.length === 0 ? (
-                      <p className="text-muted-foreground px-2 py-1 text-sm">
-                        No players assigned.
-                      </p>
-                    ) : (
-                      members.map((rp) => <PlayerRow key={rp.id} rp={rp} />)
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {ungrouped.length > 0 && (
-              <div className="rounded-lg border border-dashed">
-                <div className="flex items-center gap-2 px-4 py-2">
-                  <span className="text-muted-foreground text-sm font-semibold">
-                    Unassigned
-                  </span>
-                  <Badge variant="outline" className="text-xs">
-                    {ungrouped.length}
-                  </Badge>
-                </div>
-                <div className="space-y-1 p-2">
-                  {ungrouped.map((rp) => (
-                    <PlayerRow key={rp.id} rp={rp} />
-                  ))}
-                </div>
+                )}
               </div>
             )}
-          </div>
-        )}
-      </CardContent>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
 
       <Dialog open={autoAssignOpen} onOpenChange={setAutoAssignOpen}>
         <DialogContent className="sm:max-w-sm">
@@ -393,6 +445,6 @@ export function PlayersAndGroupsSection({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </Collapsible>
   );
 }

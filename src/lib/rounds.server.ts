@@ -18,6 +18,7 @@ import {
   createSingleRoundSchema,
   updateRoundSchema,
 } from './validators';
+import { deriveTournamentStatus } from './tournament-status';
 
 // ──────────────────────────────────────────────
 // Helper: re-sort round numbers by date/teeTime
@@ -62,6 +63,24 @@ async function resortRoundsByDate(tournamentId: string) {
         .where(eq(rounds.id, sorted[i].id));
     }
   }
+}
+
+// ──────────────────────────────────────────────
+// Helper: sync tournament status from round statuses
+// ──────────────────────────────────────────────
+
+async function syncTournamentStatus(tournamentId: string) {
+  const allRounds = await db.query.rounds.findMany({
+    where: eq(rounds.tournamentId, tournamentId),
+    columns: { status: true },
+  });
+
+  const newStatus = deriveTournamentStatus(allRounds.map((r) => r.status));
+
+  await db
+    .update(tournaments)
+    .set({ status: newStatus, updatedAt: new Date() })
+    .where(eq(tournaments.id, tournamentId));
 }
 
 // ──────────────────────────────────────────────
@@ -145,6 +164,16 @@ export const createRoundFn = createServerFn({ method: 'POST' })
   .inputValidator(createRoundSchema)
   .handler(async ({ data }) => {
     const user = await requireCommissioner(data.tournamentId);
+
+    // Only allow creating rounds when tournament is in setup
+    const tournament = await db.query.tournaments.findFirst({
+      where: eq(tournaments.id, data.tournamentId),
+      columns: { status: true },
+    });
+    if (!tournament) throw new Error('Tournament not found');
+    if (tournament.status !== 'setup') {
+      throw new Error('Can only add rounds while the tournament is in setup');
+    }
 
     // Auto-assign roundNumber as next in sequence
     const [{ value: existingCount }] = await db
@@ -323,8 +352,9 @@ export const reorderRoundsFn = createServerFn({ method: 'POST' })
 // ──────────────────────────────────────────────
 
 const validTransitions: Record<string, string[]> = {
-  draft: ['open'],
-  open: ['finalized', 'draft'],
+  draft: ['scheduled'],
+  scheduled: ['open', 'draft'],
+  open: ['finalized', 'scheduled'],
   finalized: ['open'], // reopen for corrections
 };
 
@@ -366,6 +396,16 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
         }
       }
 
+      if (data.newStatus === 'scheduled') {
+        // Can't schedule if an earlier round is still in draft
+        const draftEarlier = earlierRounds.find((r) => r.status === 'draft');
+        if (draftEarlier) {
+          throw new Error(
+            `Cannot schedule this round while Round ${draftEarlier.roundNumber} is still in draft`,
+          );
+        }
+      }
+
       if (data.newStatus === 'finalized') {
         // Can't finalize if an earlier round isn't finalized
         const unfinalized = earlierRounds.find((r) => r.status !== 'finalized');
@@ -380,10 +420,13 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
     await db
       .update(rounds)
       .set({
-        status: data.newStatus as 'draft' | 'open' | 'finalized',
+        status: data.newStatus as 'draft' | 'scheduled' | 'open' | 'finalized',
         updatedAt: new Date(),
       })
       .where(eq(rounds.id, data.roundId));
+
+    // Auto-sync tournament status based on new round statuses
+    await syncTournamentStatus(existing.tournamentId);
 
     return { success: true };
   });

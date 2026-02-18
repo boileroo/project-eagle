@@ -2,7 +2,13 @@ import { createServerFn } from '@tanstack/react-start';
 import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
-import { scoreEvents, rounds, roundParticipants, persons } from '@/db/schema';
+import {
+  scoreEvents,
+  rounds,
+  roundParticipants,
+  persons,
+  tournamentParticipants,
+} from '@/db/schema';
 import { requireAuth } from './auth.helpers';
 import { submitScoreSchema } from './validators';
 
@@ -56,17 +62,52 @@ export const submitScoreFn = createServerFn({ method: 'POST' })
     });
     if (!rp) throw new Error('Participant not in this round');
 
-    // Verify recordedByRole server-side:
-    // 'player' → the authenticated user must own this participant's person
-    // 'marker' / 'commissioner' → anyone logged in can record
+    // Verify recordedByRole server-side
     let verifiedRole = data.recordedByRole;
+
     if (data.recordedByRole === 'player') {
+      // 'player' → the authenticated user must own this participant's person
       const person = await db.query.persons.findFirst({
         where: eq(persons.id, rp.personId),
       });
       if (!person || person.userId !== user.id) {
-        // They don't own this participant, demote to marker
-        verifiedRole = 'marker';
+        throw new Error('You can only record your own scores as a player');
+      }
+    } else {
+      // 'marker' or 'commissioner' → user must actually hold that role
+      // (or a higher role) in the tournament
+      const userPerson = await db.query.persons.findFirst({
+        where: eq(persons.userId, user.id),
+      });
+      if (!userPerson) {
+        throw new Error('You are not a participant in this tournament');
+      }
+
+      const tp = await db.query.tournamentParticipants.findFirst({
+        where: and(
+          eq(tournamentParticipants.tournamentId, round.tournamentId),
+          eq(tournamentParticipants.personId, userPerson.id),
+        ),
+      });
+      if (!tp) {
+        throw new Error('You are not a participant in this tournament');
+      }
+
+      if (data.recordedByRole === 'commissioner') {
+        if (tp.role !== 'commissioner') {
+          throw new Error(
+            'Only commissioners can record scores as commissioner',
+          );
+        }
+      } else {
+        // marker claim — must be marker or commissioner
+        if (tp.role !== 'marker' && tp.role !== 'commissioner') {
+          throw new Error(
+            'Only markers and commissioners can record scores for other players',
+          );
+        }
+        // Use their actual tournament role
+        verifiedRole = tp.role === 'commissioner' ? 'commissioner' : 'marker';
       }
     }
 
@@ -168,6 +209,24 @@ export const bulkSubmitScoresFn = createServerFn({ method: 'POST' })
       ),
     });
     if (!rp) throw new Error('Participant not in this round');
+
+    // Verify the user is a commissioner in the tournament
+    const userPerson = await db.query.persons.findFirst({
+      where: eq(persons.userId, user.id),
+    });
+    if (!userPerson) {
+      throw new Error('You are not a participant in this tournament');
+    }
+
+    const tp = await db.query.tournamentParticipants.findFirst({
+      where: and(
+        eq(tournamentParticipants.tournamentId, round.tournamentId),
+        eq(tournamentParticipants.personId, userPerson.id),
+      ),
+    });
+    if (!tp || tp.role !== 'commissioner') {
+      throw new Error('Only commissioners can bulk-submit scores');
+    }
 
     // Insert all score events in one batch
     const values = data.scores.map((s) => ({

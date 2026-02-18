@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { updateRoundParticipantFn } from '@/lib/rounds.server';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,12 +11,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
 export function EditRoundHandicapDialog({
   roundParticipant,
   onSaved,
+  trigger,
 }: {
   roundParticipant: {
     id: string;
@@ -24,6 +24,7 @@ export function EditRoundHandicapDialog({
     handicapSnapshot: string;
   };
   onSaved: () => void;
+  trigger: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(roundParticipant.handicapOverride ?? '');
@@ -49,11 +50,7 @@ export function EditRoundHandicapDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-          Set Handicap Override
-        </DropdownMenuItem>
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Round Handicap Override</DialogTitle>

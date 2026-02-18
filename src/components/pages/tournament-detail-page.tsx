@@ -3,16 +3,13 @@ import {
   getTournamentFn,
   deleteTournamentFn,
   addParticipantFn,
-  removeParticipantFn,
-  updateParticipantFn,
   ensureMyPersonFn,
+  lockTournamentFn,
+  unlockTournamentFn,
 } from '@/lib/tournaments.server';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -22,27 +19,41 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Separator } from '@/components/ui/separator';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   AddParticipantDialog,
-  EditHandicapDialog,
+  AddRoundDialog,
   RoundsSection,
   StandingsSection,
-  TeamsSection,
 } from '@/components/tournament-detail';
+import { PlayersAndTeamsSection } from '@/components/tournament-detail/players-and-teams-section';
+import { CollapsibleSection } from '@/components/tournament-detail/collapsible-section';
 import type {
   StandingConfig,
   ComputedStanding,
 } from '@/components/tournament-detail/types';
+
+// ──────────────────────────────────────────────
+// Tournament Status UI Constants
+// ──────────────────────────────────────────────
+
+const tournamentStatusLabels: Record<string, string> = {
+  setup: 'Draft',
+  scheduled: 'Awaiting Start',
+  underway: 'Underway',
+  complete: 'Finished',
+};
+
+const tournamentStatusColors: Record<
+  string,
+  'default' | 'secondary' | 'outline'
+> = {
+  setup: 'outline',
+  scheduled: 'secondary',
+  underway: 'secondary',
+  complete: 'default',
+};
 
 // ──────────────────────────────────────────────
 // Types
@@ -78,11 +89,9 @@ export function TournamentDetailPage({
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [showTeams, setShowTeams] = useState(tournament.teams.length > 0);
-  const [commissionerConfirm, setCommissionerConfirm] = useState<{
-    participantId: string;
-    name: string;
-  } | null>(null);
+  const [createStandingOpen, setCreateStandingOpen] = useState(false);
+  const [locking, setLocking] = useState(false);
+  const [lockDialogOpen, setLockDialogOpen] = useState(false);
 
   const isCreator = userId === tournament.createdByUserId;
   const isCommissioner =
@@ -95,9 +104,9 @@ export function TournamentDetailPage({
   const iAmParticipant = myPerson
     ? tournament.participants.some((p) => p.personId === myPerson.id)
     : false;
-  const currentCommissioner = tournament.participants.find(
-    (p) => p.role === 'commissioner',
-  );
+
+  const isSetup = tournament.status === 'setup';
+  const isScheduled = tournament.status === 'scheduled';
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -136,72 +145,90 @@ export function TournamentDetailPage({
     }
   };
 
-  const handleRemoveParticipant = async (
-    participantId: string,
-    name: string,
-  ) => {
+  const handleLock = async () => {
+    setLocking(true);
     try {
-      await removeParticipantFn({ data: { participantId } });
-      toast.success(`${name} removed from tournament.`);
+      await lockTournamentFn({ data: { tournamentId: tournament.id } });
+      toast.success('Tournament locked. Rounds are now awaiting start.');
+      setLockDialogOpen(false);
       router.invalidate();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to remove participant',
+        error instanceof Error ? error.message : 'Failed to lock tournament',
       );
     }
+    setLocking(false);
   };
 
-  const handleRoleChange = async (
-    participantId: string,
-    role: 'commissioner' | 'marker' | 'player' | 'spectator',
-    personName?: string,
-  ) => {
-    if (
-      role === 'commissioner' &&
-      currentCommissioner &&
-      currentCommissioner.id !== participantId
-    ) {
-      setCommissionerConfirm({
-        participantId,
-        name: personName ?? 'this person',
-      });
-      return;
-    }
-    await applyRoleChange(participantId, role);
-  };
-
-  const applyRoleChange = async (
-    participantId: string,
-    role: 'commissioner' | 'marker' | 'player' | 'spectator',
-  ) => {
+  const handleUnlock = async () => {
+    setLocking(true);
     try {
-      await updateParticipantFn({ data: { participantId, role } });
-      toast.success('Role updated.');
+      await unlockTournamentFn({ data: { tournamentId: tournament.id } });
+      toast.success('Tournament unlocked. Back to draft.');
       router.invalidate();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to update role',
+        error instanceof Error ? error.message : 'Failed to unlock tournament',
       );
     }
+    setLocking(false);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-3">
           <h1 className="text-3xl font-bold tracking-tight">
             {tournament.name}
           </h1>
-          {tournament.description && (
-            <p className="text-muted-foreground mt-1">
-              {tournament.description}
-            </p>
-          )}
+          <Badge variant={tournamentStatusColors[tournament.status ?? 'setup']}>
+            {tournamentStatusLabels[tournament.status ?? 'setup']}
+          </Badge>
         </div>
 
         {isCommissioner && (
           <div className="flex items-center gap-2">
+            {/* Lock / Unlock */}
+            {isSetup && tournament.rounds.length > 0 && (
+              <Dialog open={lockDialogOpen} onOpenChange={setLockDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">Lock Tournament</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Lock tournament?</DialogTitle>
+                    <DialogDescription>
+                      All draft rounds will be moved to &quot;scheduled&quot;.
+                      Players, teams, and rounds will be locked from editing
+                      until you unlock.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setLockDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button onClick={handleLock} disabled={locking}>
+                      {locking ? 'Locking…' : 'Lock'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            {isScheduled && (
+              <Button
+                variant="outline"
+                onClick={handleUnlock}
+                disabled={locking}
+              >
+                {locking ? 'Unlocking…' : 'Unlock Tournament'}
+              </Button>
+            )}
+
             <Button variant="outline" asChild>
               <Link
                 to="/tournaments/$tournamentId/edit"
@@ -211,112 +238,62 @@ export function TournamentDetailPage({
               </Link>
             </Button>
 
-            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="destructive">Delete</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Delete tournament?</DialogTitle>
-                  <DialogDescription>
-                    This will permanently delete{' '}
-                    <strong>{tournament.name}</strong> and all its participants,
-                    rounds, scores, and competitions. This action cannot be
-                    undone.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setDeleteDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                  >
-                    {deleting ? 'Deleting…' : 'Delete'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            {isSetup && (
+              <Dialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="destructive">Delete</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Delete tournament?</DialogTitle>
+                    <DialogDescription>
+                      This will permanently delete{' '}
+                      <strong>{tournament.name}</strong> and all its
+                      participants, rounds, scores, and competitions. This
+                      action cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setDeleteDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={handleDelete}
+                      disabled={deleting}
+                    >
+                      {deleting ? 'Deleting…' : 'Delete'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         )}
       </div>
 
-      {/* Commissioner change confirmation dialog */}
-      <Dialog
-        open={commissionerConfirm !== null}
-        onOpenChange={(open) => !open && setCommissionerConfirm(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change commissioner?</DialogTitle>
-            <DialogDescription>
-              <strong>{commissionerConfirm?.name}</strong> will become the new
-              commissioner.{' '}
-              {currentCommissioner && (
-                <>
-                  <strong>{currentCommissioner.person.displayName}</strong> will
-                  be demoted to Player.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setCommissionerConfirm(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                if (commissionerConfirm) {
-                  await applyRoleChange(
-                    commissionerConfirm.participantId,
-                    'commissioner',
-                  );
-                }
-                setCommissionerConfirm(null);
-              }}
-            >
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {tournament.description && (
+        <p className="text-muted-foreground">{tournament.description}</p>
+      )}
 
       <Separator />
 
-      {/* Participants section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Players</span>
+      {/* Step 1: Players & Teams */}
+      <CollapsibleSection
+        step={1}
+        title="Players & Teams"
+        count={tournament.participants.length}
+        countLabel="player"
+        defaultOpen={true}
+        actions={
+          isSetup ? (
             <div className="flex items-center gap-2">
-              {isCommissioner && (
-                <div className="flex items-center gap-1.5">
-                  <Switch
-                    id="tournament-teams-toggle"
-                    checked={showTeams}
-                    onCheckedChange={setShowTeams}
-                    className="scale-75"
-                  />
-                  <Label
-                    htmlFor="tournament-teams-toggle"
-                    className="text-muted-foreground cursor-pointer text-xs font-normal"
-                  >
-                    Teams
-                  </Label>
-                </div>
-              )}
-              <Badge variant="secondary">
-                {tournament.participants.length} player
-                {tournament.participants.length !== 1 ? 's' : ''}
-              </Badge>
               {!iAmParticipant && (
                 <Button size="sm" variant="outline" onClick={handleAddMyself}>
                   Join
@@ -329,150 +306,67 @@ export function TournamentDetailPage({
                 />
               )}
             </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {tournament.participants.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No players yet. Add yourself or invite others to get started.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {tournament.participants.map((p) => (
-                <div
-                  key={p.id}
-                  className={cn(
-                    'flex items-center justify-between rounded-md border px-3 py-2',
-                    p.person.userId === userId && 'bg-primary/5',
-                    p.person.userId == null && 'border-dashed',
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {p.person.displayName}
-                    </span>
-                    {p.person.userId === userId && (
-                      <Badge className="text-xs">You</Badge>
-                    )}
-                    {p.person.userId == null && (
-                      <Badge variant="outline" className="text-xs">
-                        Guest
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {(p.handicapOverride ?? p.person.currentHandicap) !=
-                      null && (
-                      <Badge variant="outline">
-                        HC {p.handicapOverride ?? p.person.currentHandicap}
-                      </Badge>
-                    )}
-                    {isCommissioner && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2"
-                          >
-                            <Badge
-                              variant={
-                                p.role === 'commissioner'
-                                  ? 'default'
-                                  : 'secondary'
-                              }
-                            >
-                              {p.role}
-                            </Badge>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {(p.person.userId == null
-                            ? (['player', 'spectator'] as const)
-                            : ([
-                                'commissioner',
-                                'player',
-                                'marker',
-                                'spectator',
-                              ] as const)
-                          ).map((role) => (
-                            <DropdownMenuItem
-                              key={role}
-                              onClick={() =>
-                                handleRoleChange(
-                                  p.id,
-                                  role,
-                                  p.person.displayName,
-                                )
-                              }
-                              disabled={p.role === role}
-                            >
-                              {role.charAt(0).toUpperCase() + role.slice(1)}
-                              {p.role === role ? ' ✓' : ''}
-                            </DropdownMenuItem>
-                          ))}
-                          <DropdownMenuSeparator />
-                          <EditHandicapDialog
-                            participant={p}
-                            onSaved={() => router.invalidate()}
-                          />
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() =>
-                              handleRemoveParticipant(
-                                p.id,
-                                p.person.displayName,
-                              )
-                            }
-                          >
-                            Remove
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                    {!isCommissioner && (
-                      <Badge
-                        variant={
-                          p.role === 'commissioner' ? 'default' : 'secondary'
-                        }
-                      >
-                        {p.role}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          ) : undefined
+        }
+      >
+        <PlayersAndTeamsSection
+          tournament={tournament}
+          isCommissioner={isCommissioner}
+          readOnly={!isSetup}
+          userId={userId}
+          onChanged={() => router.invalidate()}
+        />
+      </CollapsibleSection>
 
-      {/* Inline Teams section — shown when toggle is on */}
-      {showTeams && (
-        <TeamsSection
+      {/* Step 2: Rounds */}
+      <CollapsibleSection
+        step={2}
+        title="Rounds"
+        count={tournament.rounds.length}
+        countLabel="round"
+        defaultOpen={tournament.rounds.length > 0}
+        actions={
+          isCommissioner && isSetup ? (
+            <AddRoundDialog
+              tournamentId={tournament.id}
+              courses={courses}
+              onAdded={() => router.invalidate()}
+            />
+          ) : undefined
+        }
+      >
+        <RoundsSection
           tournament={tournament}
           isCommissioner={isCommissioner}
           onChanged={() => router.invalidate()}
         />
-      )}
+      </CollapsibleSection>
 
-      {/* Rounds section */}
-      <RoundsSection
-        tournament={tournament}
-        courses={courses}
-        isCommissioner={isCommissioner}
-        onChanged={() => router.invalidate()}
-      />
-
-      {/* Standings section */}
-      <StandingsSection
-        tournamentId={tournament.id}
-        standings={standings}
-        computedStandings={computedStandings}
-        isCommissioner={isCommissioner}
-        onChanged={() => router.invalidate()}
-      />
+      {/* Step 3: Standings */}
+      <CollapsibleSection
+        step={3}
+        title="Standings"
+        count={standings.length}
+        countLabel="standing"
+        defaultOpen={standings.length > 0}
+        actions={
+          isCommissioner ? (
+            <Button size="sm" onClick={() => setCreateStandingOpen(true)}>
+              Add Standing
+            </Button>
+          ) : undefined
+        }
+      >
+        <StandingsSection
+          tournamentId={tournament.id}
+          standings={standings}
+          computedStandings={computedStandings}
+          isCommissioner={isCommissioner}
+          onChanged={() => router.invalidate()}
+          createOpen={createStandingOpen}
+          onCreateOpenChange={setCreateStandingOpen}
+        />
+      </CollapsibleSection>
     </div>
   );
 }

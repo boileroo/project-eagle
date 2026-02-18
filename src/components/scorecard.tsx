@@ -44,6 +44,8 @@ type ScorecardProps = {
     holeNumber: number,
     currentStrokes?: number,
   ) => void;
+  /** Which participant columns the current user may edit. Empty set = no editing. */
+  editableParticipantIds?: Set<string>;
 };
 
 // ──────────────────────────────────────────────
@@ -83,6 +85,7 @@ export function Scorecard({
   scores,
   roundStatus,
   onScoreClick,
+  editableParticipantIds,
 }: ScorecardProps) {
   const canEdit = roundStatus === 'open';
 
@@ -127,6 +130,9 @@ export function Scorecard({
       playingHCs[participantIdx],
       hole.strokeIndex,
     );
+    const cellEditable =
+      canEdit &&
+      (!editableParticipantIds || editableParticipantIds.has(participant.id));
 
     return (
       <td
@@ -134,11 +140,12 @@ export function Scorecard({
         className={cn(
           'relative h-10 min-w-12 border px-1 text-center text-sm',
           cell ? scoreCellClass(cell.strokes, hole.par) : '',
-          canEdit &&
+          cellEditable &&
             'hover:ring-primary cursor-pointer hover:ring-2 hover:ring-inset',
+          canEdit && !cellEditable && 'bg-muted/50',
         )}
         onClick={() => {
-          if (canEdit) {
+          if (cellEditable) {
             onScoreClick(participant.id, hole.holeNumber, cell?.strokes);
           }
         }}

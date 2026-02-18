@@ -3,10 +3,25 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
+const statusLabels: Record<string, string> = {
+  setup: 'Draft',
+  scheduled: 'Awaiting Start',
+  underway: 'Underway',
+  complete: 'Finished',
+};
+
+const statusColors: Record<string, 'default' | 'secondary' | 'outline'> = {
+  setup: 'outline',
+  scheduled: 'secondary',
+  underway: 'secondary',
+  complete: 'default',
+};
+
 type TournamentSummary = {
   id: string;
   name: string;
   description: string | null;
+  status: 'setup' | 'scheduled' | 'underway' | 'complete';
   participants: { id: string }[];
   rounds: { id: string }[];
 };
@@ -56,6 +71,9 @@ export function TournamentsPage({
                     <span className="group-hover:text-primary">
                       {tournament.name}
                     </span>
+                    <Badge variant={statusColors[tournament.status]}>
+                      {statusLabels[tournament.status]}
+                    </Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
