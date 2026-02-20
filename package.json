@@ -16,7 +16,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate-pwa-assets": "pwa-assets-generator",
+    "generate-routes": "tsx scripts/generate-route-tree.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -54,6 +56,7 @@
     "@types/node": "^22.13.2",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
+    "@vite-pwa/assets-generator": "^1.0.2",
     "@vitejs/plugin-react": "^5.1.4",
     "dotenv": "^17.3.1",
     "drizzle-kit": "^0.30.4",
@@ -69,6 +72,7 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.24.0",
     "vite": "^7.0.0",
+    "vite-plugin-pwa": "^1.2.0",
     "vite-tsconfig-paths": "^6.1.1"
   }
 }

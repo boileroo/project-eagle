@@ -35,33 +35,34 @@ export function OfflineFallback({
   const activeRound =
     roundId && tournamentId ? { roundId, tournamentId } : storedRound;
 
-  return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="max-w-md space-y-4 text-center">
-        <div className="text-4xl">📴</div>
-        <h1 className="text-2xl font-semibold">You are offline</h1>
-        <p className="text-muted-foreground">
-          This page needs a solid connection. You can keep scoring on your
-          active round while offline.
-        </p>
-        {activeRound ? (
-          <Button asChild>
-            <Link
-              to="/tournaments/$tournamentId/rounds/$roundId"
-              params={{
-                tournamentId: activeRound.tournamentId,
-                roundId: activeRound.roundId,
-              }}
-            >
-              Return to active round
-            </Link>
-          </Button>
-        ) : (
-          <p className="text-muted-foreground text-sm">
-            No active round found yet. Connect to continue.
-          </p>
-        )}
-      </div>
+  return activeRound ? (
+    <div className="flex flex-col items-center gap-2">
+      <Button asChild>
+        <Link
+          to="/tournaments/$tournamentId/rounds/$roundId/play"
+          params={{
+            tournamentId: activeRound.tournamentId,
+            roundId: activeRound.roundId,
+          }}
+        >
+          Continue live scoring
+        </Link>
+      </Button>
+      <Button variant="outline" asChild>
+        <Link
+          to="/tournaments/$tournamentId/rounds/$roundId"
+          params={{
+            tournamentId: activeRound.tournamentId,
+            roundId: activeRound.roundId,
+          }}
+        >
+          View round details
+        </Link>
+      </Button>
     </div>
+  ) : (
+    <p className="text-muted-foreground text-sm">
+      No active round found yet. Connect to continue.
+    </p>
   );
 }

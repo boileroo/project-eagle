@@ -116,7 +116,17 @@ function AppLayout() {
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6">
         {showOfflineFallback ? (
-          <OfflineFallback roundId={roundId} tournamentId={tournamentId} />
+          <div className="flex min-h-[60vh] items-center justify-center">
+            <div className="max-w-md space-y-4 text-center">
+              <div className="text-4xl">📴</div>
+              <h1 className="text-2xl font-semibold">You are offline</h1>
+              <p className="text-muted-foreground">
+                This page needs a solid connection. You can keep scoring on your
+                active round while offline.
+              </p>
+              <OfflineFallback roundId={roundId} tournamentId={tournamentId} />
+            </div>
+          </div>
         ) : (
           <Outlet />
         )}
