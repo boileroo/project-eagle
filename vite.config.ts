@@ -27,14 +27,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       injectRegister: null,
-      includeAssets: [
-        'favicon.ico',
-        'pwa-icon.svg',
-        'apple-touch-icon-180x180.png',
-      ],
+      includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png'],
       manifest: {
-        name: 'Project Eagle',
-        short_name: 'Eagle',
+        name: 'Aerie',
+        short_name: 'Aerie',
         description: 'Offline-first golf scoring and tournament management.',
         start_url: '/',
         scope: '/',

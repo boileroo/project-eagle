@@ -266,6 +266,7 @@ export function PlayersAndGroupsSection({
               variant="ghost"
               size="icon"
               className="text-muted-foreground hover:text-destructive h-6 w-6"
+              aria-label={`Remove ${rp.person.displayName} from round`}
               onClick={() =>
                 handleRemoveParticipant(rp.id, rp.person.displayName)
               }

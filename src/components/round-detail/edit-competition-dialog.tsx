@@ -4,6 +4,7 @@ import { FORMAT_TYPE_LABELS, isBonusFormat } from '@/lib/competitions';
 import type { CompetitionConfig } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -186,8 +187,7 @@ export function EditCompetitionDialog({
           {hasGroups && !isBonus && (
             <div className="space-y-2">
               <Label>Scope</Label>
-              <select
-                className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              <Select
                 value={groupScope}
                 onChange={(e) =>
                   setGroupScope(e.target.value as 'all' | 'within_group')
@@ -195,7 +195,7 @@ export function EditCompetitionDialog({
               >
                 <option value="all">All players</option>
                 <option value="within_group">Within each group</option>
-              </select>
+              </Select>
             </div>
           )}
 
@@ -215,8 +215,7 @@ export function EditCompetitionDialog({
           {formatType === 'stroke_play' && (
             <div className="space-y-2">
               <Label>Scoring Basis</Label>
-              <select
-                className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              <Select
                 value={scoringBasis}
                 onChange={(e) =>
                   setScoringBasis(
@@ -226,7 +225,7 @@ export function EditCompetitionDialog({
               >
                 <option value="net_strokes">Net Strokes</option>
                 <option value="gross_strokes">Gross Strokes</option>
-              </select>
+              </Select>
             </div>
           )}
 
@@ -273,8 +272,7 @@ export function EditCompetitionDialog({
               </div>
               <div className="space-y-2">
                 <Label>Bonus Mode</Label>
-                <select
-                  className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                <Select
                   value={bonusMode}
                   onChange={(e) =>
                     setBonusMode(e.target.value as 'standalone' | 'contributor')
@@ -284,7 +282,7 @@ export function EditCompetitionDialog({
                   <option value="contributor">
                     Contributor (adds to individual standings)
                   </option>
-                </select>
+                </Select>
               </div>
               {bonusMode === 'contributor' && (
                 <div className="space-y-2">

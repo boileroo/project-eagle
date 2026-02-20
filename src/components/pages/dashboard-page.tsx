@@ -11,20 +11,18 @@ export function DashboardPage({ userEmail }: { userEmail: string }) {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link
           to="/courses"
-          className="group bg-card hover:border-primary/50 hover:bg-accent rounded-lg border p-6 transition-colors"
+          className="group bg-card hover:bg-background rounded-lg border p-6 transition-colors"
         >
-          <h2 className="text-card-foreground group-hover:text-primary mb-1 font-semibold">
-            Courses
-          </h2>
+          <h2 className="text-card-foreground mb-1 font-semibold">Courses</h2>
           <p className="text-muted-foreground text-sm">
             Browse and manage the course library
           </p>
         </Link>
         <Link
           to="/tournaments"
-          className="group bg-card hover:border-primary/50 hover:bg-accent rounded-lg border p-6 transition-colors"
+          className="group bg-card hover:bg-background rounded-lg border p-6 transition-colors"
         >
-          <h2 className="text-card-foreground group-hover:text-primary mb-1 font-semibold">
+          <h2 className="text-card-foreground mb-1 font-semibold">
             Tournaments
           </h2>
           <p className="text-muted-foreground text-sm">
@@ -33,9 +31,9 @@ export function DashboardPage({ userEmail }: { userEmail: string }) {
         </Link>
         <Link
           to="/rounds/new"
-          className="group bg-card hover:border-primary/50 hover:bg-accent rounded-lg border p-6 transition-colors"
+          className="group bg-card hover:bg-background rounded-lg border p-6 transition-colors"
         >
-          <h2 className="text-card-foreground group-hover:text-primary mb-1 font-semibold">
+          <h2 className="text-card-foreground mb-1 font-semibold">
             Single Round
           </h2>
           <p className="text-muted-foreground text-sm">

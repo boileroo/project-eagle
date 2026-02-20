@@ -45,12 +45,10 @@ export function CoursesPage({ courses }: { courses: Course[] }) {
               params={{ courseId: course.id }}
               className="group"
             >
-              <Card className="group-hover:border-primary/50 group-hover:bg-accent h-full transition-colors">
+              <Card className="group-hover:bg-background h-full transition-colors">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between text-lg">
-                    <span className="group-hover:text-primary">
-                      {course.name}
-                    </span>
+                    <span>{course.name}</span>
                     <Badge variant="secondary">
                       {course.numberOfHoles} holes
                     </Badge>

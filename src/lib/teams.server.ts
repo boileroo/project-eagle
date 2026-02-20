@@ -137,32 +137,34 @@ export const addTeamMemberFn = createServerFn({ method: 'POST' })
     });
     if (existingMembership) throw new Error('Already a member of this team');
 
-    // Remove from any other team in the same tournament first
-    const otherTeams = await db.query.tournamentTeams.findMany({
-      where: and(eq(tournamentTeams.tournamentId, team.tournamentId)),
+    return db.transaction(async (tx) => {
+      // Remove from any other team in the same tournament first
+      const otherTeams = await tx.query.tournamentTeams.findMany({
+        where: and(eq(tournamentTeams.tournamentId, team.tournamentId)),
+      });
+      const otherTeamIds = otherTeams.map((t) => t.id);
+      for (const otherTeamId of otherTeamIds) {
+        if (otherTeamId === data.teamId) continue;
+        await tx
+          .delete(tournamentTeamMembers)
+          .where(
+            and(
+              eq(tournamentTeamMembers.teamId, otherTeamId),
+              eq(tournamentTeamMembers.participantId, data.participantId),
+            ),
+          );
+      }
+
+      const [member] = await tx
+        .insert(tournamentTeamMembers)
+        .values({
+          teamId: data.teamId,
+          participantId: data.participantId,
+        })
+        .returning();
+
+      return { memberId: member.id };
     });
-    const otherTeamIds = otherTeams.map((t) => t.id);
-    for (const otherTeamId of otherTeamIds) {
-      if (otherTeamId === data.teamId) continue;
-      await db
-        .delete(tournamentTeamMembers)
-        .where(
-          and(
-            eq(tournamentTeamMembers.teamId, otherTeamId),
-            eq(tournamentTeamMembers.participantId, data.participantId),
-          ),
-        );
-    }
-
-    const [member] = await db
-      .insert(tournamentTeamMembers)
-      .values({
-        teamId: data.teamId,
-        participantId: data.participantId,
-      })
-      .returning();
-
-    return { memberId: member.id };
   });
 
 // ──────────────────────────────────────────────

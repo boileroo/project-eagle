@@ -109,17 +109,28 @@ export function calculateStrokePlay(
   );
 
   // Sort by ranking score ascending (lower is better in stroke play)
+  // Participants with no scores are pushed to the bottom.
   playerResults.sort((a, b) => {
+    const aNoScores = a.holesCompleted === 0;
+    const bNoScores = b.holesCompleted === 0;
+
+    if (aNoScores && bNoScores) return 0;
+    if (aNoScores) return 1;
+    if (bNoScores) return -1;
+
     if (a.rankingScore !== b.rankingScore)
       return a.rankingScore - b.rankingScore;
     return 0;
   });
 
-  // Assign ranks (handle ties)
+  // Assign ranks (handle ties). Players with no scores remain unranked.
   let rank = 1;
   for (let i = 0; i < playerResults.length; i++) {
+    if (playerResults[i].holesCompleted === 0) continue;
+
     if (
       i > 0 &&
+      playerResults[i - 1].holesCompleted > 0 &&
       playerResults[i].rankingScore !== playerResults[i - 1].rankingScore
     ) {
       rank = i + 1;

@@ -3,6 +3,7 @@ import { createCompetitionFn } from '@/lib/competitions.server';
 import type { CompetitionConfig } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -131,9 +132,8 @@ export function AddIndividualCompDialog({
 
           <div className="space-y-2">
             <Label htmlFor="indiv-comp-format">Format</Label>
-            <select
+            <Select
               id="indiv-comp-format"
-              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               value={formatType}
               onChange={(e) =>
                 setFormatType(e.target.value as CompetitionConfig['formatType'])
@@ -144,7 +144,7 @@ export function AddIndividualCompDialog({
                   {ft.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           {formatType === 'stableford' && (
@@ -163,8 +163,7 @@ export function AddIndividualCompDialog({
           {formatType === 'stroke_play' && (
             <div className="space-y-2">
               <Label>Scoring Basis</Label>
-              <select
-                className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              <Select
                 value={scoringBasis}
                 onChange={(e) =>
                   setScoringBasis(
@@ -174,7 +173,7 @@ export function AddIndividualCompDialog({
               >
                 <option value="net_strokes">Net Strokes</option>
                 <option value="gross_strokes">Gross Strokes</option>
-              </select>
+              </Select>
             </div>
           )}
 

@@ -47,6 +47,7 @@ function AppLayout() {
     mutationKey: ['submit-score'],
   });
   const [showOfflineFallback, setShowOfflineFallback] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     if (isOnline || isRoundRoute) {
@@ -68,10 +69,14 @@ function AppLayout() {
       <header className="border-b">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <div className="flex items-center gap-6">
-            <Link to="/" className="text-lg font-semibold tracking-tight">
-              🦅 Project Eagle
+            <Link
+              to="/"
+              className="flex items-center gap-2 text-lg font-semibold tracking-tight"
+            >
+              <img src="/pwa-192x192.png" alt="Aerie" className="h-6 w-6" />
+              Aerie
             </Link>
-            <nav className="flex items-center gap-1">
+            <nav className="hidden items-center gap-1 sm:flex">
               {navLinks.map((link) => (
                 <Link
                   key={link.to}
@@ -85,6 +90,16 @@ function AppLayout() {
             </nav>
           </div>
           <div className="flex items-center gap-4">
+            <div className="sm:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Toggle navigation"
+                onClick={() => setMobileNavOpen((open) => !open)}
+              >
+                Menu
+              </Button>
+            </div>
             {pendingScoreMutations > 0 && (
               <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-medium">
                 Syncing…
@@ -113,6 +128,23 @@ function AppLayout() {
             </Button>
           </div>
         </div>
+        {mobileNavOpen && (
+          <div className="border-t sm:hidden">
+            <nav className="mx-auto flex max-w-5xl flex-col gap-1 px-4 py-2">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className="text-muted-foreground hover:text-foreground [&.active]:text-foreground rounded-md px-3 py-2 text-sm font-medium transition-colors"
+                  activeOptions={{ exact: link.to === '/' }}
+                  onClick={() => setMobileNavOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        )}
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6">
         {showOfflineFallback ? (

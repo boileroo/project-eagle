@@ -55,7 +55,7 @@ export function LoginPage() {
     <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Welcome back 🦅</CardTitle>
-        <CardDescription>Sign in to Project Eagle</CardDescription>
+        <CardDescription>Sign in to Aerie</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>

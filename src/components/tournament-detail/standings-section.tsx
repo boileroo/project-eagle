@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -302,9 +303,9 @@ export function StandingsSection({
               </div>
               <div>
                 <Label htmlFor="standingType">Type</Label>
-                <select
+                <Select
                   id="standingType"
-                  className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                  className="h-9 py-1"
                   value={participantType}
                   onChange={(e) =>
                     setParticipantType(e.target.value as 'individual' | 'team')
@@ -312,13 +313,13 @@ export function StandingsSection({
                 >
                   <option value="individual">Individual</option>
                   <option value="team">Team</option>
-                </select>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="standingMethod">Aggregation Method</Label>
-                <select
+                <Select
                   id="standingMethod"
-                  className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                  className="h-9 py-1"
                   value={method}
                   onChange={(e) =>
                     setMethod(e.target.value as AggregationConfig['method'])
@@ -329,15 +330,15 @@ export function StandingsSection({
                       {AGGREGATION_METHOD_LABELS[m]}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               {method === 'lowest_strokes' && (
                 <div>
                   <Label htmlFor="scoringBasis">Scoring Basis</Label>
-                  <select
+                  <Select
                     id="scoringBasis"
-                    className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    className="h-9 py-1"
                     value={scoringBasis}
                     onChange={(e) =>
                       setScoringBasis(
@@ -347,7 +348,7 @@ export function StandingsSection({
                   >
                     <option value="net_strokes">Net Strokes</option>
                     <option value="gross_strokes">Gross Strokes</option>
-                  </select>
+                  </Select>
                 </div>
               )}
 

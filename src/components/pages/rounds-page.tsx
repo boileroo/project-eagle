@@ -47,12 +47,10 @@ export function RoundsPage({ rounds }: { rounds: RoundSummary[] }) {
               params={{ roundId: round.id }}
               className="group"
             >
-              <Card className="group-hover:border-primary/50 group-hover:bg-accent h-full transition-colors">
+              <Card className="group-hover:bg-background h-full transition-colors">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between text-lg">
-                    <span className="group-hover:text-primary">
-                      {round.course.name}
-                    </span>
+                    <span>{round.course.name}</span>
                   </CardTitle>
                   {round.date && (
                     <p className="text-muted-foreground text-sm">

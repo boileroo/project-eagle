@@ -154,12 +154,10 @@ export function RoundsSection({
                   tournamentId: tournament.id,
                   roundId: r.id,
                 }}
-                className="hover:bg-accent group flex flex-1 items-center justify-between rounded-md border px-3 py-2 transition-colors"
+                className="hover:bg-background group flex flex-1 items-center justify-between rounded-md border px-3 py-2 transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <span className="group-hover:text-primary text-sm font-medium">
-                    Round {idx + 1}
-                  </span>
+                  <span className="text-sm font-medium">Round {idx + 1}</span>
                   {r.course && (
                     <span
                       role="link"

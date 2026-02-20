@@ -134,6 +134,16 @@ export function Scorecard({
       canEdit &&
       (!editableParticipantIds || editableParticipantIds.has(participant.id));
 
+    const handleScoreActivate = () => {
+      if (cellEditable) {
+        onScoreClick(participant.id, hole.holeNumber, cell?.strokes);
+      }
+    };
+
+    const ariaLabel = cellEditable
+      ? `Enter score for ${participant.person.displayName} on hole ${hole.holeNumber}`
+      : `Score for ${participant.person.displayName} on hole ${hole.holeNumber}`;
+
     return (
       <td
         key={participant.id}
@@ -144,11 +154,17 @@ export function Scorecard({
             'hover:ring-primary cursor-pointer hover:ring-2 hover:ring-inset',
           canEdit && !cellEditable && 'bg-muted/50',
         )}
-        onClick={() => {
-          if (cellEditable) {
-            onScoreClick(participant.id, hole.holeNumber, cell?.strokes);
+        onClick={handleScoreActivate}
+        onKeyDown={(event) => {
+          if (!cellEditable) return;
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleScoreActivate();
           }
         }}
+        role={cellEditable ? 'button' : undefined}
+        tabIndex={cellEditable ? 0 : undefined}
+        aria-label={ariaLabel}
       >
         {cell ? (
           <span className="font-medium">{cell.strokes}</span>

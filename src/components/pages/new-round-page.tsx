@@ -8,6 +8,7 @@ import {
 } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import {
   Form,
   FormControl,
@@ -99,17 +100,14 @@ export function NewRoundPage({ courses }: { courses: Course[] }) {
                     <FormItem>
                       <FormLabel>Course</FormLabel>
                       <FormControl>
-                        <select
-                          className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                          {...field}
-                        >
+                        <Select {...field}>
                           <option value="">Select a course…</option>
                           {courses.map((course) => (
                             <option key={course.id} value={course.id}>
                               {course.name} ({course.numberOfHoles} holes)
                             </option>
                           ))}
-                        </select>
+                        </Select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { awardBonusFn, removeBonusAwardFn } from '@/lib/competitions.server';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { EditCompetitionDialog } from './edit-competition-dialog';
 import type { RoundData, CompetitionsData } from './types';
@@ -111,8 +112,8 @@ export function BonusCompRow({
             )}
           </>
         ) : canEdit ? (
-          <select
-            className="border-input bg-background h-8 rounded-md border px-2 text-sm"
+          <Select
+            className="h-8 px-2 text-sm"
             value=""
             onChange={(e) => {
               if (e.target.value) handleAward(e.target.value);
@@ -125,7 +126,7 @@ export function BonusCompRow({
                 {rp.person.displayName}
               </option>
             ))}
-          </select>
+          </Select>
         ) : (
           <span className="text-muted-foreground text-sm">—</span>
         )}

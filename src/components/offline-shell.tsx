@@ -10,8 +10,8 @@ export function OfflineShell() {
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold">You are offline</h1>
           <p className="text-muted-foreground text-sm">
-            Project Eagle can keep scoring offline. If you opened this round
-            recently, continue from your cached data.
+            Aerie can keep scoring offline. If you opened this round recently,
+            continue from your cached data.
           </p>
         </div>
         <OfflineFallback roundId={null} tournamentId={null} />

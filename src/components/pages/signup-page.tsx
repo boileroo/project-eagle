@@ -63,7 +63,7 @@ export function SignupPage() {
     <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Create an account 🦅</CardTitle>
-        <CardDescription>Get started with Project Eagle</CardDescription>
+        <CardDescription>Get started with Aerie</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>

@@ -175,73 +175,77 @@ export const createRoundFn = createServerFn({ method: 'POST' })
       throw new Error('Can only add rounds while the tournament is in setup');
     }
 
-    // Auto-assign roundNumber as next in sequence
-    const [{ value: existingCount }] = await db
-      .select({ value: count() })
-      .from(rounds)
-      .where(eq(rounds.tournamentId, data.tournamentId));
+    const result = await db.transaction(async (tx) => {
+      // Auto-assign roundNumber as next in sequence
+      const [{ value: existingCount }] = await tx
+        .select({ value: count() })
+        .from(rounds)
+        .where(eq(rounds.tournamentId, data.tournamentId));
 
-    const [round] = await db
-      .insert(rounds)
-      .values({
-        tournamentId: data.tournamentId,
-        courseId: data.courseId,
-        roundNumber: existingCount + 1,
-        date: data.date ? new Date(data.date) : null,
-        teeTime: data.teeTime || null,
-        format: data.format || null,
-        createdByUserId: user.id,
-      })
-      .returning();
+      const [round] = await tx
+        .insert(rounds)
+        .values({
+          tournamentId: data.tournamentId,
+          courseId: data.courseId,
+          roundNumber: existingCount + 1,
+          date: data.date ? new Date(data.date) : null,
+          teeTime: data.teeTime || null,
+          format: data.format || null,
+          createdByUserId: user.id,
+        })
+        .returning();
 
-    // Auto-add all tournament participants as round participants
-    const tpList = await db.query.tournamentParticipants.findMany({
-      where: eq(tournamentParticipants.tournamentId, data.tournamentId),
-      with: {
-        person: true,
-      },
-    });
+      // Auto-add all tournament participants as round participants
+      const tpList = await tx.query.tournamentParticipants.findMany({
+        where: eq(tournamentParticipants.tournamentId, data.tournamentId),
+        with: {
+          person: true,
+        },
+      });
 
-    if (tpList.length > 0) {
-      await db.insert(roundParticipants).values(
-        tpList.map((tp) => ({
-          roundId: round.id,
-          personId: tp.personId,
-          tournamentParticipantId: tp.id,
-          handicapSnapshot:
-            tp.handicapOverride ?? tp.person.currentHandicap ?? '0',
-        })),
-      );
-    }
-
-    // Create default Group 1 and assign all participants
-    const [defaultGroup] = await db
-      .insert(roundGroups)
-      .values({
-        roundId: round.id,
-        groupNumber: 1,
-        name: 'Group 1',
-      })
-      .returning();
-
-    if (tpList.length > 0) {
-      for (const tp of tpList) {
-        await db
-          .update(roundParticipants)
-          .set({ roundGroupId: defaultGroup.id })
-          .where(
-            and(
-              eq(roundParticipants.roundId, round.id),
-              eq(roundParticipants.personId, tp.personId),
-            ),
-          );
+      if (tpList.length > 0) {
+        await tx.insert(roundParticipants).values(
+          tpList.map((tp) => ({
+            roundId: round.id,
+            personId: tp.personId,
+            tournamentParticipantId: tp.id,
+            handicapSnapshot:
+              tp.handicapOverride ?? tp.person.currentHandicap ?? '0',
+          })),
+        );
       }
-    }
+
+      // Create default Group 1 and assign all participants
+      const [defaultGroup] = await tx
+        .insert(roundGroups)
+        .values({
+          roundId: round.id,
+          groupNumber: 1,
+          name: 'Group 1',
+        })
+        .returning();
+
+      if (tpList.length > 0) {
+        for (const tp of tpList) {
+          await tx
+            .update(roundParticipants)
+            .set({ roundGroupId: defaultGroup.id })
+            .where(
+              and(
+                eq(roundParticipants.roundId, round.id),
+                eq(roundParticipants.personId, tp.personId),
+              ),
+            );
+        }
+      }
+
+      return { roundId: round.id };
+    });
 
     // Re-sort if dates are present
     await resortRoundsByDate(data.tournamentId);
 
-    return { roundId: round.id };
+    return result;
   });
 
 // ──────────────────────────────────────────────
@@ -360,7 +364,10 @@ const validTransitions: Record<string, string[]> = {
 
 export const transitionRoundFn = createServerFn({ method: 'POST' })
   .inputValidator(
-    z.object({ roundId: z.string().uuid(), newStatus: z.string() }),
+    z.object({
+      roundId: z.string().uuid(),
+      newStatus: z.enum(['draft', 'scheduled', 'open', 'finalized']),
+    }),
   )
   .handler(async ({ data }) => {
     const existing = await db.query.rounds.findFirst({
@@ -532,6 +539,9 @@ export const updateRoundParticipantFn = createServerFn({ method: 'POST' })
       with: { round: true },
     });
     if (!rp) throw new Error('Participant not found');
+    if (rp.round.status === 'finalized') {
+      throw new Error('Cannot edit handicaps on finalized rounds');
+    }
 
     await requireCommissioner(rp.round.tournamentId);
 

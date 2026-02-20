@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { createRoundFn } from '@/lib/rounds.server';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -91,9 +92,9 @@ export function AddRoundDialog({
         <div className="space-y-4">
           <div>
             <Label htmlFor="courseSelect">Course</Label>
-            <select
+            <Select
               id="courseSelect"
-              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="h-9 py-1"
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
             >
@@ -104,7 +105,7 @@ export function AddRoundDialog({
                   {c.location ? ` — ${c.location}` : ''}
                 </option>
               ))}
-            </select>
+            </Select>
             {courses.length === 0 && (
               <p className="text-muted-foreground mt-1 text-xs">
                 No courses yet.{' '}

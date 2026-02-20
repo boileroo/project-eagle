@@ -3,6 +3,7 @@ import { updateCompetitionFn } from '@/lib/competitions.server';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Select } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -245,8 +246,8 @@ export function ConfigureMatchesDialog({
                   {available.length >= 2 ? (
                     <div className="flex items-end gap-2">
                       <div className="flex-1">
-                        <select
-                          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                        <Select
+                          className="h-9 px-2"
                           value={playerA}
                           onChange={(e) =>
                             setGroupPlayerA(group.id, e.target.value)
@@ -283,14 +284,14 @@ export function ConfigureMatchesDialog({
                                 </option>
                               );
                             })}
-                        </select>
+                        </Select>
                       </div>
                       <span className="text-muted-foreground pb-2 text-sm">
                         vs
                       </span>
                       <div className="flex-1">
-                        <select
-                          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                        <Select
+                          className="h-9 px-2"
                           value={playerB}
                           onChange={(e) =>
                             setGroupPlayerB(group.id, e.target.value)
@@ -327,7 +328,7 @@ export function ConfigureMatchesDialog({
                                 </option>
                               );
                             })}
-                        </select>
+                        </Select>
                       </div>
                       <Button
                         variant="outline"

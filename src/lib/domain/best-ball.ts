@@ -124,6 +124,10 @@ function calculateBestBallMatch(
   let decidedAt: number | null = null;
 
   for (const hole of holes) {
+    if (teamAMembers.length === 0 || teamBMembers.length === 0) {
+      continue;
+    }
+
     // Calculate stableford points for each team member on this hole
     const teamAPlayerPoints = teamAMembers.map((p) => {
       const key = `${p.roundParticipantId}:${hole.holeNumber}`;

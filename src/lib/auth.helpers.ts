@@ -50,3 +50,34 @@ export async function requireCommissioner(tournamentId: string) {
 
   return user;
 }
+
+// ──────────────────────────────────────────────
+// Require commissioner or marker role for a tournament
+// ──────────────────────────────────────────────
+
+export async function requireCommissionerOrMarker(tournamentId: string) {
+  const user = await requireAuth();
+
+  // Tournament creator always has commissioner-level access
+  const tournament = await db.query.tournaments.findFirst({
+    where: eq(tournaments.id, tournamentId),
+  });
+  if (tournament?.createdByUserId === user.id) return user;
+
+  const person = await db.query.persons.findFirst({
+    where: eq(persons.userId, user.id),
+  });
+  if (!person) throw new Error('No person record found for your account');
+
+  const tp = await db.query.tournamentParticipants.findFirst({
+    where: and(
+      eq(tournamentParticipants.tournamentId, tournamentId),
+      eq(tournamentParticipants.personId, person.id),
+    ),
+  });
+  if (!tp || (tp.role !== 'commissioner' && tp.role !== 'marker')) {
+    throw new Error('Only a commissioner or marker can perform this action');
+  }
+
+  return user;
+}

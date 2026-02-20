@@ -10,7 +10,11 @@ import {
   tournamentStandings,
   tournamentTeams,
 } from '@/db/schema';
-import { requireAuth, requireCommissioner } from './auth.helpers';
+import {
+  requireAuth,
+  requireCommissioner,
+  requireCommissionerOrMarker,
+} from './auth.helpers';
 import {
   competitionConfigSchema,
   aggregationConfigSchema,
@@ -221,8 +225,6 @@ export const deleteCompetitionFn = createServerFn({ method: 'POST' })
 export const awardBonusFn = createServerFn({ method: 'POST' })
   .inputValidator(awardBonusSchema)
   .handler(async ({ data }) => {
-    const user = await requireAuth();
-
     const comp = await db.query.competitions.findFirst({
       where: eq(competitions.id, data.competitionId),
     });
@@ -233,6 +235,8 @@ export const awardBonusFn = createServerFn({ method: 'POST' })
     ) {
       throw new Error('Can only award bonuses for NTP/LD competitions');
     }
+
+    const user = await requireCommissionerOrMarker(comp.tournamentId);
 
     // Delete any existing award (only one winner per bonus comp)
     await db

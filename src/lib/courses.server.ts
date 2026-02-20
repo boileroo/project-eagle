@@ -90,33 +90,35 @@ export const updateCourseFn = createServerFn({ method: 'POST' })
       throw new Error('You can only edit courses you created');
     }
 
-    // Update course
-    await db
-      .update(courses)
-      .set({
-        name: data.name,
-        location: data.location || null,
-        numberOfHoles: data.numberOfHoles,
-        updatedAt: new Date(),
-      })
-      .where(eq(courses.id, data.id));
+    return db.transaction(async (tx) => {
+      // Update course
+      await tx
+        .update(courses)
+        .set({
+          name: data.name,
+          location: data.location || null,
+          numberOfHoles: data.numberOfHoles,
+          updatedAt: new Date(),
+        })
+        .where(eq(courses.id, data.id));
 
-    // Replace holes: delete all then re-insert
-    await db.delete(courseHoles).where(eq(courseHoles.courseId, data.id));
+      // Replace holes: delete all then re-insert
+      await tx.delete(courseHoles).where(eq(courseHoles.courseId, data.id));
 
-    if (data.holes.length > 0) {
-      await db.insert(courseHoles).values(
-        data.holes.map((hole) => ({
-          courseId: data.id,
-          holeNumber: hole.holeNumber,
-          par: hole.par,
-          strokeIndex: hole.strokeIndex,
-          yardage: hole.yardage ?? null,
-        })),
-      );
-    }
+      if (data.holes.length > 0) {
+        await tx.insert(courseHoles).values(
+          data.holes.map((hole) => ({
+            courseId: data.id,
+            holeNumber: hole.holeNumber,
+            par: hole.par,
+            strokeIndex: hole.strokeIndex,
+            yardage: hole.yardage ?? null,
+          })),
+        );
+      }
 
-    return { courseId: data.id };
+      return { courseId: data.id };
+    });
   });
 
 // ──────────────────────────────────────────────

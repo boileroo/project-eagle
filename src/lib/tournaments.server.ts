@@ -284,83 +284,87 @@ export const addParticipantFn = createServerFn({ method: 'POST' })
       }
     }
 
-    // Check person isn't already a participant
-    const existingParticipant = await db.query.tournamentParticipants.findFirst(
-      {
-        where: and(
-          eq(tournamentParticipants.tournamentId, data.tournamentId),
-          eq(tournamentParticipants.personId, data.personId),
-        ),
-      },
-    );
-    if (existingParticipant) throw new Error('Person is already a participant');
-
-    const role = isSelfJoin ? 'player' : (data.role ?? 'player');
-
-    // Guests can only be players
-    if (
-      person.userId == null &&
-      (role === 'commissioner' || role === 'marker')
-    ) {
-      throw new Error('Guests can only be assigned the player role');
-    }
-
-    // If adding as commissioner, demote any existing commissioner to player
-    if (role === 'commissioner') {
-      await db
-        .update(tournamentParticipants)
-        .set({ role: 'player' })
-        .where(
-          and(
+    return db.transaction(async (tx) => {
+      // Check person isn't already a participant
+      const existingParticipant =
+        await tx.query.tournamentParticipants.findFirst({
+          where: and(
             eq(tournamentParticipants.tournamentId, data.tournamentId),
-            eq(tournamentParticipants.role, 'commissioner'),
+            eq(tournamentParticipants.personId, data.personId),
           ),
-        );
-    }
+        });
+      if (existingParticipant)
+        throw new Error('Person is already a participant');
 
-    const [participant] = await db
-      .insert(tournamentParticipants)
-      .values({
-        tournamentId: data.tournamentId,
-        personId: data.personId,
-        role,
-        handicapOverride: data.handicapOverride?.toString() ?? null,
-      })
-      .returning();
+      const role = isSelfJoin ? 'player' : (data.role ?? 'player');
 
-    // Auto-add to all draft/open rounds in this tournament
-    const openRounds = await db.query.rounds.findMany({
-      where: and(
-        eq(rounds.tournamentId, data.tournamentId),
-        eq(rounds.status, 'draft'),
-      ),
-    });
+      // Guests can only be players
+      if (
+        person.userId == null &&
+        (role === 'commissioner' || role === 'marker')
+      ) {
+        throw new Error('Guests can only be assigned the player role');
+      }
 
-    for (const round of openRounds) {
-      const [rp] = await db
-        .insert(roundParticipants)
+      // If adding as commissioner, demote any existing commissioner to player
+      if (role === 'commissioner') {
+        await tx
+          .update(tournamentParticipants)
+          .set({ role: 'player' })
+          .where(
+            and(
+              eq(tournamentParticipants.tournamentId, data.tournamentId),
+              eq(tournamentParticipants.role, 'commissioner'),
+            ),
+          );
+      }
+
+      const [participant] = await tx
+        .insert(tournamentParticipants)
         .values({
-          roundId: round.id,
+          tournamentId: data.tournamentId,
           personId: data.personId,
-          tournamentParticipantId: participant.id,
-          handicapSnapshot:
-            data.handicapOverride?.toString() ?? person.currentHandicap ?? '0',
+          role,
+          handicapOverride: data.handicapOverride?.toString() ?? null,
         })
         .returning();
 
-      // Auto-assign to default group if there's exactly one
-      const groups = await db.query.roundGroups.findMany({
-        where: eq(roundGroups.roundId, round.id),
+      // Auto-add to all draft/open rounds in this tournament
+      const openRounds = await tx.query.rounds.findMany({
+        where: and(
+          eq(rounds.tournamentId, data.tournamentId),
+          eq(rounds.status, 'draft'),
+        ),
       });
-      if (groups.length === 1) {
-        await db
-          .update(roundParticipants)
-          .set({ roundGroupId: groups[0].id })
-          .where(eq(roundParticipants.id, rp.id));
-      }
-    }
 
-    return { participantId: participant.id };
+      for (const round of openRounds) {
+        const [rp] = await tx
+          .insert(roundParticipants)
+          .values({
+            roundId: round.id,
+            personId: data.personId,
+            tournamentParticipantId: participant.id,
+            handicapSnapshot:
+              data.handicapOverride?.toString() ??
+              person.currentHandicap ??
+              '0',
+          })
+          .returning();
+
+        // Auto-assign to default group if there's exactly one
+        const groups = await tx.query.roundGroups.findMany({
+          where: eq(roundGroups.roundId, round.id),
+        });
+        if (groups.length === 1) {
+          await tx
+            .update(roundParticipants)
+            .set({ roundGroupId: groups[0].id })
+            .where(eq(roundParticipants.id, rp.id));
+        }
+      }
+
+      return { participantId: participant.id };
+    });
   });
 
 // ──────────────────────────────────────────────

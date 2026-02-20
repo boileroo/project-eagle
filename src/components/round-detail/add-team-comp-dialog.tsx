@@ -3,6 +3,7 @@ import { createCompetitionFn } from '@/lib/competitions.server';
 import type { CompetitionConfig } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -177,9 +178,8 @@ export function AddTeamCompDialog({
 
           <div className="space-y-2">
             <Label htmlFor="team-comp-format">Format</Label>
-            <select
+            <Select
               id="team-comp-format"
-              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               value={formatType}
               onChange={(e) =>
                 setFormatType(e.target.value as CompetitionConfig['formatType'])
@@ -190,7 +190,7 @@ export function AddTeamCompDialog({
                   {ft.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           {formatType === 'best_ball' ? (

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { updateRoundFn } from '@/lib/rounds.server';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -97,9 +98,8 @@ export function EditRoundDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="edit-round-course">Course</Label>
-            <select
+            <Select
               id="edit-round-course"
-              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
             >
@@ -111,7 +111,7 @@ export function EditRoundDialog({
                   {c.name} ({c.numberOfHoles}h)
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

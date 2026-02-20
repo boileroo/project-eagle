@@ -101,6 +101,9 @@ export const assignParticipantToGroupFn = createServerFn({ method: 'POST' })
       with: { round: true },
     });
     if (!rp) throw new Error('Participant not found');
+    if (rp.round.status !== 'draft') {
+      throw new Error('Can only reassign groups in draft rounds');
+    }
 
     await requireCommissioner(rp.round.tournamentId);
 

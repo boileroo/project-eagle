@@ -3,6 +3,7 @@ import { createCompetitionFn } from '@/lib/competitions.server';
 import type { CompetitionConfig } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -127,9 +128,8 @@ export function AddBonusCompDialog({
 
           <div className="space-y-2">
             <Label htmlFor="bonus-comp-format">Type</Label>
-            <select
+            <Select
               id="bonus-comp-format"
-              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               value={formatType}
               onChange={(e) =>
                 setFormatType(e.target.value as CompetitionConfig['formatType'])
@@ -140,7 +140,7 @@ export function AddBonusCompDialog({
                   {ft.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -156,8 +156,7 @@ export function AddBonusCompDialog({
 
           <div className="space-y-2">
             <Label>Bonus Mode</Label>
-            <select
-              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            <Select
               value={bonusMode}
               onChange={(e) =>
                 setBonusMode(e.target.value as 'standalone' | 'contributor')
@@ -167,7 +166,7 @@ export function AddBonusCompDialog({
               <option value="contributor">
                 Contributor (adds to individual standings)
               </option>
-            </select>
+            </Select>
           </div>
 
           {bonusMode === 'contributor' && (

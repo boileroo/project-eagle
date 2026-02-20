@@ -39,24 +39,13 @@ export function OfflineFallback({
     <div className="flex flex-col items-center gap-2">
       <Button asChild>
         <Link
-          to="/tournaments/$tournamentId/rounds/$roundId/play"
-          params={{
-            tournamentId: activeRound.tournamentId,
-            roundId: activeRound.roundId,
-          }}
-        >
-          Continue live scoring
-        </Link>
-      </Button>
-      <Button variant="outline" asChild>
-        <Link
           to="/tournaments/$tournamentId/rounds/$roundId"
           params={{
             tournamentId: activeRound.tournamentId,
             roundId: activeRound.roundId,
           }}
         >
-          View round details
+          Continue live scoring
         </Link>
       </Button>
     </div>

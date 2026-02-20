@@ -17,13 +17,18 @@ export function resolveEffectiveHandicap(participant: {
     handicapOverride: string | null;
   } | null;
 }): number {
+  const parseOrZero = (value: string) => {
+    const parsed = Number.parseFloat(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  };
+
   if (participant.handicapOverride != null) {
-    return parseFloat(participant.handicapOverride);
+    return parseOrZero(participant.handicapOverride);
   }
   if (participant.tournamentParticipant?.handicapOverride != null) {
-    return parseFloat(participant.tournamentParticipant.handicapOverride);
+    return parseOrZero(participant.tournamentParticipant.handicapOverride);
   }
-  return parseFloat(participant.handicapSnapshot);
+  return parseOrZero(participant.handicapSnapshot);
 }
 
 /**

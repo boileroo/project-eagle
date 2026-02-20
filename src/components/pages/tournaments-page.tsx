@@ -65,12 +65,10 @@ export function TournamentsPage({
               params={{ tournamentId: tournament.id }}
               className="group"
             >
-              <Card className="group-hover:border-primary/50 group-hover:bg-accent h-full transition-colors">
+              <Card className="group-hover:bg-background h-full transition-colors">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between text-lg">
-                    <span className="group-hover:text-primary">
-                      {tournament.name}
-                    </span>
+                    <span>{tournament.name}</span>
                     <Badge variant={statusColors[tournament.status]}>
                       {statusLabels[tournament.status]}
                     </Badge>

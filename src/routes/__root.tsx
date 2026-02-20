@@ -12,6 +12,7 @@ import { DevTools } from '@/components/dev-tools';
 import { PwaUpdateToast } from '@/components/pwa-update-toast';
 import { getAuthUser } from '@/lib/auth.server';
 import appCss from '@/styles/globals.css?url';
+import { appleSplashScreens } from '@/lib/apple-splash';
 import {
   getQueryClient,
   queryPersister,
@@ -34,15 +35,24 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { name: 'theme-color', content: '#0f172a' },
       { name: 'apple-mobile-web-app-capable', content: 'yes' },
-      { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
-      { title: 'Project Eagle' },
+      {
+        name: 'apple-mobile-web-app-status-bar-style',
+        content: 'black-translucent',
+      },
+      { title: 'Aerie' },
     ],
     links: [
       { rel: 'stylesheet', href: appCss },
       { rel: 'manifest', href: '/manifest.webmanifest' },
       { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
-      { rel: 'icon', href: '/pwa-icon.svg', type: 'image/svg+xml' },
+      {
+        rel: 'icon',
+        href: '/pwa-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+      },
       { rel: 'apple-touch-icon', href: '/apple-touch-icon-180x180.png' },
+      ...appleSplashScreens,
     ],
   }),
   component: RootComponent,
@@ -78,7 +88,9 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <Toaster />
         <Scripts />
         {import.meta.env.DEV && <DevTools />}
-        <TanStackRouterDevtools position="bottom-right" />
+        {import.meta.env.DEV && (
+          <TanStackRouterDevtools position="bottom-right" />
+        )}
       </body>
     </html>
   );

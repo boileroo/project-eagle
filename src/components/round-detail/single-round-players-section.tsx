@@ -345,6 +345,7 @@ export function SingleRoundPlayersSection({
                             variant="ghost"
                             size="icon"
                             className="text-muted-foreground hover:text-destructive h-6 w-6"
+                            aria-label={`Remove ${p.person.displayName} from round`}
                             onClick={() =>
                               handleRemoveParticipant(
                                 p.id,

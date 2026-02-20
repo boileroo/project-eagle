@@ -38,6 +38,8 @@ export interface StandingEntry {
   /** Person ID for individual, team ID for team */
   entityId: string;
   displayName: string;
+  /** Rank within the standings */
+  rank: number;
   /** Total aggregated score/points */
   total: number;
   /** Number of rounds contributing */
@@ -216,10 +218,19 @@ function aggregateSumStableford(
   const leaderboard: StandingEntry[] = Array.from(totals.entries()).map(
     ([entityId, data]) => ({
       entityId,
+      rank: 0,
       ...data,
     }),
   );
   leaderboard.sort((a, b) => b.total - a.total);
+
+  let rank = 1;
+  for (let i = 0; i < leaderboard.length; i++) {
+    if (i > 0 && leaderboard[i].total !== leaderboard[i - 1].total) {
+      rank = i + 1;
+    }
+    leaderboard[i].rank = rank;
+  }
 
   return { leaderboard, sortDirection: 'desc' };
 }
@@ -320,10 +331,19 @@ function aggregateLowestStrokes(
   const leaderboard: StandingEntry[] = Array.from(totals.entries()).map(
     ([entityId, data]) => ({
       entityId,
+      rank: 0,
       ...data,
     }),
   );
   leaderboard.sort((a, b) => a.total - b.total);
+
+  let rank = 1;
+  for (let i = 0; i < leaderboard.length; i++) {
+    if (i > 0 && leaderboard[i].total !== leaderboard[i - 1].total) {
+      rank = i + 1;
+    }
+    leaderboard[i].rank = rank;
+  }
 
   return { leaderboard, sortDirection: 'asc' };
 }
@@ -494,10 +514,19 @@ function aggregateMatchWins(
   const leaderboard: StandingEntry[] = Array.from(totals.entries()).map(
     ([entityId, data]) => ({
       entityId,
+      rank: 0,
       ...data,
     }),
   );
   leaderboard.sort((a, b) => b.total - a.total);
+
+  let rank = 1;
+  for (let i = 0; i < leaderboard.length; i++) {
+    if (i > 0 && leaderboard[i].total !== leaderboard[i - 1].total) {
+      rank = i + 1;
+    }
+    leaderboard[i].rank = rank;
+  }
 
   return { leaderboard, sortDirection: 'desc' };
 }
@@ -509,7 +538,12 @@ function aggregateMatchWins(
 function safeCalculate(input: CompetitionInput): CompetitionResult | null {
   try {
     return calculateCompetitionResults(input);
-  } catch {
+  } catch (error) {
+    console.warn('Standings calculation failed', {
+      competitionId: input.competition.id,
+      formatType: input.competition.config.formatType,
+      error,
+    });
     return null;
   }
 }

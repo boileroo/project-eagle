@@ -7,6 +7,7 @@ import {
   numeric,
   boolean,
   timestamp,
+  uniqueIndex,
   jsonb,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
@@ -121,16 +122,25 @@ export const courses = pgTable('courses', {
     .notNull(),
 });
 
-export const courseHoles = pgTable('course_holes', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  courseId: uuid('course_id')
-    .references(() => courses.id, { onDelete: 'cascade' })
-    .notNull(),
-  holeNumber: integer('hole_number').notNull(),
-  par: integer('par').notNull(),
-  strokeIndex: integer('stroke_index').notNull(),
-  yardage: integer('yardage'),
-});
+export const courseHoles = pgTable(
+  'course_holes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    courseId: uuid('course_id')
+      .references(() => courses.id, { onDelete: 'cascade' })
+      .notNull(),
+    holeNumber: integer('hole_number').notNull(),
+    par: integer('par').notNull(),
+    strokeIndex: integer('stroke_index').notNull(),
+    yardage: integer('yardage'),
+  },
+  (table) => ({
+    courseHoleUnique: uniqueIndex('course_holes_course_hole_unique').on(
+      table.courseId,
+      table.holeNumber,
+    ),
+  }),
+);
 
 // ──────────────────────────────────────────────
 // Tournaments
@@ -157,23 +167,31 @@ export const tournaments = pgTable('tournaments', {
 // Tournament Participants
 // ──────────────────────────────────────────────
 
-export const tournamentParticipants = pgTable('tournament_participants', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tournamentId: uuid('tournament_id')
-    .references(() => tournaments.id, { onDelete: 'cascade' })
-    .notNull(),
-  personId: uuid('person_id')
-    .references(() => persons.id, { onDelete: 'cascade' })
-    .notNull(),
-  role: tournamentRoleEnum('role').notNull().default('player'),
-  handicapOverride: numeric('handicap_override', {
-    precision: 4,
-    scale: 1,
+export const tournamentParticipants = pgTable(
+  'tournament_participants',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tournamentId: uuid('tournament_id')
+      .references(() => tournaments.id, { onDelete: 'cascade' })
+      .notNull(),
+    personId: uuid('person_id')
+      .references(() => persons.id, { onDelete: 'cascade' })
+      .notNull(),
+    role: tournamentRoleEnum('role').notNull().default('player'),
+    handicapOverride: numeric('handicap_override', {
+      precision: 4,
+      scale: 1,
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    tournamentPersonUnique: uniqueIndex(
+      'tournament_participants_tournament_person_unique',
+    ).on(table.tournamentId, table.personId),
   }),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+);
 
 // ──────────────────────────────────────────────
 // Tournament Teams (persistent identity)
@@ -194,18 +212,26 @@ export const tournamentTeams = pgTable('tournament_teams', {
 // Tournament Team Members
 // ──────────────────────────────────────────────
 
-export const tournamentTeamMembers = pgTable('tournament_team_members', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  teamId: uuid('team_id')
-    .references(() => tournamentTeams.id, { onDelete: 'cascade' })
-    .notNull(),
-  participantId: uuid('participant_id')
-    .references(() => tournamentParticipants.id, { onDelete: 'cascade' })
-    .notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const tournamentTeamMembers = pgTable(
+  'tournament_team_members',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    teamId: uuid('team_id')
+      .references(() => tournamentTeams.id, { onDelete: 'cascade' })
+      .notNull(),
+    participantId: uuid('participant_id')
+      .references(() => tournamentParticipants.id, { onDelete: 'cascade' })
+      .notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    teamParticipantUnique: uniqueIndex(
+      'tournament_team_members_team_participant_unique',
+    ).on(table.teamId, table.participantId),
+  }),
+);
 
 // ──────────────────────────────────────────────
 // Rounds
@@ -239,49 +265,67 @@ export const rounds = pgTable('rounds', {
 // Round Groups (playing groups / fourballs)
 // ──────────────────────────────────────────────
 
-export const roundGroups = pgTable('round_groups', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  roundId: uuid('round_id')
-    .references(() => rounds.id, { onDelete: 'cascade' })
-    .notNull(),
-  groupNumber: integer('group_number').notNull(),
-  name: text('name'), // optional label, e.g. "Group A"
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const roundGroups = pgTable(
+  'round_groups',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    roundId: uuid('round_id')
+      .references(() => rounds.id, { onDelete: 'cascade' })
+      .notNull(),
+    groupNumber: integer('group_number').notNull(),
+    name: text('name'), // optional label, e.g. "Group A"
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    roundGroupNumberUnique: uniqueIndex('round_groups_round_group_unique').on(
+      table.roundId,
+      table.groupNumber,
+    ),
+  }),
+);
 
 // ──────────────────────────────────────────────
 // Round Participants (with handicap snapshot)
 // ──────────────────────────────────────────────
 
-export const roundParticipants = pgTable('round_participants', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  roundId: uuid('round_id')
-    .references(() => rounds.id, { onDelete: 'cascade' })
-    .notNull(),
-  roundGroupId: uuid('round_group_id').references(() => roundGroups.id, {
-    onDelete: 'set null',
+export const roundParticipants = pgTable(
+  'round_participants',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    roundId: uuid('round_id')
+      .references(() => rounds.id, { onDelete: 'cascade' })
+      .notNull(),
+    roundGroupId: uuid('round_group_id').references(() => roundGroups.id, {
+      onDelete: 'set null',
+    }),
+    personId: uuid('person_id')
+      .references(() => persons.id, { onDelete: 'cascade' })
+      .notNull(),
+    tournamentParticipantId: uuid('tournament_participant_id').references(
+      () => tournamentParticipants.id,
+      { onDelete: 'cascade' },
+    ),
+    handicapSnapshot: numeric('handicap_snapshot', {
+      precision: 4,
+      scale: 1,
+    }).notNull(),
+    handicapOverride: numeric('handicap_override', {
+      precision: 4,
+      scale: 1,
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    roundPersonUnique: uniqueIndex('round_participants_round_person_unique').on(
+      table.roundId,
+      table.personId,
+    ),
   }),
-  personId: uuid('person_id')
-    .references(() => persons.id, { onDelete: 'cascade' })
-    .notNull(),
-  tournamentParticipantId: uuid('tournament_participant_id').references(
-    () => tournamentParticipants.id,
-    { onDelete: 'cascade' },
-  ),
-  handicapSnapshot: numeric('handicap_snapshot', {
-    precision: 4,
-    scale: 1,
-  }).notNull(),
-  handicapOverride: numeric('handicap_override', {
-    precision: 4,
-    scale: 1,
-  }),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+);
 
 // ──────────────────────────────────────────────
 // Round Teams (per-round composition)
