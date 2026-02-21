@@ -89,6 +89,55 @@ async function syncTournamentStatus(tournamentId: string) {
 }
 
 // ──────────────────────────────────────────────
+// Get active rounds for the current user (dashboard)
+// Returns rounds with status 'open' that the user
+// participates in, with course + tournament info.
+// ──────────────────────────────────────────────
+
+export const getActiveRoundsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const user = await requireAuth();
+
+    // Find the user's person record
+    const person = await db.query.persons.findFirst({
+      where: eq(persons.userId, user.id),
+      columns: { id: true },
+    });
+    if (!person) return [];
+
+    // Find round participations for open rounds
+    const activeRPs = await db.query.roundParticipants.findMany({
+      where: eq(roundParticipants.personId, person.id),
+      with: {
+        round: {
+          with: {
+            course: { columns: { id: true, name: true } },
+            tournament: {
+              columns: { id: true, name: true, isSingleRound: true },
+            },
+            participants: { columns: { id: true } },
+          },
+        },
+      },
+    });
+
+    return activeRPs
+      .filter((rp) => rp.round.status === 'open')
+      .map((rp) => ({
+        roundId: rp.round.id,
+        roundNumber: rp.round.roundNumber,
+        tournamentId: rp.round.tournament.id,
+        tournamentName: rp.round.tournament.name,
+        isSingleRound: rp.round.tournament.isSingleRound,
+        courseName: rp.round.course.name,
+        participantCount: rp.round.participants.length,
+        date: rp.round.date,
+        teeTime: rp.round.teeTime,
+      }));
+  },
+);
+
+// ──────────────────────────────────────────────
 // List all single rounds (for /rounds page)
 // ──────────────────────────────────────────────
 

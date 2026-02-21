@@ -1,65 +1,161 @@
 import { Link } from '@tanstack/react-router';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
-const cards = [
-  {
-    to: '/courses' as const,
-    title: 'Courses',
-    description: 'Browse and manage the course library',
-    accent: 'bg-info',
-    border: 'border-t-info',
-    icon: '⛳',
-  },
-  {
-    to: '/tournaments' as const,
-    title: 'Tournaments',
-    description: 'Create and manage tournaments',
-    accent: 'bg-purple',
-    border: 'border-t-purple',
-    icon: '🏆',
-  },
-  {
-    to: '/rounds/new' as const,
-    title: 'Single Round',
-    description: 'Jump straight into a round without tournament setup',
-    accent: 'bg-coral',
-    border: 'border-t-coral',
-    icon: '🏌️',
-  },
-] as const;
+type ActiveRound = {
+  roundId: string;
+  roundNumber: number | null;
+  tournamentId: string;
+  tournamentName: string;
+  isSingleRound: boolean;
+  courseName: string;
+  participantCount: number;
+  date: Date | null;
+  teeTime: string | null;
+};
 
-export function DashboardPage({ userEmail }: { userEmail: string }) {
+export function DashboardPage({
+  userEmail,
+  activeRounds,
+}: {
+  userEmail: string;
+  activeRounds: ActiveRound[];
+}) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">Welcome back, {userEmail}</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map((card) => (
-          <Link
-            key={card.to}
-            to={card.to}
-            className={`group bg-card hover:bg-background rounded-lg border border-t-4 ${card.border} overflow-hidden transition-colors`}
-          >
-            <div className="p-6">
-              <div className="mb-3 flex items-center gap-3">
-                <span
-                  className={`${card.accent} flex h-9 w-9 items-center justify-center rounded-lg text-lg`}
+      {/* ── Zone 1: Resume (only when active rounds exist) ── */}
+      {activeRounds.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-muted-foreground text-sm font-medium tracking-wider uppercase">
+            Resume
+          </h2>
+          {activeRounds.length === 1 ? (
+            <Link
+              to="/tournaments/$tournamentId/rounds/$roundId"
+              params={{
+                tournamentId: activeRounds[0].tournamentId,
+                roundId: activeRounds[0].roundId,
+              }}
+              className="group block"
+            >
+              <Card className="border-primary/40 bg-primary/5 group-hover:bg-primary/10 border-l-4 transition-colors">
+                <CardContent className="flex items-center justify-between p-5">
+                  <div className="min-w-0 space-y-1">
+                    <p className="truncate text-lg font-semibold">
+                      {activeRounds[0].courseName}
+                      {!activeRounds[0].isSingleRound &&
+                        activeRounds[0].roundNumber != null &&
+                        ` — Round ${activeRounds[0].roundNumber}`}
+                    </p>
+                    {!activeRounds[0].isSingleRound && (
+                      <p className="text-muted-foreground text-sm">
+                        {activeRounds[0].tournamentName}
+                      </p>
+                    )}
+                  </div>
+                  <Badge variant="secondary" className="shrink-0">
+                    Live
+                  </Badge>
+                </CardContent>
+              </Card>
+            </Link>
+          ) : (
+            <div className="space-y-2">
+              {activeRounds.map((round) => (
+                <Link
+                  key={round.roundId}
+                  to="/tournaments/$tournamentId/rounds/$roundId"
+                  params={{
+                    tournamentId: round.tournamentId,
+                    roundId: round.roundId,
+                  }}
+                  className="group block"
                 >
-                  {card.icon}
-                </span>
-                <h2 className="text-card-foreground font-semibold">
-                  {card.title}
-                </h2>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                {card.description}
-              </p>
+                  <Card className="border-primary/30 group-hover:bg-primary/5 border-l-4 transition-colors">
+                    <CardContent className="flex items-center justify-between p-4">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">
+                          {round.courseName}
+                          {!round.isSingleRound &&
+                            round.roundNumber != null &&
+                            ` — Round ${round.roundNumber}`}
+                        </p>
+                        {!round.isSingleRound && (
+                          <p className="text-muted-foreground truncate text-sm">
+                            {round.tournamentName}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant="secondary" className="shrink-0">
+                        Live
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
             </div>
+          )}
+        </section>
+      )}
+
+      {/* ── Zone 2: Start ── */}
+      <section className="space-y-3">
+        <h2 className="text-muted-foreground text-sm font-medium tracking-wider uppercase">
+          Start
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Link
+            to="/tournaments/new"
+            className="group bg-card hover:bg-background rounded-lg border p-6 transition-colors"
+          >
+            <h3 className="mb-1 font-semibold">New Tournament</h3>
+            <p className="text-muted-foreground text-sm">
+              Multi-round event with teams, competitions, and standings
+            </p>
           </Link>
-        ))}
-      </div>
+          <Link
+            to="/rounds/new"
+            className="group bg-card hover:bg-background rounded-lg border p-6 transition-colors"
+          >
+            <h3 className="mb-1 font-semibold">Quick Round</h3>
+            <p className="text-muted-foreground text-sm">
+              Jump straight into a round without tournament setup
+            </p>
+          </Link>
+        </div>
+      </section>
+
+      {/* ── Zone 3: Manage ── */}
+      <section className="space-y-3">
+        <h2 className="text-muted-foreground text-sm font-medium tracking-wider uppercase">
+          Manage
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Link
+            to="/tournaments"
+            className="group bg-card hover:bg-background rounded-lg border p-5 transition-colors"
+          >
+            <h3 className="mb-1 text-sm font-medium">Events</h3>
+            <p className="text-muted-foreground text-xs">
+              View all tournaments and rounds
+            </p>
+          </Link>
+          <Link
+            to="/courses"
+            className="group bg-card hover:bg-background rounded-lg border p-5 transition-colors"
+          >
+            <h3 className="mb-1 text-sm font-medium">Courses</h3>
+            <p className="text-muted-foreground text-xs">
+              Browse and manage the course library
+            </p>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

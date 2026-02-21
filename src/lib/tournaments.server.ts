@@ -52,11 +52,15 @@ export const getTournamentsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requireAuth();
     const allTournaments = await db.query.tournaments.findMany({
-      where: eq(tournaments.isSingleRound, false),
       orderBy: (tournaments, { desc }) => [desc(tournaments.createdAt)],
       with: {
         participants: true,
-        rounds: true,
+        rounds: {
+          with: {
+            course: { columns: { id: true, name: true } },
+          },
+          orderBy: (rounds, { asc }) => [asc(rounds.roundNumber)],
+        },
       },
     });
     return allTournaments;
