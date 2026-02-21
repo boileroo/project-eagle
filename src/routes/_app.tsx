@@ -8,6 +8,7 @@ import {
   useMatchRoute,
 } from '@tanstack/react-router';
 import { useIsMutating } from '@tanstack/react-query';
+import { UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { signOutFn } from '@/lib/auth.server';
 import { useOnlineStatus } from '@/hooks';
@@ -78,12 +79,14 @@ function AppLayout() {
                 Offline
               </span>
             )}
-            <Link
-              to="/account"
-              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-            >
-              {user.email}
-            </Link>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/account" className="flex items-center gap-1.5">
+                <UserCircle className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">
+                  {user.displayName ?? user.email}
+                </span>
+              </Link>
+            </Button>
             <Button
               variant="ghost"
               size="sm"

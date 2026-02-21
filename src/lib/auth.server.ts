@@ -1,6 +1,9 @@
 import { createServerFn } from '@tanstack/react-start';
 import { getRequest } from '@tanstack/react-start/server';
 import { z } from 'zod';
+import { eq } from 'drizzle-orm';
+import { db } from '@/db';
+import { profiles } from '@/db/schema';
 import { createSupabaseServerClient } from './supabase.server';
 import { checkRateLimit } from './rate-limit';
 
@@ -27,9 +30,16 @@ export const getAuthUser = createServerFn({ method: 'GET' }).handler(
 
     if (!user) return null;
 
+    const profileRows = await db
+      .select({ displayName: profiles.displayName })
+      .from(profiles)
+      .where(eq(profiles.id, user.id))
+      .limit(1);
+
     return {
       id: user.id,
       email: user.email!,
+      displayName: profileRows[0]?.displayName ?? null,
       accessToken: session?.access_token ?? null,
     };
   },
