@@ -109,7 +109,7 @@ export function calculateCompetitionResults(
     case 'stableford':
       return {
         type: 'stableford',
-        result: calculateStableford(input, config.config),
+        result: calculateStableford(input),
       };
     case 'stroke_play':
       return {

@@ -285,7 +285,7 @@ Pure domain logic + the read-side projections.
 ### 5.2 Competition Config Types ✅
 
 - Zod discriminated union in `src/lib/competitions.ts` covering 6 formats:
-  - `stableford` — countBack tiebreaker option
+  - `stableford` — no config options
   - `stroke_play` — scoringBasis (gross or net)
   - `match_play` — pairings, variable pointsPerWin/pointsPerHalf
   - `best_ball` — team pairings, variable pointsPerWin/pointsPerHalf

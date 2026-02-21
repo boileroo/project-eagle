@@ -79,10 +79,7 @@ export function buildScoreLookup(scores: ResolvedScore[]): Map<string, number> {
 // Calculate stableford for all participants
 // ──────────────────────────────────────────────
 
-export function calculateStableford(
-  input: CompetitionInput,
-  config: { countBack: boolean },
-): StablefordResult {
+export function calculateStableford(input: CompetitionInput): StablefordResult {
   const scoreLookup = buildScoreLookup(input.scores);
   const holesByNumber = new Map<number, HoleData>();
   for (const h of input.holes) {
@@ -144,12 +141,9 @@ export function calculateStableford(
     },
   );
 
-  // Sort by total points (descending), then count-back if enabled
+  // Sort by total points (descending)
   playerResults.sort((a, b) => {
     if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
-    if (config.countBack) {
-      return countBackCompare(a, b, sortedHoles);
-    }
     return 0;
   });
 
@@ -161,47 +155,10 @@ export function calculateStableford(
       const curr = playerResults[i];
       if (curr.totalPoints < prev.totalPoints) {
         rank = i + 1;
-      } else if (config.countBack) {
-        // If count-back resolved the tie, different rank
-        if (countBackCompare(prev, curr, sortedHoles) !== 0) {
-          rank = i + 1;
-        }
       }
     }
     playerResults[i].rank = rank;
   }
 
   return { leaderboard: playerResults };
-}
-
-// ──────────────────────────────────────────────
-// Count-back tiebreaker
-// Compare stableford points over last 9, last 6, last 3, last 1 holes
-// ──────────────────────────────────────────────
-
-function countBackCompare(
-  a: StablefordPlayerResult,
-  b: StablefordPlayerResult,
-  sortedHoles: HoleData[],
-): number {
-  const totalHoles = sortedHoles.length;
-  const windows = [
-    Math.ceil(totalHoles / 2), // last 9 (for 18 holes)
-    Math.ceil(totalHoles / 3), // last 6
-    Math.ceil(totalHoles / 6), // last 3
-    1, // last hole
-  ];
-
-  for (const windowSize of windows) {
-    const startIdx = totalHoles - windowSize;
-    let aPoints = 0;
-    let bPoints = 0;
-    for (let i = startIdx; i < totalHoles; i++) {
-      aPoints += a.holeScores[i]?.points ?? 0;
-      bPoints += b.holeScores[i]?.points ?? 0;
-    }
-    if (bPoints !== aPoints) return bPoints - aPoints;
-  }
-
-  return 0; // truly tied
 }

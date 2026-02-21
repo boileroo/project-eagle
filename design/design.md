@@ -229,7 +229,7 @@ The `configJson` field is validated using a **Zod discriminated union** keyed on
 const competitionConfigSchema = z.discriminatedUnion('formatType', [
   z.object({
     formatType: z.literal('stableford'),
-    config: z.object({ countBack: z.boolean() }),
+    config: z.object({}),
   }),
   z.object({
     formatType: z.literal('stroke_play'),

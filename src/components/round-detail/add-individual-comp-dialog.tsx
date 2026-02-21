@@ -37,7 +37,6 @@ export function AddIndividualCompDialog({
   const [formatType, setFormatType] =
     useState<CompetitionConfig['formatType']>('stableford');
 
-  const [countBack, setCountBack] = useState(true);
   const [scoringBasis, setScoringBasis] = useState<
     'net_strokes' | 'gross_strokes'
   >('net_strokes');
@@ -47,7 +46,6 @@ export function AddIndividualCompDialog({
   const resetForm = () => {
     setName('');
     setFormatType('stableford');
-    setCountBack(true);
     setScoringBasis('net_strokes');
     setPointsPerWin(1);
     setPointsPerHalf(0.5);
@@ -56,7 +54,7 @@ export function AddIndividualCompDialog({
   const buildConfig = (): CompetitionConfig => {
     switch (formatType) {
       case 'stableford':
-        return { formatType: 'stableford', config: { countBack } };
+        return { formatType: 'stableford', config: {} };
       case 'stroke_play':
         return { formatType: 'stroke_play', config: { scoringBasis } };
       case 'match_play':
@@ -65,7 +63,7 @@ export function AddIndividualCompDialog({
           config: { pointsPerWin, pointsPerHalf, pairings: [] },
         };
       default:
-        return { formatType: 'stableford', config: { countBack } };
+        return { formatType: 'stableford', config: {} };
     }
   };
 
@@ -146,19 +144,6 @@ export function AddIndividualCompDialog({
               ))}
             </Select>
           </div>
-
-          {formatType === 'stableford' && (
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="indiv-countback"
-                checked={countBack}
-                onChange={(e) => setCountBack(e.target.checked)}
-                className="h-4 w-4"
-              />
-              <Label htmlFor="indiv-countback">Count-back tiebreaker</Label>
-            </div>
-          )}
 
           {formatType === 'stroke_play' && (
             <div className="space-y-2">

@@ -22,10 +22,7 @@ export type ScoringBasis = z.infer<typeof scoringBasisSchema>;
 
 export const stablefordConfigSchema = z.object({
   formatType: z.literal('stableford'),
-  config: z.object({
-    /** Count-back tiebreaker: use last 9, last 6, last 3 holes */
-    countBack: z.boolean().default(true),
-  }),
+  config: z.object({}),
 });
 
 // ──────────────────────────────────────────────

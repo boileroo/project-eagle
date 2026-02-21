@@ -38,9 +38,6 @@ export function EditCompetitionDialog({
   const [groupScope, setGroupScope] = useState<'all' | 'within_group'>(
     (comp.groupScope as 'all' | 'within_group') ?? 'all',
   );
-  const [countBack, setCountBack] = useState<boolean>(
-    (existingConfig.countBack as boolean) ?? true,
-  );
   const [scoringBasis, setScoringBasis] = useState<
     'net_strokes' | 'gross_strokes'
   >(
@@ -66,7 +63,6 @@ export function EditCompetitionDialog({
   const resetForm = () => {
     setName(comp.name);
     setGroupScope((comp.groupScope as 'all' | 'within_group') ?? 'all');
-    setCountBack((existingConfig.countBack as boolean) ?? true);
     setScoringBasis(
       (existingConfig.scoringBasis as 'net_strokes' | 'gross_strokes') ??
         'net_strokes',
@@ -84,7 +80,7 @@ export function EditCompetitionDialog({
   const buildConfig = (): CompetitionConfig => {
     switch (formatType) {
       case 'stableford':
-        return { formatType: 'stableford', config: { countBack } };
+        return { formatType: 'stableford', config: {} };
       case 'stroke_play':
         return { formatType: 'stroke_play', config: { scoringBasis } };
       case 'match_play':
@@ -196,19 +192,6 @@ export function EditCompetitionDialog({
                 <option value="all">All players</option>
                 <option value="within_group">Within each group</option>
               </Select>
-            </div>
-          )}
-
-          {formatType === 'stableford' && (
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="edit-countback"
-                checked={countBack}
-                onChange={(e) => setCountBack(e.target.checked)}
-                className="h-4 w-4"
-              />
-              <Label htmlFor="edit-countback">Count-back tiebreaker</Label>
             </div>
           )}
 
