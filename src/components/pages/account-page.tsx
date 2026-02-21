@@ -1,6 +1,7 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTheme } from 'next-themes';
 import { updateMyAccountFn } from '@/lib/persons.server';
 import { updateAccountSchema, type UpdateAccountInput } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -33,6 +35,7 @@ type AccountData = {
 export function AccountPage({ account }: { account: AccountData }) {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const { theme } = useTheme();
 
   const form = useForm<UpdateAccountInput>({
     resolver: zodResolver(updateAccountSchema),
@@ -128,6 +131,22 @@ export function AccountPage({ account }: { account: AccountData }) {
                   </FormItem>
                 )}
               />
+
+              <Separator />
+
+              <div className="space-y-2">
+                <FormLabel>Theme</FormLabel>
+                <div className="flex items-center gap-3">
+                  <ThemeToggle size="icon-sm" />
+                  <span className="text-muted-foreground text-sm">
+                    {theme === 'dark' ? 'Dark mode' : 'Light mode'}
+                  </span>
+                </div>
+                <FormDescription>
+                  Choose your preferred appearance. Dark mode is easier on the
+                  eyes in low light.
+                </FormDescription>
+              </div>
 
               <div className="flex justify-end pt-2">
                 <Button type="submit" disabled={submitting}>

@@ -206,7 +206,7 @@ export function StandingsSection({
                               key={entry.entityId}
                               className={
                                 idx === 0
-                                  ? 'bg-yellow-50 dark:bg-yellow-950/20'
+                                  ? 'bg-warning/10 border-l-warning border-l-2'
                                   : idx % 2 === 1
                                     ? 'bg-muted/25'
                                     : ''

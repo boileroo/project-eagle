@@ -65,14 +65,11 @@ function shortName(name: string): string {
 /** Colour class for a score relative to par */
 function scoreCellClass(strokes: number, par: number): string {
   const diff = strokes - par;
-  if (diff <= -2)
-    return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
-  if (diff === -1)
-    return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
+  if (diff <= -2) return 'bg-info/10 border border-info';
+  if (diff === -1) return 'bg-success/10 border border-success';
   if (diff === 0) return '';
-  if (diff === 1)
-    return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
-  return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
+  if (diff === 1) return 'bg-warning/10 border border-warning';
+  return 'bg-destructive/10 border border-destructive';
 }
 
 // ──────────────────────────────────────────────
