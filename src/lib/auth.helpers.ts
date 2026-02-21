@@ -52,6 +52,53 @@ export async function requireCommissioner(tournamentId: string) {
 }
 
 // ──────────────────────────────────────────────
+// Verify a user is a participant in a tournament
+// (or the tournament creator).
+// Exported for callers that have already called requireAuth()
+// and just need the membership check.
+// ──────────────────────────────────────────────
+
+export async function verifyTournamentMembership(
+  userId: string,
+  tournamentId: string,
+) {
+  // Tournament creator always has access
+  const tournament = await db.query.tournaments.findFirst({
+    where: eq(tournaments.id, tournamentId),
+    columns: { createdByUserId: true },
+  });
+  if (!tournament) throw new Error('Tournament not found');
+  if (tournament.createdByUserId === userId) return;
+
+  const person = await db.query.persons.findFirst({
+    where: eq(persons.userId, userId),
+    columns: { id: true },
+  });
+  if (!person) throw new Error('Unauthorized');
+
+  const tp = await db.query.tournamentParticipants.findFirst({
+    where: and(
+      eq(tournamentParticipants.tournamentId, tournamentId),
+      eq(tournamentParticipants.personId, person.id),
+    ),
+    columns: { id: true },
+  });
+  if (!tp) throw new Error('Unauthorized');
+}
+
+// ──────────────────────────────────────────────
+// Require the authenticated user to be a participant
+// in a specific tournament (or its creator).
+// Returns the authenticated user.
+// ──────────────────────────────────────────────
+
+export async function requireTournamentParticipant(tournamentId: string) {
+  const user = await requireAuth();
+  await verifyTournamentMembership(user.id, tournamentId);
+  return user;
+}
+
+// ──────────────────────────────────────────────
 // Require commissioner or marker role for a tournament
 // ──────────────────────────────────────────────
 

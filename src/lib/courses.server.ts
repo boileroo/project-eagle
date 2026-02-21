@@ -5,6 +5,7 @@ import { db } from '@/db';
 import { courses, courseHoles } from '@/db/schema';
 import { requireAuth } from './auth.helpers';
 import { createCourseSchema, updateCourseSchema } from './validators';
+import { safeHandler } from './server-utils';
 
 // ──────────────────────────────────────────────
 // List all courses
@@ -12,6 +13,7 @@ import { createCourseSchema, updateCourseSchema } from './validators';
 
 export const getCoursesFn = createServerFn({ method: 'GET' }).handler(
   async () => {
+    await requireAuth();
     const allCourses = await db.query.courses.findMany({
       orderBy: (courses, { desc }) => [desc(courses.createdAt)],
     });
@@ -26,6 +28,7 @@ export const getCoursesFn = createServerFn({ method: 'GET' }).handler(
 export const getCourseFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ courseId: z.string().uuid() }))
   .handler(async ({ data }) => {
+    await requireAuth();
     const course = await db.query.courses.findFirst({
       where: eq(courses.id, data.courseId),
       with: {
@@ -44,71 +47,24 @@ export const getCourseFn = createServerFn({ method: 'GET' })
 
 export const createCourseFn = createServerFn({ method: 'POST' })
   .inputValidator(createCourseSchema)
-  .handler(async ({ data }) => {
-    const user = await requireAuth();
+  .handler(
+    safeHandler(async ({ data }) => {
+      const user = await requireAuth();
 
-    const [course] = await db
-      .insert(courses)
-      .values({
-        name: data.name,
-        location: data.location || null,
-        numberOfHoles: data.numberOfHoles,
-        createdByUserId: user.id,
-      })
-      .returning();
-
-    if (data.holes.length > 0) {
-      await db.insert(courseHoles).values(
-        data.holes.map((hole) => ({
-          courseId: course.id,
-          holeNumber: hole.holeNumber,
-          par: hole.par,
-          strokeIndex: hole.strokeIndex,
-          yardage: hole.yardage ?? null,
-        })),
-      );
-    }
-
-    return { courseId: course.id };
-  });
-
-// ──────────────────────────────────────────────
-// Update a course and its holes
-// ──────────────────────────────────────────────
-
-export const updateCourseFn = createServerFn({ method: 'POST' })
-  .inputValidator(updateCourseSchema)
-  .handler(async ({ data }) => {
-    const user = await requireAuth();
-
-    // Verify ownership
-    const existing = await db.query.courses.findFirst({
-      where: eq(courses.id, data.id),
-    });
-    if (!existing) throw new Error('Course not found');
-    if (existing.createdByUserId !== user.id) {
-      throw new Error('You can only edit courses you created');
-    }
-
-    return db.transaction(async (tx) => {
-      // Update course
-      await tx
-        .update(courses)
-        .set({
+      const [course] = await db
+        .insert(courses)
+        .values({
           name: data.name,
           location: data.location || null,
           numberOfHoles: data.numberOfHoles,
-          updatedAt: new Date(),
+          createdByUserId: user.id,
         })
-        .where(eq(courses.id, data.id));
-
-      // Replace holes: delete all then re-insert
-      await tx.delete(courseHoles).where(eq(courseHoles.courseId, data.id));
+        .returning();
 
       if (data.holes.length > 0) {
-        await tx.insert(courseHoles).values(
+        await db.insert(courseHoles).values(
           data.holes.map((hole) => ({
-            courseId: data.id,
+            courseId: course.id,
             holeNumber: hole.holeNumber,
             par: hole.par,
             strokeIndex: hole.strokeIndex,
@@ -117,9 +73,60 @@ export const updateCourseFn = createServerFn({ method: 'POST' })
         );
       }
 
-      return { courseId: data.id };
-    });
-  });
+      return { courseId: course.id };
+    }),
+  );
+
+// ──────────────────────────────────────────────
+// Update a course and its holes
+// ──────────────────────────────────────────────
+
+export const updateCourseFn = createServerFn({ method: 'POST' })
+  .inputValidator(updateCourseSchema)
+  .handler(
+    safeHandler(async ({ data }) => {
+      const user = await requireAuth();
+
+      // Verify ownership
+      const existing = await db.query.courses.findFirst({
+        where: eq(courses.id, data.id),
+      });
+      if (!existing) throw new Error('Course not found');
+      if (existing.createdByUserId !== user.id) {
+        throw new Error('You can only edit courses you created');
+      }
+
+      return db.transaction(async (tx) => {
+        // Update course
+        await tx
+          .update(courses)
+          .set({
+            name: data.name,
+            location: data.location || null,
+            numberOfHoles: data.numberOfHoles,
+            updatedAt: new Date(),
+          })
+          .where(eq(courses.id, data.id));
+
+        // Replace holes: delete all then re-insert
+        await tx.delete(courseHoles).where(eq(courseHoles.courseId, data.id));
+
+        if (data.holes.length > 0) {
+          await tx.insert(courseHoles).values(
+            data.holes.map((hole) => ({
+              courseId: data.id,
+              holeNumber: hole.holeNumber,
+              par: hole.par,
+              strokeIndex: hole.strokeIndex,
+              yardage: hole.yardage ?? null,
+            })),
+          );
+        }
+
+        return { courseId: data.id };
+      });
+    }),
+  );
 
 // ──────────────────────────────────────────────
 // Delete a course

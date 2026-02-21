@@ -70,6 +70,14 @@
   --color-tn-storm-input: var(--tn-storm-input);
   --color-tn-storm-ring: var(--tn-storm-ring);
   --color-tn-storm-comment: var(--tn-storm-comment);
+  --color-coral: var(--coral);
+  --color-coral-foreground: var(--coral-foreground);
+  --color-purple: var(--purple);
+  --color-purple-foreground: var(--purple-foreground);
+  --color-tn-linen-coral: var(--tn-linen-coral);
+  --color-tn-linen-purple: var(--tn-linen-purple);
+  --color-tn-storm-coral: var(--tn-storm-coral);
+  --color-tn-storm-purple: var(--tn-storm-purple);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -92,6 +100,10 @@
   --tn-linen-border: oklch(0.8627 0.0327 264.46);
   --tn-linen-input: oklch(0.8627 0.0327 264.46);
   --tn-linen-ring: oklch(0.5686 0.1571 264.46);
+
+  /* Coral (salmon-orange) + Purple (violet) accents */
+  --tn-linen-coral: oklch(0.63 0.19 26);
+  --tn-linen-purple: oklch(0.57 0.2 301);
 
   /* Semantic Token Mappings - Tokyo Night Linen */
   --background: var(--tn-linen-bg);
@@ -132,6 +144,10 @@
   --sidebar-accent-foreground: var(--tn-linen-fg);
   --sidebar-border: var(--tn-linen-border);
   --sidebar-ring: var(--tn-linen-ring);
+  --coral: var(--tn-linen-coral);
+  --coral-foreground: oklch(1 0 0);
+  --purple: var(--tn-linen-purple);
+  --purple-foreground: oklch(1 0 0);
   --radius: 0.625rem;
 }
 
@@ -152,6 +168,10 @@
   --tn-storm-input: oklch(0.3843 0.0457 264.05);
   --tn-storm-ring: oklch(0.6941 0.0981 264.46);
   --tn-storm-comment: oklch(0.5098 0.0522 264.46);
+
+  /* Coral (salmon-orange) + Purple (violet) accents */
+  --tn-storm-coral: oklch(0.72 0.17 26);
+  --tn-storm-purple: oklch(0.73 0.18 301);
 
   /* Semantic Token Mappings - Tokyo Night Storm */
   --background: var(--tn-storm-bg);
@@ -192,6 +212,10 @@
   --sidebar-accent-foreground: var(--tn-storm-fg);
   --sidebar-border: var(--tn-storm-border);
   --sidebar-ring: var(--tn-storm-ring);
+  --coral: var(--tn-storm-coral);
+  --coral-foreground: oklch(0.2196 0.0279 264.05);
+  --purple: var(--tn-storm-purple);
+  --purple-foreground: oklch(0.2196 0.0279 264.05);
 }
 
 @layer base {

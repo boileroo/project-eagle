@@ -4,6 +4,7 @@ import {
   getPlayingHandicap,
   getStrokesOnHole,
 } from '@/lib/handicaps';
+import { shortName, scoreCellClass } from '@/lib/scoring-utils';
 
 // ──────────────────────────────────────────────
 // Types
@@ -47,30 +48,6 @@ type ScorecardProps = {
   /** Which participant columns the current user may edit. Empty set = no editing. */
   editableParticipantIds?: Set<string>;
 };
-
-// ──────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────
-
-/** Get initials or short name from display name */
-function shortName(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 3);
-  return parts
-    .map((p) => p[0])
-    .join('')
-    .toUpperCase();
-}
-
-/** Colour class for a score relative to par */
-function scoreCellClass(strokes: number, par: number): string {
-  const diff = strokes - par;
-  if (diff <= -2) return 'bg-info/10 border border-info';
-  if (diff === -1) return 'bg-success/10 border border-success';
-  if (diff === 0) return '';
-  if (diff === 1) return 'bg-warning/10 border border-warning';
-  return 'bg-destructive/10 border border-destructive';
-}
 
 // ──────────────────────────────────────────────
 // Component

@@ -6,5 +6,5 @@ import { useRouteContext } from '@tanstack/react-router';
  */
 export function useAuth() {
   const context = useRouteContext({ from: '/_app' });
-  return { user: context.user };
+  return { user: context.user, accessToken: context.user?.accessToken ?? null };
 }

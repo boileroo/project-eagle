@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { getRequest } from '@tanstack/react-start/server';
 import { z } from 'zod';
 import { createSupabaseServerClient } from './supabase.server';
+import { checkRateLimit } from './rate-limit';
 
 // ──────────────────────────────────────────────
 // Get the current authenticated user (or null)
@@ -12,15 +13,24 @@ export const getAuthUser = createServerFn({ method: 'GET' }).handler(
     const request = getRequest();
     const { supabase } = createSupabaseServerClient(request);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const [
+      {
+        data: { user },
+      },
+      {
+        data: { session },
+      },
+    ] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase.auth.getSession(),
+    ]);
 
     if (!user) return null;
 
     return {
       id: user.id,
       email: user.email!,
+      accessToken: session?.access_token ?? null,
     };
   },
 );
@@ -39,6 +49,13 @@ export const signUpFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const request = getRequest();
+
+    // Rate limit: 5 sign-up attempts per email per 15 minutes
+    const key = `signup:${data.email.toLowerCase()}`;
+    if (!checkRateLimit(key, 5, 15 * 60 * 1000)) {
+      return { error: 'Too many sign-up attempts. Please try again later.' };
+    }
+
     const { supabase } = createSupabaseServerClient(request);
 
     const { data: authData, error } = await supabase.auth.signUp({
@@ -67,10 +84,17 @@ export const signUpFn = createServerFn({ method: 'POST' })
 
 export const signInFn = createServerFn({ method: 'POST' })
   .inputValidator(
-    z.object({ email: z.string().email(), password: z.string().min(1) }),
+    z.object({ email: z.string().email(), password: z.string().min(8) }),
   )
   .handler(async ({ data }) => {
     const request = getRequest();
+
+    // Rate limit: 10 sign-in attempts per email per 15 minutes
+    const key = `signin:${data.email.toLowerCase()}`;
+    if (!checkRateLimit(key, 10, 15 * 60 * 1000)) {
+      return { error: 'Too many sign-in attempts. Please try again later.' };
+    }
+
     const { supabase } = createSupabaseServerClient(request);
 
     const { error } = await supabase.auth.signInWithPassword({

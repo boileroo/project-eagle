@@ -1,4 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
+import { Play } from 'lucide-react';
 import {
   getRoundFn,
   deleteRoundFn,
@@ -167,7 +168,9 @@ export function RoundDetailPage({
     }
   };
 
-  const handleTransition = async (newStatus: string) => {
+  const handleTransition = async (
+    newStatus: 'draft' | 'scheduled' | 'open' | 'finalized',
+  ) => {
     try {
       await transitionRoundFn({ data: { roundId: round.id, newStatus } });
       toast.success(`Round status changed to ${statusLabels[newStatus]}.`);
@@ -236,6 +239,20 @@ export function RoundDetailPage({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Live Scoring — shown when round is open and user can score */}
+          {round.status === 'open' && editableParticipantIds.size > 0 && (
+            <Button size="sm" asChild>
+              <Link
+                to="/tournaments/$tournamentId/rounds/$roundId/play"
+                params={{ tournamentId, roundId: round.id }}
+                search={{ hole: 1, group: undefined }}
+              >
+                <Play className="mr-1.5 h-3.5 w-3.5" />
+                Live Scoring
+              </Link>
+            </Button>
+          )}
+
           {isCommissioner && isDraft && (
             <EditRoundDialog
               round={round}
@@ -254,7 +271,11 @@ export function RoundDetailPage({
                     ? 'outline'
                     : 'default'
                 }
-                onClick={() => handleTransition(t.status)}
+                onClick={() =>
+                  handleTransition(
+                    t.status as 'draft' | 'scheduled' | 'open' | 'finalized',
+                  )
+                }
               >
                 {t.label}
               </Button>

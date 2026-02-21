@@ -47,11 +47,11 @@ const tournamentStatusLabels: Record<string, string> = {
 
 const tournamentStatusColors: Record<
   string,
-  'default' | 'secondary' | 'outline'
+  'default' | 'secondary' | 'outline' | 'warning'
 > = {
   setup: 'outline',
   scheduled: 'secondary',
-  underway: 'secondary',
+  underway: 'warning',
   complete: 'default',
 };
 

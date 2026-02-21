@@ -1,5 +1,32 @@
 import { Link } from '@tanstack/react-router';
 
+const cards = [
+  {
+    to: '/courses' as const,
+    title: 'Courses',
+    description: 'Browse and manage the course library',
+    accent: 'bg-info',
+    border: 'border-t-info',
+    icon: '⛳',
+  },
+  {
+    to: '/tournaments' as const,
+    title: 'Tournaments',
+    description: 'Create and manage tournaments',
+    accent: 'bg-purple',
+    border: 'border-t-purple',
+    icon: '🏆',
+  },
+  {
+    to: '/rounds/new' as const,
+    title: 'Single Round',
+    description: 'Jump straight into a round without tournament setup',
+    accent: 'bg-coral',
+    border: 'border-t-coral',
+    icon: '🏌️',
+  },
+] as const;
+
 export function DashboardPage({ userEmail }: { userEmail: string }) {
   return (
     <div className="space-y-6">
@@ -9,37 +36,29 @@ export function DashboardPage({ userEmail }: { userEmail: string }) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Link
-          to="/courses"
-          className="group bg-card hover:bg-background rounded-lg border p-6 transition-colors"
-        >
-          <h2 className="text-card-foreground mb-1 font-semibold">Courses</h2>
-          <p className="text-muted-foreground text-sm">
-            Browse and manage the course library
-          </p>
-        </Link>
-        <Link
-          to="/tournaments"
-          className="group bg-card hover:bg-background rounded-lg border p-6 transition-colors"
-        >
-          <h2 className="text-card-foreground mb-1 font-semibold">
-            Tournaments
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            Create and manage tournaments
-          </p>
-        </Link>
-        <Link
-          to="/rounds/new"
-          className="group bg-card hover:bg-background rounded-lg border p-6 transition-colors"
-        >
-          <h2 className="text-card-foreground mb-1 font-semibold">
-            Single Round
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            Jump straight into a round without tournament setup
-          </p>
-        </Link>
+        {cards.map((card) => (
+          <Link
+            key={card.to}
+            to={card.to}
+            className={`group bg-card hover:bg-background rounded-lg border border-t-4 ${card.border} overflow-hidden transition-colors`}
+          >
+            <div className="p-6">
+              <div className="mb-3 flex items-center gap-3">
+                <span
+                  className={`${card.accent} flex h-9 w-9 items-center justify-center rounded-lg text-lg`}
+                >
+                  {card.icon}
+                </span>
+                <h2 className="text-card-foreground font-semibold">
+                  {card.title}
+                </h2>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                {card.description}
+              </p>
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
   );

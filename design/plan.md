@@ -2,7 +2,7 @@
 
 ## Current State
 
-Phases 1-5 are complete. Phase 6 is partially complete: offline-first scoring (6.1 + 6.2) is done, Supabase Realtime (6.3) and conflict verification testing (6.4) are not started.
+Phases 1-6.3 are complete. Phase 6.4 (conflict verification testing) is not started.
 
 The app has full auth, course library, tournament setup, score entry, round status guards, role-based permissions, a complete competition engine with UI, and offline-first score entry with persistence, optimistic updates, and automatic sync.
 

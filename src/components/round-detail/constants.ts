@@ -1,12 +1,14 @@
 import type { CompetitionConfig } from '@/lib/competitions';
 
-export const statusColors: Record<string, 'default' | 'secondary' | 'outline'> =
-  {
-    draft: 'outline',
-    scheduled: 'secondary',
-    open: 'secondary',
-    finalized: 'default',
-  };
+export const statusColors: Record<
+  string,
+  'default' | 'secondary' | 'outline' | 'warning' | 'success'
+> = {
+  draft: 'outline',
+  scheduled: 'secondary',
+  open: 'warning',
+  finalized: 'default',
+};
 
 export const statusLabels: Record<string, string> = {
   draft: 'Draft',

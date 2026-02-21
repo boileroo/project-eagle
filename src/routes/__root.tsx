@@ -19,14 +19,43 @@ import {
   queryPersister,
   dehydrateOptions,
 } from '@/lib/query-client';
+import { setResponseHeaders } from '@tanstack/react-start/server';
 
 export interface RouterContext {
-  user: { id: string; email: string; displayName: string | null } | null;
+  user: {
+    id: string;
+    email: string;
+    displayName: string | null;
+    accessToken: string | null;
+  } | null;
   queryClient: ReturnType<typeof getQueryClient>;
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async () => {
+    if (typeof window === 'undefined') {
+      setResponseHeaders({
+        'X-Frame-Options': 'DENY',
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Permissions-Policy':
+          'camera=(), microphone=(), geolocation=(), payment=()',
+        'Strict-Transport-Security':
+          'max-age=31536000; includeSubDomains; preload',
+        'Content-Security-Policy': [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline'",
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' data: blob: https://*.supabase.co",
+          "font-src 'self' data:",
+          "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+          'worker-src blob:',
+          "frame-ancestors 'none'",
+          "base-uri 'self'",
+          "form-action 'self'",
+        ].join('; '),
+      });
+    }
     const user = await getAuthUser();
     return { user };
   },

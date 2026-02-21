@@ -9,8 +9,9 @@ import {
   persons,
   tournamentParticipants,
 } from '@/db/schema';
-import { requireAuth } from './auth.helpers';
+import { requireAuth, verifyTournamentMembership } from './auth.helpers';
 import { submitScoreSchema } from './validators';
+import { safeHandler } from './server-utils';
 
 // ──────────────────────────────────────────────
 // Shared: resolve latest score per (participant, hole)
@@ -40,92 +41,94 @@ export function resolveLatestScores<
 
 export const submitScoreFn = createServerFn({ method: 'POST' })
   .inputValidator(submitScoreSchema)
-  .handler(async ({ data }) => {
-    const user = await requireAuth();
+  .handler(
+    safeHandler(async ({ data }) => {
+      const user = await requireAuth();
 
-    // Validate round exists and is in appropriate status
-    const round = await db.query.rounds.findFirst({
-      where: eq(rounds.id, data.roundId),
-    });
-    if (!round) throw new Error('Round not found');
-
-    if (round.status !== 'open') {
-      throw new Error('Round must be open to enter scores');
-    }
-
-    // Validate participant belongs to this round
-    const rp = await db.query.roundParticipants.findFirst({
-      where: and(
-        eq(roundParticipants.id, data.roundParticipantId),
-        eq(roundParticipants.roundId, data.roundId),
-      ),
-    });
-    if (!rp) throw new Error('Participant not in this round');
-
-    // Verify recordedByRole server-side
-    let verifiedRole = data.recordedByRole;
-
-    if (data.recordedByRole === 'player') {
-      // 'player' → the authenticated user must own this participant's person
-      const person = await db.query.persons.findFirst({
-        where: eq(persons.id, rp.personId),
+      // Validate round exists and is in appropriate status
+      const round = await db.query.rounds.findFirst({
+        where: eq(rounds.id, data.roundId),
       });
-      if (!person || person.userId !== user.id) {
-        throw new Error('You can only record your own scores as a player');
-      }
-    } else {
-      // 'marker' or 'commissioner' → user must actually hold that role
-      // (or a higher role) in the tournament
-      const userPerson = await db.query.persons.findFirst({
-        where: eq(persons.userId, user.id),
-      });
-      if (!userPerson) {
-        throw new Error('You are not a participant in this tournament');
+      if (!round) throw new Error('Round not found');
+
+      if (round.status !== 'open') {
+        throw new Error('Round must be open to enter scores');
       }
 
-      const tp = await db.query.tournamentParticipants.findFirst({
+      // Validate participant belongs to this round
+      const rp = await db.query.roundParticipants.findFirst({
         where: and(
-          eq(tournamentParticipants.tournamentId, round.tournamentId),
-          eq(tournamentParticipants.personId, userPerson.id),
+          eq(roundParticipants.id, data.roundParticipantId),
+          eq(roundParticipants.roundId, data.roundId),
         ),
       });
-      if (!tp) {
-        throw new Error('You are not a participant in this tournament');
-      }
+      if (!rp) throw new Error('Participant not in this round');
 
-      if (data.recordedByRole === 'commissioner') {
-        if (tp.role !== 'commissioner') {
-          throw new Error(
-            'Only commissioners can record scores as commissioner',
-          );
+      // Verify recordedByRole server-side
+      let verifiedRole = data.recordedByRole;
+
+      if (data.recordedByRole === 'player') {
+        // 'player' → the authenticated user must own this participant's person
+        const person = await db.query.persons.findFirst({
+          where: eq(persons.id, rp.personId),
+        });
+        if (!person || person.userId !== user.id) {
+          throw new Error('You can only record your own scores as a player');
         }
       } else {
-        // marker claim — must be marker or commissioner
-        if (tp.role !== 'marker' && tp.role !== 'commissioner') {
-          throw new Error(
-            'Only markers and commissioners can record scores for other players',
-          );
+        // 'marker' or 'commissioner' → user must actually hold that role
+        // (or a higher role) in the tournament
+        const userPerson = await db.query.persons.findFirst({
+          where: eq(persons.userId, user.id),
+        });
+        if (!userPerson) {
+          throw new Error('You are not a participant in this tournament');
         }
-        // Use their actual tournament role
-        verifiedRole = tp.role === 'commissioner' ? 'commissioner' : 'marker';
+
+        const tp = await db.query.tournamentParticipants.findFirst({
+          where: and(
+            eq(tournamentParticipants.tournamentId, round.tournamentId),
+            eq(tournamentParticipants.personId, userPerson.id),
+          ),
+        });
+        if (!tp) {
+          throw new Error('You are not a participant in this tournament');
+        }
+
+        if (data.recordedByRole === 'commissioner') {
+          if (tp.role !== 'commissioner') {
+            throw new Error(
+              'Only commissioners can record scores as commissioner',
+            );
+          }
+        } else {
+          // marker claim — must be marker or commissioner
+          if (tp.role !== 'marker' && tp.role !== 'commissioner') {
+            throw new Error(
+              'Only markers and commissioners can record scores for other players',
+            );
+          }
+          // Use their actual tournament role
+          verifiedRole = tp.role === 'commissioner' ? 'commissioner' : 'marker';
+        }
       }
-    }
 
-    // Append the score event (immutable, latest wins)
-    const [event] = await db
-      .insert(scoreEvents)
-      .values({
-        roundId: data.roundId,
-        roundParticipantId: data.roundParticipantId,
-        holeNumber: data.holeNumber,
-        strokes: data.strokes,
-        recordedByUserId: user.id,
-        recordedByRole: verifiedRole,
-      })
-      .returning();
+      // Append the score event (immutable, latest wins)
+      const [event] = await db
+        .insert(scoreEvents)
+        .values({
+          roundId: data.roundId,
+          roundParticipantId: data.roundParticipantId,
+          holeNumber: data.holeNumber,
+          strokes: data.strokes,
+          recordedByUserId: user.id,
+          recordedByRole: verifiedRole,
+        })
+        .returning();
 
-    return event;
-  });
+      return event;
+    }),
+  );
 
 // ──────────────────────────────────────────────
 // Get resolved scorecard (latest event wins)
@@ -135,6 +138,16 @@ export const submitScoreFn = createServerFn({ method: 'POST' })
 export const getScorecardFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ roundId: z.string().uuid() }))
   .handler(async ({ data }) => {
+    const user = await requireAuth();
+
+    // IDOR: verify the requesting user is a participant in this round's tournament
+    const roundForAuth = await db.query.rounds.findFirst({
+      where: eq(rounds.id, data.roundId),
+      columns: { tournamentId: true },
+    });
+    if (!roundForAuth) throw new Error('Round not found');
+    await verifyTournamentMembership(user.id, roundForAuth.tournamentId);
+
     // Fetch all events ordered by createdAt DESC so first-seen = latest
     const events = await db.query.scoreEvents.findMany({
       where: eq(scoreEvents.roundId, data.roundId),
@@ -254,6 +267,20 @@ export const getScoreHistoryFn = createServerFn({ method: 'GET' })
     }),
   )
   .handler(async ({ data }) => {
+    const user = await requireAuth();
+
+    // IDOR: verify the requesting user is a participant in this round's tournament
+    const rpForAuth = await db.query.roundParticipants.findFirst({
+      where: eq(roundParticipants.id, data.roundParticipantId),
+      columns: { roundId: true },
+    });
+    if (!rpForAuth) throw new Error('Not found');
+    const roundForAuth = await db.query.rounds.findFirst({
+      where: eq(rounds.id, rpForAuth.roundId),
+      columns: { tournamentId: true },
+    });
+    if (!roundForAuth) throw new Error('Not found');
+    await verifyTournamentMembership(user.id, roundForAuth.tournamentId);
     const events = await db.query.scoreEvents.findMany({
       where: and(
         eq(scoreEvents.roundParticipantId, data.roundParticipantId),

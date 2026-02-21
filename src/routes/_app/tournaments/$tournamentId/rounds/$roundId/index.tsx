@@ -92,9 +92,9 @@ function RouteComponent() {
     ...myPersonQueryOptions,
     enabled: shouldLoadTournament,
   });
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
 
-  useScoreRealtime(roundId, user!.id);
+  useScoreRealtime(roundId, user!.id, accessToken);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

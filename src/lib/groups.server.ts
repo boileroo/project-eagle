@@ -8,7 +8,7 @@ import {
   rounds,
   roundTeamMembers,
 } from '@/db/schema';
-import { requireCommissioner } from './auth.helpers';
+import { requireAuth, requireCommissioner } from './auth.helpers';
 import {
   createRoundGroupSchema,
   assignParticipantToGroupSchema,
@@ -22,6 +22,7 @@ import {
 export const getRoundGroupsFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ roundId: z.string().uuid() }))
   .handler(async ({ data }) => {
+    await requireAuth();
     return db.query.roundGroups.findMany({
       where: eq(roundGroups.roundId, data.roundId),
       orderBy: (g, { asc }) => [asc(g.groupNumber)],
@@ -216,6 +217,7 @@ export const deriveGroupPairingsFn = createServerFn({ method: 'GET' })
     }),
   )
   .handler(async ({ data }) => {
+    await requireAuth();
     const group = await db.query.roundGroups.findFirst({
       where: eq(roundGroups.id, data.roundGroupId),
       with: {

@@ -14,6 +14,8 @@ import {
   requireAuth,
   requireCommissioner,
   requireCommissionerOrMarker,
+  requireTournamentParticipant,
+  verifyTournamentMembership,
 } from './auth.helpers';
 import {
   competitionConfigSchema,
@@ -22,6 +24,7 @@ import {
 } from './competitions';
 import type { CompetitionConfig } from './competitions';
 import { resolveEffectiveHandicap, getPlayingHandicap } from './handicaps';
+import { checkRateLimit } from './rate-limit';
 import { resolveLatestScores } from './scores.server';
 import { calculateStandings } from './domain/standings';
 import type {
@@ -52,6 +55,7 @@ import {
 export const getCompetitionsFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ tournamentId: z.string().uuid() }))
   .handler(async ({ data }) => {
+    await requireTournamentParticipant(data.tournamentId);
     return db.query.competitions.findMany({
       where: eq(competitions.tournamentId, data.tournamentId),
       orderBy: (competitions, { asc }) => [asc(competitions.createdAt)],
@@ -74,6 +78,14 @@ export const getCompetitionsFn = createServerFn({ method: 'GET' })
 export const getRoundCompetitionsFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ roundId: z.string().uuid() }))
   .handler(async ({ data }) => {
+    const user = await requireAuth();
+    // IDOR: verify the requesting user is a participant in this round's tournament
+    const roundForAuth = await db.query.rounds.findFirst({
+      where: eq(rounds.id, data.roundId),
+      columns: { tournamentId: true },
+    });
+    if (!roundForAuth) throw new Error('Round not found');
+    await verifyTournamentMembership(user.id, roundForAuth.tournamentId);
     return db.query.competitions.findMany({
       where: eq(competitions.roundId, data.roundId),
       orderBy: (competitions, { asc }) => [asc(competitions.createdAt)],
@@ -96,7 +108,8 @@ export const getRoundCompetitionsFn = createServerFn({ method: 'GET' })
 export const getCompetitionFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ competitionId: z.string().uuid() }))
   .handler(async ({ data }) => {
-    return db.query.competitions.findFirst({
+    const user = await requireAuth();
+    const comp = await db.query.competitions.findFirst({
       where: eq(competitions.id, data.competitionId),
       with: {
         bonusAwards: {
@@ -108,6 +121,11 @@ export const getCompetitionFn = createServerFn({ method: 'GET' })
         },
       },
     });
+    // IDOR: verify the requesting user is a participant in this tournament
+    if (comp) {
+      await verifyTournamentMembership(user.id, comp.tournamentId);
+    }
+    return comp;
   });
 
 // ──────────────────────────────────────────────
@@ -287,6 +305,7 @@ export const removeBonusAwardFn = createServerFn({ method: 'POST' })
 export const getTournamentStandingsFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ tournamentId: z.string().uuid() }))
   .handler(async ({ data }) => {
+    await requireTournamentParticipant(data.tournamentId);
     return db.query.tournamentStandings.findMany({
       where: eq(tournamentStandings.tournamentId, data.tournamentId),
       orderBy: (s, { asc }) => [asc(s.createdAt)],
@@ -381,11 +400,21 @@ export const deleteTournamentStandingFn = createServerFn({ method: 'POST' })
 export const computeStandingsFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ standingId: z.string().uuid() }))
   .handler(async ({ data }) => {
+    const user = await requireAuth();
+
+    // Rate-limit: this is the most expensive endpoint
+    if (!checkRateLimit(`standings:${user.id}`, 30, 60_000)) {
+      throw new Error('Too many requests. Please slow down.');
+    }
+
     // 1. Load the standing config
     const standing = await db.query.tournamentStandings.findFirst({
       where: eq(tournamentStandings.id, data.standingId),
     });
     if (!standing) throw new Error('Standing not found');
+
+    // IDOR: verify the requesting user is a participant in this tournament
+    await verifyTournamentMembership(user.id, standing.tournamentId);
 
     const aggregationConfig = aggregationConfigSchema.parse(
       standing.aggregationConfig,

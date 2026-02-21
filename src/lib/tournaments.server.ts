@@ -11,7 +11,11 @@ import {
   tournamentParticipants,
   tournaments,
 } from '@/db/schema';
-import { requireAuth, requireCommissioner } from './auth.helpers';
+import {
+  requireAuth,
+  requireCommissioner,
+  requireTournamentParticipant,
+} from './auth.helpers';
 import {
   addParticipantSchema,
   createGuestSchema,
@@ -20,6 +24,7 @@ import {
   updateTournamentSchema,
 } from './validators';
 import { isTournamentInSetup } from './tournament-status';
+import { safeHandler } from './server-utils';
 
 // ──────────────────────────────────────────────
 // Helper: require tournament to be in setup status
@@ -45,6 +50,7 @@ async function requireSetup(tournamentId: string) {
 
 export const getTournamentsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
+    await requireAuth();
     const allTournaments = await db.query.tournaments.findMany({
       where: eq(tournaments.isSingleRound, false),
       orderBy: (tournaments, { desc }) => [desc(tournaments.createdAt)],
@@ -64,6 +70,7 @@ export const getTournamentsFn = createServerFn({ method: 'GET' }).handler(
 export const getTournamentFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ tournamentId: z.string().uuid() }))
   .handler(async ({ data }) => {
+    await requireTournamentParticipant(data.tournamentId);
     const tournament = await db.query.tournaments.findFirst({
       where: eq(tournaments.id, data.tournamentId),
       with: {
@@ -103,32 +110,34 @@ export const getTournamentFn = createServerFn({ method: 'GET' })
 
 export const createTournamentFn = createServerFn({ method: 'POST' })
   .inputValidator(createTournamentSchema)
-  .handler(async ({ data }) => {
-    const user = await requireAuth();
+  .handler(
+    safeHandler(async ({ data }) => {
+      const user = await requireAuth();
 
-    const [tournament] = await db
-      .insert(tournaments)
-      .values({
-        name: data.name,
-        description: data.description || null,
-        createdByUserId: user.id,
-      })
-      .returning();
+      const [tournament] = await db
+        .insert(tournaments)
+        .values({
+          name: data.name,
+          description: data.description || null,
+          createdByUserId: user.id,
+        })
+        .returning();
 
-    // Auto-add the creator as commissioner
-    const person = await db.query.persons.findFirst({
-      where: eq(persons.userId, user.id),
-    });
-    if (person) {
-      await db.insert(tournamentParticipants).values({
-        tournamentId: tournament.id,
-        personId: person.id,
-        role: 'commissioner',
+      // Auto-add the creator as commissioner
+      const person = await db.query.persons.findFirst({
+        where: eq(persons.userId, user.id),
       });
-    }
+      if (person) {
+        await db.insert(tournamentParticipants).values({
+          tournamentId: tournament.id,
+          personId: person.id,
+          role: 'commissioner',
+        });
+      }
 
-    return { tournamentId: tournament.id };
-  });
+      return { tournamentId: tournament.id };
+    }),
+  );
 
 // ──────────────────────────────────────────────
 // Update a tournament
@@ -183,7 +192,10 @@ export const deleteTournamentFn = createServerFn({ method: 'POST' })
 
 export const searchPersonsFn = createServerFn({ method: 'GET' })
   .inputValidator(
-    z.object({ query: z.string(), tournamentId: z.string().uuid() }),
+    z.object({
+      query: z.string().max(100),
+      tournamentId: z.string().uuid(),
+    }),
   )
   .handler(async ({ data }) => {
     await requireAuth();
@@ -195,9 +207,12 @@ export const searchPersonsFn = createServerFn({ method: 'GET' })
     });
     const existingPersonIds = new Set(existing.map((p) => p.personId));
 
+    // Escape ILIKE metacharacters to prevent wildcard injection
+    const escapedQuery = data.query.replace(/[%_\\]/g, (c) => `\\${c}`);
+
     // Search persons by display name
     const results = await db.query.persons.findMany({
-      where: ilike(persons.displayName, `%${data.query}%`),
+      where: ilike(persons.displayName, `%${escapedQuery}%`),
       with: {
         user: true,
       },
@@ -244,131 +259,131 @@ export const createGuestPersonFn = createServerFn({ method: 'POST' })
 
 export const addParticipantFn = createServerFn({ method: 'POST' })
   .inputValidator(addParticipantSchema)
-  .handler(async ({ data }) => {
-    const user = await requireAuth();
+  .handler(
+    safeHandler(async ({ data }) => {
+      const user = await requireAuth();
 
-    // Look up person to check if this is a self-join
-    const person = await db.query.persons.findFirst({
-      where: eq(persons.id, data.personId),
-    });
-    if (!person) throw new Error('Person not found');
-
-    const isSelfJoin = person.userId === user.id;
-
-    // Verify tournament exists and is in setup
-    const tournament = await db.query.tournaments.findFirst({
-      where: eq(tournaments.id, data.tournamentId),
-    });
-    if (!tournament) throw new Error('Tournament not found');
-    if (!isTournamentInSetup(tournament.status)) {
-      throw new Error(
-        'Cannot add participants once the tournament has left setup',
-      );
-    }
-
-    const isCreator = tournament.createdByUserId === user.id;
-
-    if (isSelfJoin) {
-      // Creator can join as commissioner; others self-join as player only
-      if (
-        data.role &&
-        data.role !== 'player' &&
-        !(data.role === 'commissioner' && isCreator)
-      ) {
-        throw new Error('You can only join as a player');
-      }
-    } else {
-      // Adding someone else: require commissioner (or creator)
-      if (!isCreator) {
-        await requireCommissioner(data.tournamentId);
-      }
-    }
-
-    return db.transaction(async (tx) => {
-      // Check person isn't already a participant
-      const existingParticipant =
-        await tx.query.tournamentParticipants.findFirst({
-          where: and(
-            eq(tournamentParticipants.tournamentId, data.tournamentId),
-            eq(tournamentParticipants.personId, data.personId),
-          ),
-        });
-      if (existingParticipant)
-        throw new Error('Person is already a participant');
-
-      const role = isSelfJoin ? 'player' : (data.role ?? 'player');
-
-      // Guests can only be players
-      if (
-        person.userId == null &&
-        (role === 'commissioner' || role === 'marker')
-      ) {
-        throw new Error('Guests can only be assigned the player role');
-      }
-
-      // If adding as commissioner, demote any existing commissioner to player
-      if (role === 'commissioner') {
-        await tx
-          .update(tournamentParticipants)
-          .set({ role: 'player' })
-          .where(
-            and(
-              eq(tournamentParticipants.tournamentId, data.tournamentId),
-              eq(tournamentParticipants.role, 'commissioner'),
-            ),
-          );
-      }
-
-      const [participant] = await tx
-        .insert(tournamentParticipants)
-        .values({
-          tournamentId: data.tournamentId,
-          personId: data.personId,
-          role,
-          handicapOverride: data.handicapOverride?.toString() ?? null,
-        })
-        .returning();
-
-      // Auto-add to all draft/open rounds in this tournament
-      const openRounds = await tx.query.rounds.findMany({
-        where: and(
-          eq(rounds.tournamentId, data.tournamentId),
-          eq(rounds.status, 'draft'),
-        ),
+      // Look up person to check if this is a self-join
+      const person = await db.query.persons.findFirst({
+        where: eq(persons.id, data.personId),
       });
+      if (!person) throw new Error('Person not found');
 
-      for (const round of openRounds) {
-        const [rp] = await tx
-          .insert(roundParticipants)
-          .values({
-            roundId: round.id,
-            personId: data.personId,
-            tournamentParticipantId: participant.id,
-            handicapSnapshot:
-              data.handicapOverride?.toString() ??
-              person.currentHandicap ??
-              '0',
-          })
-          .returning();
+      const isSelfJoin = person.userId === user.id;
 
-        // Auto-assign to default group if there's exactly one
-        const groups = await tx.query.roundGroups.findMany({
-          where: eq(roundGroups.roundId, round.id),
-        });
-        if (groups.length === 1) {
-          await tx
-            .update(roundParticipants)
-            .set({ roundGroupId: groups[0].id })
-            .where(eq(roundParticipants.id, rp.id));
+      // Verify tournament exists and is in setup
+      const tournament = await db.query.tournaments.findFirst({
+        where: eq(tournaments.id, data.tournamentId),
+      });
+      if (!tournament) throw new Error('Tournament not found');
+      if (!isTournamentInSetup(tournament.status)) {
+        throw new Error(
+          'Cannot add participants once the tournament has left setup',
+        );
+      }
+
+      const isCreator = tournament.createdByUserId === user.id;
+
+      if (isSelfJoin) {
+        // Creator can join as commissioner; others self-join as player only
+        if (
+          data.role &&
+          data.role !== 'player' &&
+          !(data.role === 'commissioner' && isCreator)
+        ) {
+          throw new Error('You can only join as a player');
+        }
+      } else {
+        // Adding someone else: require commissioner (or creator)
+        if (!isCreator) {
+          await requireCommissioner(data.tournamentId);
         }
       }
 
-      return { participantId: participant.id };
-    });
-  });
+      return db.transaction(async (tx) => {
+        // Check person isn't already a participant
+        const existingParticipant =
+          await tx.query.tournamentParticipants.findFirst({
+            where: and(
+              eq(tournamentParticipants.tournamentId, data.tournamentId),
+              eq(tournamentParticipants.personId, data.personId),
+            ),
+          });
+        if (existingParticipant)
+          throw new Error('Person is already a participant');
 
-// ──────────────────────────────────────────────
-// Update a participant (role, handicap override)
+        const role = isSelfJoin ? 'player' : (data.role ?? 'player');
+
+        // Guests can only be players
+        if (
+          person.userId == null &&
+          (role === 'commissioner' || role === 'marker')
+        ) {
+          throw new Error('Guests can only be assigned the player role');
+        }
+
+        // If adding as commissioner, demote any existing commissioner to player
+        if (role === 'commissioner') {
+          await tx
+            .update(tournamentParticipants)
+            .set({ role: 'player' })
+            .where(
+              and(
+                eq(tournamentParticipants.tournamentId, data.tournamentId),
+                eq(tournamentParticipants.role, 'commissioner'),
+              ),
+            );
+        }
+
+        const [participant] = await tx
+          .insert(tournamentParticipants)
+          .values({
+            tournamentId: data.tournamentId,
+            personId: data.personId,
+            role,
+            handicapOverride: data.handicapOverride?.toString() ?? null,
+          })
+          .returning();
+
+        // Auto-add to all draft/open rounds in this tournament
+        const openRounds = await tx.query.rounds.findMany({
+          where: and(
+            eq(rounds.tournamentId, data.tournamentId),
+            eq(rounds.status, 'draft'),
+          ),
+        });
+
+        for (const round of openRounds) {
+          const [rp] = await tx
+            .insert(roundParticipants)
+            .values({
+              roundId: round.id,
+              personId: data.personId,
+              tournamentParticipantId: participant.id,
+              handicapSnapshot:
+                data.handicapOverride?.toString() ??
+                person.currentHandicap ??
+                '0',
+            })
+            .returning();
+
+          // Auto-assign to default group if there's exactly one
+          const groups = await tx.query.roundGroups.findMany({
+            where: eq(roundGroups.roundId, round.id),
+          });
+          if (groups.length === 1) {
+            await tx
+              .update(roundParticipants)
+              .set({ roundGroupId: groups[0].id })
+              .where(eq(roundParticipants.id, rp.id));
+          }
+        }
+
+        return { participantId: participant.id };
+      });
+    }),
+  );
+
 // ──────────────────────────────────────────────
 
 export const updateParticipantFn = createServerFn({ method: 'POST' })

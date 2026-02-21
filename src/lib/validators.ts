@@ -13,15 +13,21 @@ import {
 // Auth schemas
 // ──────────────────────────────────────────────
 export const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  email: z.string().email('Please enter a valid email').max(254),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(128),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export const signUpSchema = loginSchema
   .extend({
-    confirmPassword: z.string(),
-    displayName: z.string().min(2, 'Name must be at least 2 characters'),
+    confirmPassword: z.string().max(128),
+    displayName: z
+      .string()
+      .min(2, 'Name must be at least 2 characters')
+      .max(100),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
@@ -42,8 +48,8 @@ export const courseHoleSchema = z.object({
 export type CourseHoleInput = z.infer<typeof courseHoleSchema>;
 
 const courseBaseSchema = z.object({
-  name: z.string().min(1, 'Course name is required'),
-  location: z.string().optional(),
+  name: z.string().min(1, 'Course name is required').max(150),
+  location: z.string().max(200).optional(),
   numberOfHoles: z.union([z.literal(9), z.literal(18)]),
   holes: z.array(courseHoleSchema),
 });
@@ -73,7 +79,7 @@ export type UpdateCourseInput = z.infer<typeof updateCourseSchema>;
 // ──────────────────────────────────────────────
 
 export const updateAccountSchema = z.object({
-  displayName: z.string().min(2, 'Name must be at least 2 characters'),
+  displayName: z.string().min(2, 'Name must be at least 2 characters').max(100),
   currentHandicap: z
     .number()
     .min(-10, 'Handicap cannot be below -10')
@@ -89,8 +95,8 @@ export type UpdateAccountInput = z.infer<typeof updateAccountSchema>;
 // ──────────────────────────────────────────────
 
 export const createTournamentSchema = z.object({
-  name: z.string().min(1, 'Tournament name is required'),
-  description: z.string().optional(),
+  name: z.string().min(1, 'Tournament name is required').max(150),
+  description: z.string().max(1000).optional(),
 });
 export type CreateTournamentInput = z.infer<typeof createTournamentSchema>;
 
@@ -138,7 +144,7 @@ export const updateParticipantSchema = z.object({
 export type UpdateParticipantInput = z.infer<typeof updateParticipantSchema>;
 
 export const createGuestSchema = z.object({
-  displayName: z.string().min(2, 'Name must be at least 2 characters'),
+  displayName: z.string().min(2, 'Name must be at least 2 characters').max(100),
   currentHandicap: z
     .number()
     .min(-10)
@@ -155,13 +161,13 @@ export type CreateGuestInput = z.infer<typeof createGuestSchema>;
 
 export const createTeamSchema = z.object({
   tournamentId: z.string().uuid(),
-  name: z.string().min(1, 'Team name is required'),
+  name: z.string().min(1, 'Team name is required').max(100),
 });
 export type CreateTeamInput = z.infer<typeof createTeamSchema>;
 
 export const updateTeamSchema = z.object({
   teamId: z.string().uuid(),
-  name: z.string().min(1, 'Team name is required'),
+  name: z.string().min(1, 'Team name is required').max(100),
 });
 export type UpdateTeamInput = z.infer<typeof updateTeamSchema>;
 
@@ -178,18 +184,18 @@ export type AddTeamMemberInput = z.infer<typeof addTeamMemberSchema>;
 export const createRoundSchema = z.object({
   tournamentId: z.string().uuid(),
   courseId: z.string().uuid('Please select a course'),
-  date: z.string().optional(), // ISO date string from input[type=date]
-  teeTime: z.string().optional(), // HH:mm string from input[type=time]
-  format: z.string().optional(), // display label e.g. "Irish Rumble", "Singles"
+  date: z.string().max(10).optional(), // ISO date string from input[type=date]
+  teeTime: z.string().max(5).optional(), // HH:mm string from input[type=time]
+  format: z.string().max(100).optional(), // display label e.g. "Irish Rumble", "Singles"
 });
 export type CreateRoundInput = z.infer<typeof createRoundSchema>;
 
 export const updateRoundSchema = z.object({
   id: z.string().uuid(),
   courseId: z.string().uuid('Please select a course').optional(),
-  date: z.string().optional(),
-  teeTime: z.string().optional(), // HH:mm string from input[type=time]
-  format: z.string().optional(), // display label e.g. "Irish Rumble", "Singles"
+  date: z.string().max(10).optional(),
+  teeTime: z.string().max(5).optional(), // HH:mm string from input[type=time]
+  format: z.string().max(100).optional(), // display label e.g. "Irish Rumble", "Singles"
 });
 export type UpdateRoundInput = z.infer<typeof updateRoundSchema>;
 
@@ -200,7 +206,7 @@ export type UpdateRoundInput = z.infer<typeof updateRoundSchema>;
 export const createRoundGroupSchema = z.object({
   roundId: z.string().uuid(),
   groupNumber: z.number().int().min(1),
-  name: z.string().optional(),
+  name: z.string().max(100).optional(),
 });
 export type CreateRoundGroupInput = z.infer<typeof createRoundGroupSchema>;
 
@@ -238,7 +244,7 @@ export type SubmitScoreInput = z.infer<typeof submitScoreSchema>;
 export const createCompetitionSchema = z.object({
   tournamentId: z.string().uuid(),
   roundId: z.string().uuid(),
-  name: z.string().min(1, 'Competition name is required'),
+  name: z.string().min(1, 'Competition name is required').max(150),
   participantType: z.enum(['individual', 'team']),
   groupScope: z.enum(['all', 'within_group']).default('all'),
   /** The full config including formatType discriminant */
@@ -248,7 +254,7 @@ export type CreateCompetitionInput = z.infer<typeof createCompetitionSchema>;
 
 export const updateCompetitionSchema = z.object({
   id: z.string().uuid(),
-  name: z.string().min(1, 'Competition name is required').optional(),
+  name: z.string().min(1, 'Competition name is required').max(150).optional(),
   groupScope: z.enum(['all', 'within_group']).optional(),
   competitionConfig: competitionConfigSchema.optional(),
 });
@@ -270,7 +276,7 @@ export type AwardBonusInput = z.infer<typeof awardBonusSchema>;
 
 export const createTournamentStandingSchema = z.object({
   tournamentId: z.string().uuid(),
-  name: z.string().min(1, 'Standing name is required'),
+  name: z.string().min(1, 'Standing name is required').max(150),
   participantType: z.enum(['individual', 'team']),
   aggregationConfig: aggregationConfigSchema,
 });
@@ -280,7 +286,7 @@ export type CreateTournamentStandingInput = z.infer<
 
 export const updateTournamentStandingSchema = z.object({
   id: z.string().uuid(),
-  name: z.string().min(1, 'Standing name is required').optional(),
+  name: z.string().min(1, 'Standing name is required').max(150).optional(),
   aggregationConfig: aggregationConfigSchema.optional(),
 });
 export type UpdateTournamentStandingInput = z.infer<

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -11,10 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
-import { useOnlineStatus } from '@/hooks';
-import type { ScorecardData } from '@/components/round-detail/types';
-import type { SubmitScoreInput } from '@/lib/validators';
+import { useOnlineStatus, useScoreMutation } from '@/hooks';
 
 type ScoreEntryDialogProps = {
   open: boolean;
@@ -40,75 +36,8 @@ export function ScoreEntryDialog({
   recordedByRole,
 }: ScoreEntryDialogProps) {
   const [strokes, setStrokes] = useState<number | null>(currentStrokes ?? null);
-  const queryClient = useQueryClient();
   const isOnline = useOnlineStatus();
-  const scorecardQueryKey = ['round', roundId, 'scorecard'] as const;
-  const scoreMutation = useMutation({
-    mutationKey: ['submit-score'],
-    onMutate: async (
-      variables: SubmitScoreInput & { clientMeta?: { savedOffline?: boolean } },
-    ) => {
-      const savedOffline = typeof window === 'undefined' ? false : !isOnline;
-      await queryClient.cancelQueries({ queryKey: scorecardQueryKey });
-      const previousScorecard =
-        queryClient.getQueryData<ScorecardData>(scorecardQueryKey);
-
-      const nextScorecard: ScorecardData = previousScorecard
-        ? structuredClone(previousScorecard)
-        : {};
-      const participantScores = {
-        ...nextScorecard[variables.roundParticipantId],
-      };
-      const existing = participantScores[variables.holeNumber];
-      participantScores[variables.holeNumber] = {
-        strokes: variables.strokes,
-        recordedByRole: variables.recordedByRole,
-        eventCount: (existing?.eventCount ?? 0) + 1,
-      };
-      nextScorecard[variables.roundParticipantId] = participantScores;
-
-      queryClient.setQueryData(scorecardQueryKey, nextScorecard);
-
-      if (savedOffline) {
-        toast.info(
-          `Hole ${variables.holeNumber}: ${variables.strokes} stroke${variables.strokes !== 1 ? 's' : ''} saved offline.`,
-        );
-      }
-
-      return {
-        previousScorecard: savedOffline ? undefined : previousScorecard,
-        savedOffline,
-      };
-    },
-    onError: (error, variables, context) => {
-      if (context?.previousScorecard) {
-        queryClient.setQueryData(scorecardQueryKey, context.previousScorecard);
-      } else {
-        void queryClient.invalidateQueries({ queryKey: scorecardQueryKey });
-      }
-      const rawMessage = error instanceof Error ? error.message : '';
-      const normalizedMessage = rawMessage.toLowerCase();
-      const message = rawMessage
-        ? normalizedMessage.includes('round must be open')
-          ? 'Round is closed.'
-          : normalizedMessage.includes('round not found')
-            ? 'Round no longer exists.'
-            : normalizedMessage.includes('participant not in this round')
-              ? 'Player is no longer in this round.'
-              : normalizedMessage.includes('failed to fetch')
-                ? 'Network error. Check your connection.'
-                : rawMessage
-        : 'Failed to save score.';
-      const wasSavedOffline = variables?.clientMeta?.savedOffline ?? false;
-      const prefix = wasSavedOffline
-        ? 'Offline score could not be synced.'
-        : 'Score could not be saved.';
-      const holeLabel = variables?.holeNumber ?? holeNumber;
-      toast.error(
-        `${participantName} · Hole ${holeLabel}: ${prefix} ${message}`,
-      );
-    },
-  });
+  const scoreMutation = useScoreMutation(roundId);
 
   // Sync strokes state when the target hole/participant changes
   const targetKey = `${roundParticipantId}:${holeNumber}`;
@@ -120,17 +49,14 @@ export function ScoreEntryDialog({
 
   const handleSave = async () => {
     if (strokes == null) return;
-    const variables: SubmitScoreInput & {
-      clientMeta?: { savedOffline?: boolean };
-    } = {
+    scoreMutation.mutate({
       roundId,
       roundParticipantId,
       holeNumber,
       strokes,
       recordedByRole,
       clientMeta: { savedOffline: !isOnline },
-    };
-    scoreMutation.mutate(variables);
+    });
     onOpenChange(false);
   };
 

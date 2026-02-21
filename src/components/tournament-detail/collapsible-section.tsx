@@ -42,7 +42,17 @@ export function CollapsibleSection({
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {step != null && (
-                  <span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+                  <span
+                    className={[
+                      'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                      step === 1 && 'bg-info text-info-foreground',
+                      step === 2 && 'bg-purple text-purple-foreground',
+                      step === 3 && 'bg-coral text-coral-foreground',
+                      step > 3 && 'bg-primary text-primary-foreground',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
                     {step}
                   </span>
                 )}

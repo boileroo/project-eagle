@@ -39,11 +39,12 @@ export function OfflineFallback({
     <div className="flex flex-col items-center gap-2">
       <Button asChild>
         <Link
-          to="/tournaments/$tournamentId/rounds/$roundId"
+          to="/tournaments/$tournamentId/rounds/$roundId/play"
           params={{
             tournamentId: activeRound.tournamentId,
             roundId: activeRound.roundId,
           }}
+          search={{ hole: 1, group: undefined }}
         >
           Continue live scoring
         </Link>

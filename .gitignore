@@ -9,7 +9,17 @@ dist/
 # environment variables
 .env
 .env.local
+.env.production
+.env.staging
+.env.*.local
 *.local
+
+# secrets / certificates
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
 
 # IDE
 .vscode/*

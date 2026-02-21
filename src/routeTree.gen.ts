@@ -28,6 +28,7 @@ import { Route as AppCoursesCourseIdIndexRouteImport } from './routes/_app/cours
 import { Route as AppTournamentsTournamentIdEditRouteImport } from './routes/_app/tournaments/$tournamentId/edit'
 import { Route as AppCoursesCourseIdEditRouteImport } from './routes/_app/courses/$courseId/edit'
 import { Route as AppTournamentsTournamentIdRoundsRoundIdIndexRouteImport } from './routes/_app/tournaments/$tournamentId/rounds/$roundId/index'
+import { Route as AppTournamentsTournamentIdRoundsRoundIdPlayRouteImport } from './routes/_app/tournaments/$tournamentId/rounds/$roundId/play'
 
 const OfflineRoute = OfflineRouteImport.update({
   id: '/offline',
@@ -125,6 +126,12 @@ const AppTournamentsTournamentIdRoundsRoundIdIndexRoute =
     path: '/tournaments/$tournamentId/rounds/$roundId/',
     getParentRoute: () => AppRoute,
   } as any)
+const AppTournamentsTournamentIdRoundsRoundIdPlayRoute =
+  AppTournamentsTournamentIdRoundsRoundIdPlayRouteImport.update({
+    id: '/tournaments/$tournamentId/rounds/$roundId/play',
+    path: '/tournaments/$tournamentId/rounds/$roundId/play',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
   '/courses/$courseId/': typeof AppCoursesCourseIdIndexRoute
   '/tournaments/$tournamentId/': typeof AppTournamentsTournamentIdIndexRoute
+  '/tournaments/$tournamentId/rounds/$roundId/play': typeof AppTournamentsTournamentIdRoundsRoundIdPlayRoute
   '/tournaments/$tournamentId/rounds/$roundId/': typeof AppTournamentsTournamentIdRoundsRoundIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -162,6 +170,7 @@ export interface FileRoutesByTo {
   '/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
   '/courses/$courseId': typeof AppCoursesCourseIdIndexRoute
   '/tournaments/$tournamentId': typeof AppTournamentsTournamentIdIndexRoute
+  '/tournaments/$tournamentId/rounds/$roundId/play': typeof AppTournamentsTournamentIdRoundsRoundIdPlayRoute
   '/tournaments/$tournamentId/rounds/$roundId': typeof AppTournamentsTournamentIdRoundsRoundIdIndexRoute
 }
 export interface FileRoutesById {
@@ -184,6 +193,7 @@ export interface FileRoutesById {
   '/_app/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
   '/_app/courses/$courseId/': typeof AppCoursesCourseIdIndexRoute
   '/_app/tournaments/$tournamentId/': typeof AppTournamentsTournamentIdIndexRoute
+  '/_app/tournaments/$tournamentId/rounds/$roundId/play': typeof AppTournamentsTournamentIdRoundsRoundIdPlayRoute
   '/_app/tournaments/$tournamentId/rounds/$roundId/': typeof AppTournamentsTournamentIdRoundsRoundIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/tournaments/$tournamentId/edit'
     | '/courses/$courseId/'
     | '/tournaments/$tournamentId/'
+    | '/tournaments/$tournamentId/rounds/$roundId/play'
     | '/tournaments/$tournamentId/rounds/$roundId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/tournaments/$tournamentId/edit'
     | '/courses/$courseId'
     | '/tournaments/$tournamentId'
+    | '/tournaments/$tournamentId/rounds/$roundId/play'
     | '/tournaments/$tournamentId/rounds/$roundId'
   id:
     | '__root__'
@@ -245,6 +257,7 @@ export interface FileRouteTypes {
     | '/_app/tournaments/$tournamentId/edit'
     | '/_app/courses/$courseId/'
     | '/_app/tournaments/$tournamentId/'
+    | '/_app/tournaments/$tournamentId/rounds/$roundId/play'
     | '/_app/tournaments/$tournamentId/rounds/$roundId/'
   fileRoutesById: FileRoutesById
 }
@@ -389,6 +402,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTournamentsTournamentIdRoundsRoundIdIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/tournaments/$tournamentId/rounds/$roundId/play': {
+      id: '/_app/tournaments/$tournamentId/rounds/$roundId/play'
+      path: '/tournaments/$tournamentId/rounds/$roundId/play'
+      fullPath: '/tournaments/$tournamentId/rounds/$roundId/play'
+      preLoaderRoute: typeof AppTournamentsTournamentIdRoundsRoundIdPlayRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -406,6 +426,7 @@ interface AppRouteChildren {
   AppTournamentsTournamentIdEditRoute: typeof AppTournamentsTournamentIdEditRoute
   AppCoursesCourseIdIndexRoute: typeof AppCoursesCourseIdIndexRoute
   AppTournamentsTournamentIdIndexRoute: typeof AppTournamentsTournamentIdIndexRoute
+  AppTournamentsTournamentIdRoundsRoundIdPlayRoute: typeof AppTournamentsTournamentIdRoundsRoundIdPlayRoute
   AppTournamentsTournamentIdRoundsRoundIdIndexRoute: typeof AppTournamentsTournamentIdRoundsRoundIdIndexRoute
 }
 
@@ -423,6 +444,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppTournamentsTournamentIdEditRoute: AppTournamentsTournamentIdEditRoute,
   AppCoursesCourseIdIndexRoute: AppCoursesCourseIdIndexRoute,
   AppTournamentsTournamentIdIndexRoute: AppTournamentsTournamentIdIndexRoute,
+  AppTournamentsTournamentIdRoundsRoundIdPlayRoute:
+    AppTournamentsTournamentIdRoundsRoundIdPlayRoute,
   AppTournamentsTournamentIdRoundsRoundIdIndexRoute:
     AppTournamentsTournamentIdRoundsRoundIdIndexRoute,
 }

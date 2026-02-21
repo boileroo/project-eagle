@@ -12,13 +12,18 @@ import {
   persons,
   profiles,
 } from '@/db/schema';
-import { requireAuth, requireCommissioner } from './auth.helpers';
+import {
+  requireAuth,
+  requireCommissioner,
+  verifyTournamentMembership,
+} from './auth.helpers';
 import {
   createRoundSchema,
   createSingleRoundSchema,
   updateRoundSchema,
 } from './validators';
 import { deriveTournamentStatus } from './tournament-status';
+import { safeHandler } from './server-utils';
 
 // ──────────────────────────────────────────────
 // Helper: re-sort round numbers by date/teeTime
@@ -89,10 +94,15 @@ async function syncTournamentStatus(tournamentId: string) {
 
 export const getSingleRoundsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
+    const user = await requireAuth();
     // Single rounds live inside auto-tournaments with isSingleRound=true
-    // Each auto-tournament has exactly one round
+    // Each auto-tournament has exactly one round.
+    // Only return tournaments created by (or participated in by) the current user.
     const singleTournaments = await db.query.tournaments.findMany({
-      where: eq(tournaments.isSingleRound, true),
+      where: and(
+        eq(tournaments.isSingleRound, true),
+        eq(tournaments.createdByUserId, user.id),
+      ),
       orderBy: (t, { desc }) => [desc(t.createdAt)],
       with: {
         rounds: {
@@ -118,6 +128,7 @@ export const getSingleRoundsFn = createServerFn({ method: 'GET' }).handler(
 export const getRoundFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ roundId: z.string().uuid() }))
   .handler(async ({ data }) => {
+    const user = await requireAuth();
     const round = await db.query.rounds.findFirst({
       where: eq(rounds.id, data.roundId),
       with: {
@@ -153,6 +164,8 @@ export const getRoundFn = createServerFn({ method: 'GET' })
       },
     });
     if (!round) throw new Error('Round not found');
+    // IDOR: verify the requesting user is a participant in this tournament
+    await verifyTournamentMembership(user.id, round.tournamentId);
     return round;
   });
 
@@ -162,91 +175,93 @@ export const getRoundFn = createServerFn({ method: 'GET' })
 
 export const createRoundFn = createServerFn({ method: 'POST' })
   .inputValidator(createRoundSchema)
-  .handler(async ({ data }) => {
-    const user = await requireCommissioner(data.tournamentId);
+  .handler(
+    safeHandler(async ({ data }) => {
+      const user = await requireCommissioner(data.tournamentId);
 
-    // Only allow creating rounds when tournament is in setup
-    const tournament = await db.query.tournaments.findFirst({
-      where: eq(tournaments.id, data.tournamentId),
-      columns: { status: true },
-    });
-    if (!tournament) throw new Error('Tournament not found');
-    if (tournament.status !== 'setup') {
-      throw new Error('Can only add rounds while the tournament is in setup');
-    }
+      // Only allow creating rounds when tournament is in setup
+      const tournament = await db.query.tournaments.findFirst({
+        where: eq(tournaments.id, data.tournamentId),
+        columns: { status: true },
+      });
+      if (!tournament) throw new Error('Tournament not found');
+      if (tournament.status !== 'setup') {
+        throw new Error('Can only add rounds while the tournament is in setup');
+      }
 
-    const result = await db.transaction(async (tx) => {
-      // Auto-assign roundNumber as next in sequence
-      const [{ value: existingCount }] = await tx
-        .select({ value: count() })
-        .from(rounds)
-        .where(eq(rounds.tournamentId, data.tournamentId));
+      const result = await db.transaction(async (tx) => {
+        // Auto-assign roundNumber as next in sequence
+        const [{ value: existingCount }] = await tx
+          .select({ value: count() })
+          .from(rounds)
+          .where(eq(rounds.tournamentId, data.tournamentId));
 
-      const [round] = await tx
-        .insert(rounds)
-        .values({
-          tournamentId: data.tournamentId,
-          courseId: data.courseId,
-          roundNumber: existingCount + 1,
-          date: data.date ? new Date(data.date) : null,
-          teeTime: data.teeTime || null,
-          format: data.format || null,
-          createdByUserId: user.id,
-        })
-        .returning();
+        const [round] = await tx
+          .insert(rounds)
+          .values({
+            tournamentId: data.tournamentId,
+            courseId: data.courseId,
+            roundNumber: existingCount + 1,
+            date: data.date ? new Date(data.date) : null,
+            teeTime: data.teeTime || null,
+            format: data.format || null,
+            createdByUserId: user.id,
+          })
+          .returning();
 
-      // Auto-add all tournament participants as round participants
-      const tpList = await tx.query.tournamentParticipants.findMany({
-        where: eq(tournamentParticipants.tournamentId, data.tournamentId),
-        with: {
-          person: true,
-        },
+        // Auto-add all tournament participants as round participants
+        const tpList = await tx.query.tournamentParticipants.findMany({
+          where: eq(tournamentParticipants.tournamentId, data.tournamentId),
+          with: {
+            person: true,
+          },
+        });
+
+        if (tpList.length > 0) {
+          await tx.insert(roundParticipants).values(
+            tpList.map((tp) => ({
+              roundId: round.id,
+              personId: tp.personId,
+              tournamentParticipantId: tp.id,
+              handicapSnapshot:
+                tp.handicapOverride ?? tp.person.currentHandicap ?? '0',
+            })),
+          );
+        }
+
+        // Create default Group 1 and assign all participants
+        const [defaultGroup] = await tx
+          .insert(roundGroups)
+          .values({
+            roundId: round.id,
+            groupNumber: 1,
+            name: 'Group 1',
+          })
+          .returning();
+
+        if (tpList.length > 0) {
+          for (const tp of tpList) {
+            await tx
+              .update(roundParticipants)
+              .set({ roundGroupId: defaultGroup.id })
+              .where(
+                and(
+                  eq(roundParticipants.roundId, round.id),
+                  eq(roundParticipants.personId, tp.personId),
+                ),
+              );
+          }
+        }
+
+        return { roundId: round.id };
       });
 
-      if (tpList.length > 0) {
-        await tx.insert(roundParticipants).values(
-          tpList.map((tp) => ({
-            roundId: round.id,
-            personId: tp.personId,
-            tournamentParticipantId: tp.id,
-            handicapSnapshot:
-              tp.handicapOverride ?? tp.person.currentHandicap ?? '0',
-          })),
-        );
-      }
+      // Re-sort if dates are present
+      await resortRoundsByDate(data.tournamentId);
 
-      // Create default Group 1 and assign all participants
-      const [defaultGroup] = await tx
-        .insert(roundGroups)
-        .values({
-          roundId: round.id,
-          groupNumber: 1,
-          name: 'Group 1',
-        })
-        .returning();
-
-      if (tpList.length > 0) {
-        for (const tp of tpList) {
-          await tx
-            .update(roundParticipants)
-            .set({ roundGroupId: defaultGroup.id })
-            .where(
-              and(
-                eq(roundParticipants.roundId, round.id),
-                eq(roundParticipants.personId, tp.personId),
-              ),
-            );
-        }
-      }
-
-      return { roundId: round.id };
-    });
-
-    // Re-sort if dates are present
-    await resortRoundsByDate(data.tournamentId);
-
-    return result;
-  });
+      return result;
+    }),
+  );
 
 // ──────────────────────────────────────────────
 // Update a round (course, date, tee time)
@@ -451,50 +466,52 @@ export const addRoundParticipantFn = createServerFn({ method: 'POST' })
       handicapSnapshot: z.string(),
     }),
   )
-  .handler(async ({ data }) => {
-    // Only allow adding participants in draft or open status
-    const round = await db.query.rounds.findFirst({
-      where: eq(rounds.id, data.roundId),
-    });
-    if (!round) throw new Error('Round not found');
-    if (round.status !== 'draft') {
-      throw new Error('Can only add participants to draft rounds');
-    }
+  .handler(
+    safeHandler(async ({ data }) => {
+      // Only allow adding participants in draft or open status
+      const round = await db.query.rounds.findFirst({
+        where: eq(rounds.id, data.roundId),
+      });
+      if (!round) throw new Error('Round not found');
+      if (round.status !== 'draft') {
+        throw new Error('Can only add participants to draft rounds');
+      }
 
-    await requireCommissioner(round.tournamentId);
+      await requireCommissioner(round.tournamentId);
 
-    // Check for duplicates
-    const existing = await db.query.roundParticipants.findFirst({
-      where: and(
-        eq(roundParticipants.roundId, data.roundId),
-        eq(roundParticipants.personId, data.personId),
-      ),
-    });
-    if (existing) throw new Error('Person is already in this round');
+      // Check for duplicates
+      const existing = await db.query.roundParticipants.findFirst({
+        where: and(
+          eq(roundParticipants.roundId, data.roundId),
+          eq(roundParticipants.personId, data.personId),
+        ),
+      });
+      if (existing) throw new Error('Person is already in this round');
 
-    const [rp] = await db
-      .insert(roundParticipants)
-      .values({
-        roundId: data.roundId,
-        personId: data.personId,
-        tournamentParticipantId: data.tournamentParticipantId ?? null,
-        handicapSnapshot: data.handicapSnapshot,
-      })
-      .returning();
+      const [rp] = await db
+        .insert(roundParticipants)
+        .values({
+          roundId: data.roundId,
+          personId: data.personId,
+          tournamentParticipantId: data.tournamentParticipantId ?? null,
+          handicapSnapshot: data.handicapSnapshot,
+        })
+        .returning();
 
-    // Auto-assign to group if there's exactly one group (the default)
-    const groups = await db.query.roundGroups.findMany({
-      where: eq(roundGroups.roundId, data.roundId),
-    });
-    if (groups.length === 1) {
-      await db
-        .update(roundParticipants)
-        .set({ roundGroupId: groups[0].id })
-        .where(eq(roundParticipants.id, rp.id));
-    }
+      // Auto-assign to group if there's exactly one group (the default)
+      const groups = await db.query.roundGroups.findMany({
+        where: eq(roundGroups.roundId, data.roundId),
+      });
+      if (groups.length === 1) {
+        await db
+          .update(roundParticipants)
+          .set({ roundGroupId: groups[0].id })
+          .where(eq(roundParticipants.id, rp.id));
+      }
 
-    return { roundParticipantId: rp.id };
-  });
+      return { roundParticipantId: rp.id };
+    }),
+  );
 
 // ──────────────────────────────────────────────
 // Remove a participant from a round
