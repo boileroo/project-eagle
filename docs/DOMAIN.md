@@ -1,18 +1,8 @@
-# Golf Scoring Engine – Architecture Overview
+# Domain
 
-## Vision
+Domain model, scoring engine, and competition design for Aerie — an event-driven golf competition engine.
 
-A social golf scoring app for **golf holidays with flexible tournament formats**.
-
-- Multi-round tournaments with multiple simultaneous competitions
-- Multiple scoring formats (matches, games, stableford, etc.)
-- Individual and team competitions running over the same raw data
-- Offline-first with live updates when connected
-- Formats can change at any point — results are always re-derived
-- Stores only raw facts; all results are projections
-
-> This is not a CRUD golf app.
-> This is an **event-driven golf competition engine** with UI on top.
+> This is not a CRUD golf app. This is an **event-driven golf competition engine** with UI on top.
 
 ---
 
@@ -85,6 +75,8 @@ Person { id, displayName, userId (nullable), currentHandicap }
 - `userId` exists → Registered user
 - `currentHandicap` — self-managed, manually updated over time as part of the player's profile
 
+> Guests are not a role. They are a `Person` without a `userId`.
+
 **TournamentParticipant** — links a person to a tournament:
 
 ```
@@ -120,8 +112,6 @@ This allows:
 - Commissioners to override handicaps at tournament or round level
 - Past rounds to be unaffected by future handicap changes
 - Lifetime stats to be built later
-
-> Guests are not a role. They are a `Person` without a `userId`.
 
 ---
 
@@ -219,11 +209,70 @@ CourseHole { id, courseId, holeNumber, par, strokeIndex, yardage (optional) }
 
 ---
 
+## Real-World Scenarios
+
+### Scenario 1: 8-Player Tournament
+
+**Structure:** 8 players, 2 teams of 4, 3 rounds, 2 groups of 4 per round.
+
+**Round 1 — Rumble:** Group 1 (all Team 1) vs Group 2 (all Team 2). Commissioner sets winning team receives 2 points.
+
+**Round 2 — Best Ball:** Both groups playing 2v2 from each team, lowest stableford score across the pair wins the hole, matchplay. Winning pair receives 2 points.
+
+**Round 3 — Singles:** Each group has 2 members from each team, 2 matches per group. Winning player receives 1 point.
+
+Individual tournament running across all 3 rounds (best overall stableford combined). NTP and LD in each round, +1 bonus stableford point each (6 total bonus points available, contributor mode).
+
+#### Team Competition
+
+| Round     | Format    | Competition  | Points/Win | Total Available |
+| --------- | --------- | ------------ | ---------- | --------------- |
+| 1         | Rumble    | `rumble`     | 2          | 2               |
+| 2         | Best Ball | `best_ball`  | 2          | 4               |
+| 3         | Singles   | `match_play` | 1          | 8               |
+| **Total** |           |              |            | **14**          |
+
+#### Individual Competition
+
+- Individual Scoreboard always shown — Gross, Net, Stableford columns
+- Bonus competitions (contributor mode): NTP + LD per round → +1 pt each → 6 total bonus points
+- Commissioner marks `total` as `primaryScoringBasis` (stableford + bonuses)
+
+---
+
+### Scenario 2: 16-Player Tournament
+
+**Structure:** 16 players, 2 teams of 8, 3 rounds, 4 groups of 4 per round.
+
+**Round 1 — Foursomes:** Alternate shot, pairs vs pairs within each group, 2 from each team. 1 point per match win. _(Foursomes is deferred — see `TODO.md`.)_
+
+**Round 2 — Best Ball (Fourballs):** Pairs vs pairs within each group, 2 from each team. 1 point per match win.
+
+**Round 3 — Singles:** Each group 2 members per team, 2 matches per group. 1 point per win.
+
+Individual tournament across all 3 rounds, stableford basis, no bonus scoring.
+
+#### Team Competition
+
+| Round     | Format    | Competition  | Matches | Points/Win | Total Available |
+| --------- | --------- | ------------ | ------- | ---------- | --------------- |
+| 1         | Foursomes | —            | —       | —          | — (deferred)    |
+| 2         | Best Ball | `best_ball`  | 4       | 1          | 4               |
+| 3         | Singles   | `match_play` | 8       | 1          | 8               |
+| **Total** |           |              |         |            | **12** (est.)   |
+
+#### Individual Competition
+
+- Individual Scoreboard always shown — commissioner marks `stableford` as `primaryScoringBasis`
+- No bonus scoring
+
+---
+
 ## Individual Scoreboard
 
 The Individual Scoreboard is **always present** on every round and tournament — it is not a competition and requires no configuration. It is computed from raw score events.
 
-### Round-level columns
+### Round-Level Columns
 
 | Column        | Derivation                                                                                               |
 | ------------- | -------------------------------------------------------------------------------------------------------- |
@@ -235,11 +284,11 @@ The Individual Scoreboard is **always present** on every round and tournament �
 
 A player is only included if they have scores for **all holes** in the round's course.
 
-### Tournament-level (Individual Leaderboard)
+### Tournament-Level (Individual Leaderboard)
 
 The same columns, **aggregated across all finalised rounds** where the player completed all holes. Each player's row shows how many rounds are counted. Rounds that are not yet finalised, or where a player did not complete all holes, are excluded.
 
-### Primary scoring basis
+### Primary Scoring Basis
 
 The commissioner can designate one column as the **trophy column** — the metric that determines the official winner. This is stored as `primaryScoringBasis` on the round or tournament and is highlighted in the UI. Users can independently show/hide any column for their own view (client-side preference).
 
@@ -272,7 +321,7 @@ Competition {
 
 A round may have at most 1 match and at most 1 game competition simultaneously. If both are configured, the UI warns that tournament-level team scoring will not aggregate (since team and individual game results are incompatible in the leaderboard).
 
-> Note: `stableford` and `stroke_play` were previous competition format types. They are retired — individual scoring is now always provided by the auto-computed Individual Scoreboard.
+> `stableford` and `stroke_play` are retired format types. Individual scoring is now always provided by the auto-computed Individual Scoreboard.
 
 ### Pre-Round Availability Matrix
 
@@ -285,9 +334,7 @@ The competition setup UI filters available formats based on the round's actual g
 | All groups have exactly 2 players per team | Best Ball, Match Play, Hi-Lo                                         |
 | Mixed group makeup                         | All formats shown; a warning indicates which groups will be excluded |
 
-Games (Wolf, Six Point, Chair) are always available regardless of team configuration. Bonuses (NTP/LD) are always available.
-
-If no groups have been set up yet, match formats are not shown — group composition must be known first.
+Games (Wolf, Six Point, Chair) are always available regardless of team configuration. Bonuses (NTP/LD) are always available. If no groups have been set up yet, match formats are not shown.
 
 ### Format Config Schemas
 
@@ -338,8 +385,9 @@ const competitionConfigSchema = z.discriminatedUnion('formatType', [
   z.object({
     formatType: z.literal('six_point'),
     config: z.object({
-      // 4 values summing to 6, one per finishing position
-      distribution: z.array(z.number()).length(4),
+      scoringBasis: z.enum(['stableford', 'gross']),
+      // Fixed 4/2/0 distribution — not configurable
+      // Tie-splitting: 3/3/0, 4/1/1, 2/2/2
     }),
   }),
   z.object({
@@ -366,7 +414,7 @@ const competitionConfigSchema = z.discriminatedUnion('formatType', [
 ]);
 ```
 
-This keeps the database schema flexible (`jsonb`) while giving us **full type safety** at the application layer. Adding a new format means adding a new union member — no schema migration required.
+This keeps the database schema flexible (`jsonb`) while giving full type safety at the application layer. Adding a new format means adding a new union member — no schema migration required.
 
 ### Scoring Rules
 
@@ -391,8 +439,6 @@ BonusAward {
 ```
 
 Only one winner per bonus competition — awarding a new winner replaces the previous one.
-
-**Bonus modes:**
 
 | Mode          | Behaviour                                                                                                                                 |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
@@ -456,8 +502,8 @@ calculateCompetitionResults({
 | **Best Ball**  | `best-ball.ts`  | 2v2 team. Best stableford from each pair compared per hole. Same match logic as match play. `within_group` scope                  |
 | **Hi-Lo**      | `hi-lo.ts`      | 2v2 team. Two parallel matches per hole: high ball (best stableford each side) + low ball (worst each side). `within_group` scope |
 | **Rumble**     | `rumble.ts`     | 4v4 group-vs-group. Escalating scores count per hole range (see below). Aggregate team total, highest wins. `all` scope           |
-| **Wolf**       | `wolf.ts`       | Within-group individual game. Per-hole wolf declarations. Standard 2/4/2 points. `within_group` scope                             |
-| **Six Point**  | `six-point.ts`  | Within-group individual game. Configurable 4-value distribution summing to 6. Tie-splitting. `within_group` scope                 |
+| **Wolf**       | `wolf.ts`       | Within-group individual game. Per-hole wolf declarations. Standard 2/4/2 points. `within_group` scope (pending implementation)    |
+| **Six Point**  | `six-point.ts`  | Within-group individual game. 3-player, fixed 4/2/0 distribution, stableford or gross basis. Tie-splitting. `within_group` scope  |
 | **Chair**      | `chair.ts`      | Within-group individual game. State machine — win outright to take chair, 1pt/hole held, tie retains. `within_group` scope        |
 | **NTP / LD**   | `bonus.ts`      | Award-based, not score-derived. Helpers for UI dropdowns                                                                          |
 
@@ -474,7 +520,7 @@ The Rumble escalates how many scores count per hole:
 
 Hole numbers refer to actual course hole numbers on the card. Each group produces a group aggregate. All groups from the same team are summed for the team total. Higher team total wins.
 
-Constraints: all groups must have exactly 4 players, all from the same team. Only available in team-based tournaments or standalone rounds with teams.
+Constraints: all groups must have exactly 4 players, all from the same team.
 
 ### Wolf Scoring Detail
 
@@ -515,127 +561,63 @@ The engine never touches the database or knows about override precedence. It rec
 
 ---
 
-## Roles & Permissions
+## Model Mapping & Design Reconciliation
 
-### Tournament-Scoped
+This section records how the original scenario-based design (raw notes) maps to the current system, and what was resolved during implementation.
 
-| Role         | Capabilities                                                                          |
-| ------------ | ------------------------------------------------------------------------------------- |
-| Commissioner | Configure tournament, manage teams, lock rounds, override scores, manage competitions |
-| Marker       | Enter/edit scores for their group, award bonus comps, record Wolf declarations        |
-| Player       | Enter/edit own score, self-join tournaments                                           |
-| Spectator    | Read-only access                                                                      |
+### What Aligns Well
 
-Permissions are enforced at **both** layers:
+| Their concept                                 | Our model                                                               |
+| --------------------------------------------- | ----------------------------------------------------------------------- |
+| Tournament, Players, Teams                    | `tournaments`, `tournamentParticipants`, `tournamentTeams`              |
+| Rounds, Groups                                | `rounds`, `roundGroups`, `roundParticipants` (with `roundGroupId`)      |
+| Individual hole scores                        | `scoreEvents` (append-only)                                             |
+| Individual competition (aggregate stableford) | Auto-computed Individual Scoreboard (not a `competitions` row)          |
+| Team competition (match wins)                 | `competitions` with `competitionCategory: 'match'`                      |
+| Points per win / per half                     | `pointsPerWin` / `pointsPerHalf` on match configs                       |
+| Multiple competitions simultaneously          | Multiple `competitions` per round (1 match + 1 game + N bonuses)        |
+| Per-hole game decisions (Wolf)                | `gameDecisions` table (append-only; latest per competitionId+hole wins) |
 
-- **Client-side** — UI gating via `isCommissioner` check (hide/disable admin controls)
-- **Server-side** — `requireCommissioner(tournamentId)` in `src/lib/auth.helpers.ts` on all mutations (tournaments, rounds, teams, competitions). Score entry uses `requireAuth()` with role verification.
+### Resolved Gaps
 
----
+1. **Round-level format label** ✅ — Optional `format` text field on `rounds` for display only (e.g. "Round 1: Irish Rumble"). Scoring logic stays on competitions.
 
-## Authentication
+2. **Per-round competition constraints** ✅ — At most 1 match + 1 game + unlimited bonuses per round. Validated at creation time.
 
-Authentication is handled by **Supabase Auth** and is required from day one — RLS policies depend on it.
+3. **Irish Rumble** ✅ — `rumble` format engine with escalating per-hole scoring. `all` scope. Groups must be 4-player, all same team.
 
-### Auth Model
+4. **Group vs group scope** ✅ — Rumble uses `all` scope (no new `between_groups` scope needed). Team pairings auto-derived from group + team membership, not explicit config.
 
-- Supabase manages `auth.users` (email, password hash, sessions)
-- Our `profiles` table extends `auth.users` with app-specific data
-- The `Person` entity links to `profiles` via `userId` (nullable for guests)
+5. **Bonus dual-mode (standalone vs contributor)** ✅ — `bonusMode` (`standalone` | `contributor`) and `bonusPoints` on NTP/LD configs.
 
-### Key Flows
+6. **Variable points per round** ✅ — `pointsPerWin` is per competition, each round has its own competitions.
 
-- **Sign up / Sign in** — email + magic link (or password, TBD)
-- **Guest creation** — authenticated users create `Person` records without a `userId` for guests in their group
-- **Guest claiming** — a guest can later sign up and link their `Person` to a new `userId`
-- **Session management** — Supabase handles tokens, refresh, and expiry
+7. **Individual scoreboard as a competition** ✅ — Individual Scoreboard is auto-computed; `stableford` and `stroke_play` competition types retired from the UI.
 
-### RLS Dependency
+8. **`participantType` field** ✅ — Renamed to `competitionCategory` (`'match' | 'game' | 'bonus'`).
 
-Every table with user-scoped data uses Supabase RLS policies that reference `auth.uid()`. Without auth, there is no data access control. This is not a future feature — it's foundational.
+9. **`roundTeams` / `roundTeamMembers`** ✅ — Dropped. These tables were never written to in practice. Teams are tournament-level only.
 
----
+### Remaining Gaps / Cross-References to TODO
 
-## Offline-First Strategy
+The following were identified as new work during reconciliation. Current status:
 
-### Client Flow
+1. **`gameDecisions` table** — required for Wolf declarations. Schema migration needed. See `TODO.md` → Wolf UI.
 
-1. User enters a score
-2. Local store (IndexedDB via TanStack Query persister) writes the event immediately
-3. UI updates optimistically
-4. Background sync pushes event to Supabase
-5. Supabase persists the event
-6. Realtime subscription broadcasts to other connected clients
+2. **`primaryScoringBasis` field** — new column on `rounds` and `tournaments`. Schema migration needed.
 
-### Conflict Resolution
+3. **`competitionCategory` enum** — `competitions` table needs the `match | game | bonus` discriminant.
 
-- Append-only events — no destructive writes
-- Latest `createdAt` timestamp per `(roundId, participantId, holeNumber)` wins
-- No merge logic needed
+4. **Wolf declaration UI** — live scoring view needs a per-hole Wolf partner selection panel. See `TODO.md` → Wolf UI.
 
----
+5. **Hi-Lo engine** ✅ — Implemented as `hi-lo.ts`.
 
-## Tech Stack
+6. **Wolf engine** — Pending. See `TODO.md` → Wolf UI.
 
-| Layer             | Choice                                   |
-| ----------------- | ---------------------------------------- |
-| Package Manager   | Yarn                                     |
-| Framework         | TanStack Start                           |
-| Routing / Data    | TanStack Router + TanStack Query         |
-| Database          | Supabase (Postgres)                      |
-| ORM               | Drizzle                                  |
-| Styling           | Tailwind CSS                             |
-| UI Components     | shadcn/ui                                |
-| Local Persistence | IndexedDB (via TanStack Query persister) |
+7. **Six Point engine** ✅ — Implemented as `six-point.ts` (revised design: 3-player, fixed 4/2/0, stableford/gross basis).
 
-### Key Tech Decisions
+8. **Chair engine** ✅ — Implemented as `chair.ts`.
 
-**Drizzle** — Strong TypeScript types, SQL-like syntax (transparent, predictable), lightweight vs Prisma, works well with Supabase Postgres.
+9. **Auto-computed leaderboards** ✅ — `tournamentStandings` table deprecated. Auto-computed Individual Leaderboard and Team Leaderboard replace it.
 
-**Supabase** — Hosted Postgres, realtime subscriptions, built-in auth (foundational — required for RLS), free tier, pairs well with Drizzle.
-
-**TanStack Query + IndexedDB** — Caching, background revalidation, offline mutation queue, ideal for unreliable mobile signal.
-
----
-
-## Requirements
-
-### Functional
-
-- Create and configure tournaments
-- Define teams and individual participants
-- Support multiple rounds per tournament
-- Support multiple concurrent competitions with different scoring formats
-- Handle both team and individual scoring
-- Live leaderboard updates via realtime subscriptions
-
-### Technical
-
-- Offline resilience (works with no signal)
-- Eventual consistency when connectivity returns
-- Mobile-friendly (primary use case is on-course)
-- Deployable to free hosting tier
-- Type-safe end to end (DB → API → client)
-
----
-
-## Risks & Constraints
-
-| Risk                         | Mitigation / Notes                                  |
-| ---------------------------- | --------------------------------------------------- |
-| iOS PWA limitations          | Test early; may need native wrapper later           |
-| IndexedDB storage quotas     | Score events are small; monitor usage               |
-| Sync conflicts (poor signal) | Append-only model avoids destructive conflicts      |
-| Complex scoring rules        | Pure-function engine is easy to extend and test     |
-| Format flexibility           | `configJson` on Competition allows arbitrary config |
-
----
-
-## Guiding Principles
-
-1. **Store facts, derive everything else**
-2. **Offline-first from day one**
-3. **Type safety over convenience**
-4. **Keep schema flexible** — formats will evolve
-5. **Avoid premature backend complexity**
-6. **Keep hosting free initially**
+10. **Foursomes** — Still deferred. See `TODO.md` → Foursomes.

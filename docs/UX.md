@@ -1,6 +1,8 @@
-# Color System
+# UX
 
-This document defines the Tokyo Night dual-theme color system used in Project Eagle with a developer-friendly, consistent, and modern UI that works beautifully in both dark and light modes.
+This document defines the Tokyo Night dual-theme color system used in Aerie with a developer-friendly, consistent, and modern UI that works beautifully in both dark and light modes.
+
+---
 
 ## Overview
 
@@ -9,7 +11,7 @@ The app uses **Tokyo Night Storm** (dark) as the default theme and **Tokyo Night
 - **Tokyo Night Storm**: A dark, rich blue-purple theme with vibrant accents
 - **Tokyo Night Linen**: A warm, soft light theme with refined blues
 
-## Goals
+### Goals
 
 - Provide a beautiful dark-first experience with Tokyo Night Storm as the default
 - Offer a light mode alternative that maintains visual harmony
@@ -17,17 +19,21 @@ The app uses **Tokyo Night Storm** (dark) as the default theme and **Tokyo Night
 - Maintain WCAG accessibility standards across all color combinations
 - Enable smooth theme switching without visual jarring
 
+---
+
 ## Token Strategy
 
-We use a three-tier system:
+A three-tier system:
 
-1. **Primitive tokens** for raw palette values (per-theme)
-2. **Semantic tokens** for functional roles (background, primary, success, etc.)
-3. **Tailwind utilities** generated from semantic tokens
+1. **Primitive tokens** — raw palette values (per-theme)
+2. **Semantic tokens** — functional roles (background, primary, success, etc.)
+3. **Tailwind utilities** — generated from semantic tokens
 
 All color values use **OKLCH** format for perceptual uniformity and better color interpolation.
 
-## Tokyo Night Storm (Dark Mode - Default)
+---
+
+## Tokyo Night Storm (Dark Mode — Default)
 
 ### Primitives
 
@@ -53,7 +59,9 @@ All color values use **OKLCH** format for perceptual uniformity and better color
 - Rich, deep blue-purple background that's easy on the eyes
 - Vibrant but not harsh accent colors for excellent readability
 - Perceptually balanced with OKLCH color space
-- Suitable for extended coding/reading sessions
+- Suitable for extended sessions
+
+---
 
 ## Tokyo Night Linen (Light Mode)
 
@@ -81,6 +89,8 @@ All color values use **OKLCH** format for perceptual uniformity and better color
 - Excellent contrast for readability in bright environments
 - Maintains visual harmony with Storm's color relationships
 - Professional and accessible for all users
+
+---
 
 ## Semantic Token Mapping
 
@@ -113,6 +123,8 @@ Semantic tokens automatically map to the correct primitive based on the current 
 | `--border`                 | Dividers            | `--tn-storm-border`      | `--tn-linen-border`      |
 | `--input`                  | Form inputs         | `--tn-storm-input`       | `--tn-linen-input`       |
 | `--ring`                   | Focus ring          | `--tn-storm-ring`        | `--tn-linen-ring`        |
+
+---
 
 ## Usage Guidelines
 
@@ -171,36 +183,40 @@ The first-place row in standings uses warning color with a left border:
 className = 'bg-warning/10 border-l-2 border-l-warning';
 ```
 
-## Developer Experience (DX) Rules
+---
+
+## Developer DX Rules
 
 ### DO
 
-- ✅ Use semantic tokens (`bg-primary`, `text-foreground`, `border-border`)
-- ✅ Use opacity modifiers for subtle fills (`bg-muted/25`, `bg-success/10`)
-- ✅ Rely on automatic theme switching via semantic tokens
-- ✅ Test UI in both dark and light modes during development
+- Use semantic tokens (`bg-primary`, `text-foreground`, `border-border`)
+- Use opacity modifiers for subtle fills (`bg-muted/25`, `bg-success/10`)
+- Rely on automatic theme switching via semantic tokens
+- Test UI in both dark and light modes during development
 
 ### DON'T
 
-- ❌ Hardcode hex values in components
-- ❌ Use Tailwind color utilities (`bg-blue-500`, `text-red-600`)
-- ❌ Manually handle dark mode with `dark:` variants (semantic tokens handle this)
-- ❌ Use primitive tokens (`--tn-storm-*`, `--tn-linen-*`) directly in components
+- Hardcode hex values in components
+- Use Tailwind color utilities (`bg-blue-500`, `text-red-600`)
+- Manually handle dark mode with `dark:` variants (semantic tokens handle this)
+- Use primitive tokens (`--tn-storm-*`, `--tn-linen-*`) directly in components
 
 ### Why Semantic Tokens?
 
 Semantic tokens ensure:
 
 - **Consistency**: All components use the same color roles
-- **Maintainability**: Palette changes happen in one place (globals.css)
+- **Maintainability**: Palette changes happen in one place (`globals.css`)
 - **Accessibility**: Contrast ratios are preserved across themes
 - **Theme switching**: Components automatically adapt to dark/light mode
+
+---
 
 ## Theme Implementation
 
 ### ThemeProvider Setup
 
-The app uses `next-themes` with the following configuration (src/routes/\_\_root.tsx):
+The app uses `next-themes` with the following configuration (`src/routes/__root.tsx`):
 
 ```tsx
 <ThemeProvider
@@ -253,6 +269,8 @@ All colors are defined in `src/styles/globals.css`:
 }
 ```
 
+---
+
 ## PWA Configuration
 
 The PWA manifest and meta tags use Tokyo Night Linen colors for consistency with the OS:
@@ -263,6 +281,8 @@ The PWA manifest and meta tags use Tokyo Night Linen colors for consistency with
 - Splash screens: Tokyo Night branded for all iOS devices
 
 This ensures the app feels native and polished when installed as a PWA.
+
+---
 
 ## Accessibility
 
@@ -278,6 +298,8 @@ Key accessible pairings:
 - Linen: `--tn-linen-fg` on `--tn-linen-bg` → 8.3:1
 - Primary on foreground text → Always meets 4.5:1 in both themes
 
+---
+
 ## Migration Notes
 
 ### From Princeton Orange Palette
@@ -291,7 +313,9 @@ The previous Princeton Orange palette has been fully replaced with Tokyo Night. 
 
 ### Theme Switching
 
-Users can toggle themes via a theme switcher component. The theme preference persists in localStorage via `next-themes`.
+Users can toggle themes via the theme switcher component. The theme preference persists in localStorage via `next-themes`.
+
+---
 
 ## Future Considerations
 
