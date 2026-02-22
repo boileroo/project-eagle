@@ -18,6 +18,7 @@ import {
   RunningTotals,
   GroupSelector,
   BonusAwardControl,
+  WolfDeclarationControl,
 } from '@/components/live-scoring';
 import { Button } from '@/components/ui/button';
 import type {
@@ -274,6 +275,15 @@ export function LiveScoringPage({
             canAward={isMarkerOrCommissioner}
             canRemove={isCommissioner}
             onChanged={invalidateCompetitions}
+          />
+
+          {/* Wolf declaration */}
+          <WolfDeclarationControl
+            round={round}
+            competitions={competitions}
+            holeNumber={currentHole}
+            groupParticipants={groupParticipants}
+            canDeclare={isMarkerOrCommissioner}
           />
 
           {/* Running totals */}

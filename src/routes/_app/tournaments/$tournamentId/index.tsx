@@ -1,15 +1,24 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
+import { queryOptions } from '@tanstack/react-query';
 import { getTournamentFn, getMyPersonFn } from '@/lib/tournaments.server';
 import { getCoursesFn } from '@/lib/courses.server';
 import {
   getTournamentStandingsFn,
   computeStandingsFn,
+  getTournamentLeaderboardFn,
 } from '@/lib/competitions.server';
 import { useAuth } from '@/hooks/use-auth';
 import { TournamentDetailPage } from '@/components/pages';
 
+const tournamentLeaderboardQueryOptions = (tournamentId: string) =>
+  queryOptions({
+    queryKey: ['tournament-leaderboard', tournamentId],
+    queryFn: () => getTournamentLeaderboardFn({ data: { tournamentId } }),
+  });
+
 export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
-  loader: async ({ params }) => {
+  loader: async ({ params, context }) => {
+    const queryClient = context.queryClient;
     const [tournament, myPerson, courses, standings] = await Promise.all([
       getTournamentFn({ data: { tournamentId: params.tournamentId } }),
       getMyPersonFn(),
@@ -42,6 +51,11 @@ export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
         computedStandings[standings[i].id] = result.value;
       }
     }
+
+    // Prefetch leaderboard into query cache for LeaderboardSection (useSuspenseQuery)
+    await queryClient.ensureQueryData(
+      tournamentLeaderboardQueryOptions(params.tournamentId),
+    );
 
     return { tournament, myPerson, courses, standings, computedStandings };
   },

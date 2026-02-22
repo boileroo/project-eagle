@@ -19,35 +19,41 @@ export const statusLabels: Record<string, string> = {
 
 export const nextTransitions: Record<
   string,
-  { label: string; status: string }[]
+  { label: string; status: string; direction: 'forward' | 'back' }[]
 > = {
-  draft: [{ label: 'Mark Awaiting Start', status: 'scheduled' }],
+  draft: [
+    { label: 'Mark Awaiting Start', status: 'scheduled', direction: 'forward' },
+  ],
   scheduled: [
-    { label: 'Start Round', status: 'open' },
-    { label: 'Back to Draft', status: 'draft' },
+    { label: 'Back to Draft', status: 'draft', direction: 'back' },
+    { label: 'Start Round', status: 'open', direction: 'forward' },
   ],
   open: [
-    { label: 'Finish Round', status: 'finalized' },
-    { label: 'Back to Awaiting Start', status: 'scheduled' },
+    { label: 'Back to Awaiting Start', status: 'scheduled', direction: 'back' },
+    { label: 'Finish Round', status: 'finalized', direction: 'forward' },
   ],
-  finalized: [{ label: 'Reopen for Corrections', status: 'open' }],
+  finalized: [
+    { label: 'Reopen for Corrections', status: 'open', direction: 'back' },
+  ],
 };
 
 export const INDIVIDUAL_FORMATS: {
   value: CompetitionConfig['formatType'];
   label: string;
 }[] = [
-  { value: 'stableford', label: 'Stableford' },
-  { value: 'stroke_play', label: 'Stroke Play' },
-  { value: 'match_play', label: 'Match Play' },
+  { value: 'wolf', label: 'Wolf' },
+  { value: 'six_point', label: 'Six Point' },
+  { value: 'chair', label: 'Chair' },
 ];
 
 export const TEAM_FORMATS: {
   value: CompetitionConfig['formatType'];
   label: string;
 }[] = [
-  { value: 'match_play', label: 'Match Play' },
+  { value: 'match_play', label: 'Singles' },
   { value: 'best_ball', label: 'Best Ball' },
+  { value: 'hi_lo', label: 'Hi-Lo' },
+  { value: 'rumble', label: 'Rumble' },
 ];
 
 export const BONUS_FORMATS: {

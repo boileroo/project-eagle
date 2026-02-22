@@ -26,6 +26,7 @@ import {
   AddRoundDialog,
   RoundsSection,
   StandingsSection,
+  LeaderboardSection,
 } from '@/components/tournament-detail';
 import { PlayersAndTeamsSection } from '@/components/tournament-detail/players-and-teams-section';
 import { CollapsibleSection } from '@/components/tournament-detail/collapsible-section';
@@ -342,31 +343,37 @@ export function TournamentDetailPage({
         />
       </CollapsibleSection>
 
-      {/* Step 3: Standings */}
-      <CollapsibleSection
-        step={3}
-        title="Standings"
-        count={standings.length}
-        countLabel="standing"
-        defaultOpen={standings.length > 0}
-        actions={
-          isCommissioner ? (
-            <Button size="sm" onClick={() => setCreateStandingOpen(true)}>
-              Add Standing
-            </Button>
-          ) : undefined
-        }
-      >
-        <StandingsSection
-          tournamentId={tournament.id}
-          standings={standings}
-          computedStandings={computedStandings}
-          isCommissioner={isCommissioner}
-          onChanged={() => router.invalidate()}
-          createOpen={createStandingOpen}
-          onCreateOpenChange={setCreateStandingOpen}
-        />
+      {/* Step 3: Leaderboard (auto-computed) */}
+      <CollapsibleSection step={3} title="Leaderboard" defaultOpen={true}>
+        <LeaderboardSection tournamentId={tournament.id} />
       </CollapsibleSection>
+
+      {/* Legacy Standings (deprecated — shown only if manual standings exist) */}
+      {standings.length > 0 && (
+        <CollapsibleSection
+          title="Standings (Legacy)"
+          count={standings.length}
+          countLabel="standing"
+          defaultOpen={false}
+          actions={
+            isCommissioner ? (
+              <Button size="sm" onClick={() => setCreateStandingOpen(true)}>
+                Add Standing
+              </Button>
+            ) : undefined
+          }
+        >
+          <StandingsSection
+            tournamentId={tournament.id}
+            standings={standings}
+            computedStandings={computedStandings}
+            isCommissioner={isCommissioner}
+            onChanged={() => router.invalidate()}
+            createOpen={createStandingOpen}
+            onCreateOpenChange={setCreateStandingOpen}
+          />
+        </CollapsibleSection>
+      )}
     </div>
   );
 }

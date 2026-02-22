@@ -47,6 +47,8 @@ type ScorecardProps = {
   ) => void;
   /** Which participant columns the current user may edit. Empty set = no editing. */
   editableParticipantIds?: Set<string>;
+  /** Optional map of roundParticipantId → team hex colour for header colouring. */
+  participantTeamColours?: Map<string, string>;
 };
 
 // ──────────────────────────────────────────────
@@ -60,6 +62,7 @@ export function Scorecard({
   roundStatus,
   onScoreClick,
   editableParticipantIds,
+  participantTeamColours,
 }: ScorecardProps) {
   const canEdit = roundStatus === 'open';
 
@@ -212,6 +215,14 @@ export function Scorecard({
                 key={p.id}
                 className="border px-2 py-1.5 text-center text-xs font-medium"
                 title={`${p.person.displayName} (HC ${playingHCs[i]})`}
+                style={
+                  participantTeamColours?.has(p.id)
+                    ? {
+                        borderBottomColor: participantTeamColours.get(p.id),
+                        borderBottomWidth: '2px',
+                      }
+                    : undefined
+                }
               >
                 {shortName(p.person.displayName)}
               </th>

@@ -245,7 +245,7 @@ export const createCompetitionSchema = z.object({
   tournamentId: z.string().uuid(),
   roundId: z.string().uuid(),
   name: z.string().min(1, 'Competition name is required').max(150),
-  participantType: z.enum(['individual', 'team']),
+  competitionCategory: z.enum(['match', 'game', 'bonus']),
   groupScope: z.enum(['all', 'within_group']).default('all'),
   /** The full config including formatType discriminant */
   competitionConfig: competitionConfigSchema,

@@ -59,6 +59,9 @@ export function EditCompetitionDialog({
   const [bonusPoints, setBonusPoints] = useState<number>(
     (existingConfig.bonusPoints as number) ?? 1,
   );
+  const [sixPointScoringBasis, setSixPointScoringBasis] = useState<
+    'stableford' | 'gross'
+  >((existingConfig.scoringBasis as 'stableford' | 'gross') ?? 'stableford');
 
   const resetForm = () => {
     setName(comp.name);
@@ -75,6 +78,9 @@ export function EditCompetitionDialog({
         'standalone',
     );
     setBonusPoints((existingConfig.bonusPoints as number) ?? 1);
+    setSixPointScoringBasis(
+      (existingConfig.scoringBasis as 'stableford' | 'gross') ?? 'stableford',
+    );
   };
 
   const buildConfig = (): CompetitionConfig => {
@@ -107,6 +113,16 @@ export function EditCompetitionDialog({
               [],
           },
         };
+      case 'hi_lo':
+        return {
+          formatType: 'hi_lo',
+          config: { pointsPerWin, pointsPerHalf },
+        };
+      case 'rumble':
+        return {
+          formatType: 'rumble',
+          config: { pointsPerWin },
+        };
       case 'nearest_pin':
         return {
           formatType: 'nearest_pin',
@@ -117,6 +133,16 @@ export function EditCompetitionDialog({
           formatType: 'longest_drive',
           config: { holeNumber, bonusMode, bonusPoints },
         };
+      default:
+        // wolf, chair: name-only edit (no config fields needed)
+        if (formatType === 'wolf') return { formatType: 'wolf', config: {} };
+        if (formatType === 'chair') return { formatType: 'chair', config: {} };
+        if (formatType === 'six_point')
+          return {
+            formatType: 'six_point',
+            config: { scoringBasis: sixPointScoringBasis },
+          };
+        throw new Error(`Unsupported format type for edit: ${formatType}`);
     }
   };
 
@@ -166,7 +192,11 @@ export function EditCompetitionDialog({
           <DialogTitle>Edit Competition</DialogTitle>
           <DialogDescription>
             {formatLabel} ·{' '}
-            {comp.participantType === 'team' ? 'Team' : 'Individual'}
+            {comp.competitionCategory === 'match'
+              ? 'Match'
+              : comp.competitionCategory === 'game'
+                ? 'Game'
+                : 'Bonus'}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -180,18 +210,55 @@ export function EditCompetitionDialog({
             />
           </div>
 
-          {hasGroups && !isBonus && (
+          {hasGroups &&
+            !isBonus &&
+            formatType !== 'wolf' &&
+            formatType !== 'six_point' &&
+            formatType !== 'chair' &&
+            formatType !== 'hi_lo' &&
+            formatType !== 'rumble' && (
+              <div className="space-y-2">
+                <Label>Scope</Label>
+                <Select
+                  value={groupScope}
+                  onChange={(e) =>
+                    setGroupScope(e.target.value as 'all' | 'within_group')
+                  }
+                >
+                  <option value="all">All players</option>
+                  <option value="within_group">Within each group</option>
+                </Select>
+              </div>
+            )}
+
+          {formatType === 'six_point' && (
             <div className="space-y-2">
-              <Label>Scope</Label>
-              <Select
-                value={groupScope}
-                onChange={(e) =>
-                  setGroupScope(e.target.value as 'all' | 'within_group')
-                }
-              >
-                <option value="all">All players</option>
-                <option value="within_group">Within each group</option>
-              </Select>
+              <Label>Scoring Basis</Label>
+              <div className="flex gap-3">
+                {(
+                  [
+                    { value: 'stableford', label: 'Stableford' },
+                    { value: 'gross', label: 'Gross Strokes' },
+                  ] as const
+                ).map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex cursor-pointer items-center gap-1.5 text-sm"
+                  >
+                    <input
+                      type="radio"
+                      name="edit-six-point-basis"
+                      value={opt.value}
+                      checked={sixPointScoringBasis === opt.value}
+                      onChange={() => setSixPointScoringBasis(opt.value)}
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Fixed distribution: 1st = 4 pts, 2nd = 2 pts, 3rd = 0 pts.
+              </p>
             </div>
           )}
 
@@ -221,9 +288,11 @@ export function EditCompetitionDialog({
                   step="0.5"
                   min="0"
                   value={pointsPerWin}
-                  onChange={(e) =>
-                    setPointsPerWin(parseFloat(e.target.value) || 0)
-                  }
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    setPointsPerWin(val);
+                    setPointsPerHalf(val / 2);
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -235,6 +304,64 @@ export function EditCompetitionDialog({
                   value={pointsPerHalf}
                   onChange={(e) =>
                     setPointsPerHalf(parseFloat(e.target.value) || 0)
+                  }
+                />
+              </div>
+            </div>
+          )}
+
+          {formatType === 'hi_lo' && (
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-xs">
+                2v2 per group. Each hole: High ball match + Low ball match — 2
+                points available per hole.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Points per Win</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={pointsPerWin}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      setPointsPerWin(val);
+                      setPointsPerHalf(val / 2);
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Points per Half</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={pointsPerHalf}
+                    onChange={(e) =>
+                      setPointsPerHalf(parseFloat(e.target.value) || 0)
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {formatType === 'rumble' && (
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-xs">
+                4-player groups (same team). Holes 1–6: best 1; Holes 7–12: top
+                2; Holes 13–17: top 3; Hole 18: all 4. Higher team total wins.
+              </p>
+              <div className="space-y-2">
+                <Label>Points per Win</Label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={pointsPerWin}
+                  onChange={(e) =>
+                    setPointsPerWin(parseFloat(e.target.value) || 0)
                   }
                 />
               </div>
@@ -263,7 +390,7 @@ export function EditCompetitionDialog({
                 >
                   <option value="standalone">Standalone (award only)</option>
                   <option value="contributor">
-                    Contributor (adds to individual standings)
+                    Contributor (contributes to stableford point standings)
                   </option>
                 </Select>
               </div>

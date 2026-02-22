@@ -27,8 +27,8 @@ export interface BestBallHoleResult {
 }
 
 export interface BestBallMatchResult {
-  teamA: { roundTeamId: string; name: string };
-  teamB: { roundTeamId: string; name: string };
+  teamA: { teamId: string; name: string };
+  teamB: { teamId: string; name: string };
   holeResults: BestBallHoleResult[];
   /** Positive = A leads, negative = B leads, 0 = all square */
   matchScore: number;
@@ -58,7 +58,7 @@ export function calculateBestBall(
     (a, b) => a.holeNumber - b.holeNumber,
   );
 
-  const teamMap = new Map((input.teams ?? []).map((t) => [t.roundTeamId, t]));
+  const teamMap = new Map((input.teams ?? []).map((t) => [t.teamId, t]));
   const participantMap = new Map(
     input.participants.map((p) => [p.roundParticipantId, p]),
   );
@@ -78,9 +78,9 @@ export function calculateBestBall(
       .filter(Boolean) as NonNullable<ReturnType<typeof participantMap.get>>[];
 
     return calculateBestBallMatch(
-      { roundTeamId: teamA.roundTeamId, name: teamA.name },
+      { teamId: teamA.teamId, name: teamA.name },
       teamAMembers,
-      { roundTeamId: teamB.roundTeamId, name: teamB.name },
+      { teamId: teamB.teamId, name: teamB.name },
       teamBMembers,
       sortedHoles,
       scoreLookup,
@@ -97,7 +97,7 @@ export function calculateBestBall(
 // ──────────────────────────────────────────────
 
 interface TeamInfo {
-  roundTeamId: string;
+  teamId: string;
   name: string;
 }
 

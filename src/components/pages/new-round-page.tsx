@@ -98,7 +98,12 @@ export function NewRoundPage({ courses }: { courses: Course[] }) {
                   name="courseId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Course</FormLabel>
+                      <FormLabel>
+                        Course{' '}
+                        <span className="text-destructive" aria-hidden="true">
+                          *
+                        </span>
+                      </FormLabel>
                       <FormControl>
                         <Select {...field}>
                           <option value="">Select a course…</option>
@@ -153,6 +158,13 @@ export function NewRoundPage({ courses }: { courses: Course[] }) {
                 />
               </CardContent>
             </Card>
+
+            <p className="text-muted-foreground text-sm">
+              <span className="text-destructive" aria-hidden="true">
+                *
+              </span>{' '}
+              Required
+            </p>
 
             <div className="flex gap-3">
               <Button type="submit" disabled={submitting}>

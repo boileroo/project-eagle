@@ -5,3 +5,4 @@ export { CollapsibleSection } from './collapsible-section';
 export { PlayersAndTeamsSection } from './players-and-teams-section';
 export { RoundsSection } from './rounds-section';
 export { StandingsSection } from './standings-section';
+export { LeaderboardSection } from './leaderboard-section';

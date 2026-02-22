@@ -130,7 +130,7 @@ function aggregateSumStableford(
           for (const team of inputTeams) {
             for (const memberId of team.memberParticipantIds) {
               playerTeamMap.set(memberId, {
-                teamId: team.roundTeamId,
+                teamId: team.teamId,
                 teamName: team.name,
               });
             }
@@ -202,7 +202,7 @@ function aggregateSumStableford(
         const inputTeams = input.teams ?? [];
         for (const team of inputTeams) {
           if (team.memberParticipantIds.includes(bonus.roundParticipantId)) {
-            const existing = totals.get(team.roundTeamId);
+            const existing = totals.get(team.teamId);
             if (existing) {
               existing.total += bonus.bonusPoints;
               existing.bonusTotal += bonus.bonusPoints;
@@ -267,7 +267,7 @@ function aggregateLowestStrokes(
           for (const team of inputTeams) {
             for (const memberId of team.memberParticipantIds) {
               playerTeamMap.set(memberId, {
-                teamId: team.roundTeamId,
+                teamId: team.teamId,
                 teamName: team.name,
               });
             }
@@ -436,7 +436,7 @@ function aggregateMatchWins(
           for (const team of inputTeams) {
             for (const memberId of team.memberParticipantIds) {
               playerTeamMap.set(memberId, {
-                teamId: team.roundTeamId,
+                teamId: team.teamId,
                 teamName: team.name,
               });
             }
@@ -477,8 +477,8 @@ function aggregateMatchWins(
         if (result.type === 'best_ball' && participantType === 'team') {
           for (const match of result.result.matches) {
             const entries = [
-              { id: match.teamA.roundTeamId, name: match.teamA.name },
-              { id: match.teamB.roundTeamId, name: match.teamB.name },
+              { id: match.teamA.teamId, name: match.teamA.name },
+              { id: match.teamB.teamId, name: match.teamB.name },
             ];
 
             for (const entry of entries) {
@@ -489,9 +489,8 @@ function aggregateMatchWins(
               if (match.winner === 'halved') {
                 pts = config.pointsPerHalf;
               } else if (
-                (match.winner === 'A' &&
-                  entry.id === match.teamA.roundTeamId) ||
-                (match.winner === 'B' && entry.id === match.teamB.roundTeamId)
+                (match.winner === 'A' && entry.id === match.teamA.teamId) ||
+                (match.winner === 'B' && entry.id === match.teamB.teamId)
               ) {
                 pts = config.pointsPerWin;
               }

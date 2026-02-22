@@ -2,12 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
-import {
-  roundGroups,
-  roundParticipants,
-  rounds,
-  roundTeamMembers,
-} from '@/db/schema';
+import { roundGroups, roundParticipants, rounds } from '@/db/schema';
 import { requireAuth, requireCommissioner } from './auth.helpers';
 import {
   createRoundGroupSchema,
@@ -283,19 +278,21 @@ export const deriveGroupPairingsFn = createServerFn({ method: 'GET' })
       return { format: 'match_play' as const, pairings: matchPairings };
     }
 
-    // best_ball: pair teams
-    // Find round teams that have members in this group
-    const roundTeamIds = new Set<string>();
+    // best_ball: pair teams by grouping participants from this group by their tournament team
+    // Uses tournamentParticipant.teamMemberships (already loaded above)
+    const teamMap2 = new Map<string, string[]>(); // tournamentTeamId -> roundParticipantIds
+
     for (const p of participants) {
-      const teamMembers = await db.query.roundTeamMembers.findMany({
-        where: eq(roundTeamMembers.roundParticipantId, p.id),
-      });
-      for (const tm of teamMembers) {
-        roundTeamIds.add(tm.roundTeamId);
+      const memberships = p.tournamentParticipant?.teamMemberships ?? [];
+      if (memberships.length > 0) {
+        const teamId = memberships[0].teamId;
+        const list = teamMap2.get(teamId) ?? [];
+        list.push(p.id);
+        teamMap2.set(teamId, list);
       }
     }
 
-    const teamIdList = Array.from(roundTeamIds);
+    const teamIdList = Array.from(teamMap2.keys());
     const teamPairings: DerivedTeamPairing[] = [];
     for (let i = 0; i < teamIdList.length - 1; i += 2) {
       teamPairings.push({

@@ -91,7 +91,12 @@ export function AddRoundDialog({
 
         <div className="space-y-4">
           <div>
-            <Label htmlFor="courseSelect">Course</Label>
+            <Label htmlFor="courseSelect">
+              Course{' '}
+              <span className="text-destructive" aria-hidden="true">
+                *
+              </span>
+            </Label>
             <Select
               id="courseSelect"
               className="h-9 py-1"
@@ -140,6 +145,12 @@ export function AddRoundDialog({
         </div>
 
         <DialogFooter>
+          <p className="text-muted-foreground mr-auto text-sm">
+            <span className="text-destructive" aria-hidden="true">
+              *
+            </span>{' '}
+            Required
+          </p>
           <Button onClick={handleAdd} disabled={adding || !courseId}>
             {adding ? 'Creating…' : 'Create Round'}
           </Button>

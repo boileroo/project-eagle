@@ -2,7 +2,7 @@
 
 ## Current State
 
-Phases 1-6.3 are complete. Phase 6.4 (conflict verification testing) is not started.
+Phases 1-6.3 are complete. Phase 6.4 (conflict verification testing) is not started. Phase 7 (Scoring Rework) is planned and design docs are complete — implementation not yet started.
 
 The app has full auth, course library, tournament setup, score entry, round status guards, role-based permissions, a complete competition engine with UI, and offline-first score entry with persistence, optimistic updates, and automatic sync.
 
@@ -390,6 +390,94 @@ Polish for real-world on-course use.
 
 ---
 
+---
+
+## Phase 7 — Scoring Rework
+
+A major rework of the competition and scoring model. The goal is to simplify the commissioner experience, expose always-on individual scoring, and add new match/game formats.
+
+### Context
+
+After Phase 6, the following structural problems exist:
+
+- Individual scoring requires the commissioner to manually create a `stableford` or `stroke_play` competition. If they forget, there is no individual leaderboard.
+- The `tournamentStandings` aggregation config is complex and error-prone. The commissioner must explicitly configure how tournament standings are derived.
+- The `roundTeams` / `roundTeamMembers` tables exist in schema but are never written to in practice. They add dead complexity.
+- `participantType: 'individual' | 'team'` is confusing — it conflates the scoring subject with the competition category.
+- There is no support for games (Wolf, Six Point, Chair) or the Hi-Lo match format.
+
+### Key decisions
+
+- **Individual Scoreboard always present** — auto-computed from raw score events, not a competition. No configuration needed.
+- **`stableford` and `stroke_play` competition types retired** from the UI (schema kept for legacy data display only).
+- **`roundTeams` / `roundTeamMembers` dropped** — they were never written to. Teams are tournament-level only.
+- **`tournamentStandings` deprecated** — no new writes. Auto-computed leaderboards replace it entirely.
+- **`participantType` renamed to `competitionCategory`** — values: `'match' | 'game' | 'bonus'`.
+- **`primaryScoringBasis`** added to `rounds` and `tournaments` — commissioner marks the trophy column.
+- **`gameDecisions` table added** — append-only per-hole game declarations (required for Wolf).
+
+### 7.1 Schema migration
+
+- Drop `roundTeams` and `roundTeamMembers` tables
+- Add `primaryScoringBasis` column to `rounds` (enum: `gross_strokes | net_strokes | stableford | total | null`)
+- Add `primaryScoringBasis` column to `tournaments` (same enum)
+- Add `gameDecisions` table (`id`, `competitionId`, `roundId`, `holeNumber`, `data` jsonb, `recordedByUserId`, `createdAt`)
+- Rename `competitions.participantType` → `competitions.competitionCategory` with new enum values (`match | game | bonus`)
+- Retire `stableford` and `stroke_play` from `formatTypeEnum` (keep values for legacy read; remove from UI options)
+
+### 7.2 Domain engine
+
+- **New** `src/lib/domain/individual-scoreboard.ts` — computes gross/net/stableford/bonus/total per player
+- **New** `src/lib/domain/rumble.ts` — escalating group aggregate; `all` scope
+- **New** `src/lib/domain/hi-lo.ts` — dual high/low ball match per hole; `within_group` scope
+- **New** `src/lib/domain/wolf.ts` — per-hole wolf declarations from `gameDecisions`; `within_group` scope
+- **New** `src/lib/domain/six-point.ts` — configurable distribution with tie-splitting; `within_group` scope
+- **New** `src/lib/domain/chair.ts` — state-machine chair tracking; `within_group` scope
+- **Update** `src/lib/domain/best-ball.ts` — rename `TeamData.roundTeamId` → `teamId` (promote existing fallback to primary path)
+- **Update** `src/lib/domain/standings.ts` — remove aggregation config system; replace with auto-computation from round competition results
+- **Update** `src/lib/domain/index.ts` — register new format engines; update `TeamData` interface
+
+### 7.3 Server functions
+
+- `getIndividualScoreboardFn(roundId)` — returns per-player scoreboard rows (gross/net/stableford/bonus/total)
+- `getTournamentLeaderboardFn(tournamentId)` — returns aggregated individual + team leaderboard
+- `setRoundPrimaryScoringBasisFn(roundId, basis)` — commissioner sets trophy column
+- `setTournamentPrimaryScoringBasisFn(tournamentId, basis)` — commissioner sets tournament trophy column
+- `submitGameDecisionFn(competitionId, roundId, holeNumber, data)` — Wolf/game declarations
+- `getGameDecisionsFn(competitionId)` — returns all decisions for a competition (latest per hole resolved at call site or in engine)
+
+### 7.4 Round detail UI
+
+- Reorder sections: Status controls → Scorecard → Individual Scoreboard → Team Competitions
+- **New** `src/components/individual-scoreboard.tsx` — column headers (Gross/Net/Stableford/Bonus/Total), column visibility toggles (client preference), primary scoring basis badge
+- Rename `CompetitionsSection` → `TeamCompetitionsSection` — restricted to match/game/bonus formats; smart pre-round availability matrix filters available formats based on group composition
+- **New** Rumble config form in `add-team-comp-dialog.tsx`
+- **New** Hi-Lo config form in `add-team-comp-dialog.tsx`
+- Remove stableford/stroke_play from the "Add Competition" format selector
+
+### 7.5 Tournament detail UI
+
+- Replace `standings-section.tsx` with two auto-computed leaderboard sections:
+  - **Individual Leaderboard** — aggregates finalised rounds; same columns as Individual Scoreboard
+  - **Team Leaderboard** — sums match points from all finalised rounds; only shown if teams exist
+- **New** `src/components/tournament-detail/leaderboard-section.tsx`
+
+### 7.6 New game formats — Wolf (requires declarations UI)
+
+- Wolf declaration panel in live scoring view — appears on the wolf's hole; wolf selects partner or "Lone Wolf"
+- `submitGameDecisionFn` mutation with optimistic update
+- Wolf engine computes per-hole results and running totals
+
+### Done when
+
+- Every round automatically shows Gross/Net/Stableford columns — no competition setup required
+- Rumble, Hi-Lo, Wolf, Six Point, and Chair are all playable
+- Tournament leaderboards are auto-computed — no `tournamentStandings` configuration needed
+- `roundTeams` / `roundTeamMembers` tables are gone
+- All domain engine pure functions have Vitest unit tests
+
+---
+
 ## Design Decisions
 
 ### Competition Structure Per Round
@@ -426,9 +514,9 @@ Polish for real-world on-course use.
 ## Sequencing
 
 ```
-Phase 1 ──→ Phase 2 ──→ Phase 3 ──→ Phase 4 ──→ Phase 5 ──→ Phase 6
- Auth &      Course      Tournament   Score       Engine &     Offline &
- Schema      Library     Setup        Entry       Leaderboards Realtime
+Phase 1 ──→ Phase 2 ──→ Phase 3 ──→ Phase 4 ──→ Phase 5 ──→ Phase 6 ──→ Phase 7
+ Auth &      Course      Tournament   Score       Engine &     Offline &   Scoring
+ Schema      Library     Setup        Entry       Leaderboards Realtime    Rework
 ```
 
 Each phase produces something usable and builds on the last. Phase 1 is the clear starting point — auth and schema are blocking everything else.

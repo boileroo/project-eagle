@@ -76,7 +76,7 @@ export function AddBonusCompDialog({
         data: {
           tournamentId,
           name: name.trim(),
-          participantType: 'individual',
+          competitionCategory: 'bonus',
           groupScope: 'all',
           roundId,
           competitionConfig: buildConfig(),
@@ -164,7 +164,7 @@ export function AddBonusCompDialog({
             >
               <option value="standalone">Standalone (award only)</option>
               <option value="contributor">
-                Contributor (adds to individual standings)
+                Contributor (contributes to stableford point standings)
               </option>
             </Select>
           </div>

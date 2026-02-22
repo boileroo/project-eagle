@@ -11,7 +11,11 @@ export const Route = createFileRoute('/_app/')({
     const { user } = Route.useRouteContext();
     const { activeRounds } = Route.useLoaderData();
     return (
-      <DashboardPage userEmail={user.email!} activeRounds={activeRounds} />
+      <DashboardPage
+        userEmail={user.email!}
+        displayName={user.displayName ?? null}
+        activeRounds={activeRounds}
+      />
     );
   },
 });

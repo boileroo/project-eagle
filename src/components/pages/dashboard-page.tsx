@@ -16,16 +16,20 @@ type ActiveRound = {
 
 export function DashboardPage({
   userEmail,
+  displayName,
   activeRounds,
 }: {
   userEmail: string;
+  displayName: string | null;
   activeRounds: ActiveRound[];
 }) {
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back, {userEmail}</p>
+        <p className="text-muted-foreground">
+          Welcome back, {displayName ?? userEmail}
+        </p>
       </div>
 
       {/* ── Zone 1: Resume (only when active rounds exist) ── */}

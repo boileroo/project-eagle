@@ -9,6 +9,11 @@ import { calculateStableford, type StablefordResult } from './stableford';
 import { calculateStrokePlay, type StrokePlayResult } from './stroke-play';
 import { calculateMatchPlay, type MatchPlayResult } from './match-play';
 import { calculateBestBall, type BestBallResult } from './best-ball';
+import { calculateRumble, type RumbleResult } from './rumble';
+import { calculateHiLo, type HiLoResult } from './hi-lo';
+import { calculateWolf, type WolfResult } from './wolf';
+import { calculateSixPoint, type SixPointResult } from './six-point';
+import { calculateChair, type ChairResult } from './chair';
 
 // ──────────────────────────────────────────────
 // Engine Input Types (pre-resolved by caller)
@@ -40,7 +45,7 @@ export interface GroupData {
 }
 
 export interface TeamData {
-  roundTeamId: string;
+  teamId: string;
   name: string;
   tournamentTeamId: string | null;
   memberParticipantIds: string[];
@@ -51,6 +56,15 @@ export interface ResolvedScore {
   roundParticipantId: string;
   holeNumber: number;
   strokes: number;
+}
+
+/** Wolf per-hole game decision (latest per holeNumber wins) */
+export interface GameDecisionData {
+  holeNumber: number;
+  data: {
+    wolfPlayerId: string;
+    partnerPlayerId: string | null;
+  };
 }
 
 export interface CompetitionInput {
@@ -65,6 +79,8 @@ export interface CompetitionInput {
   scores: ResolvedScore[];
   teams?: TeamData[];
   groups?: GroupData[];
+  /** Wolf only: per-hole game decisions (latest per holeNumber) */
+  gameDecisions?: GameDecisionData[];
 }
 
 // ──────────────────────────────────────────────
@@ -77,7 +93,12 @@ export type CompetitionResult =
   | { type: 'match_play'; result: MatchPlayResult }
   | { type: 'best_ball'; result: BestBallResult }
   | { type: 'nearest_pin'; result: null }
-  | { type: 'longest_drive'; result: null };
+  | { type: 'longest_drive'; result: null }
+  | { type: 'rumble'; result: RumbleResult }
+  | { type: 'hi_lo'; result: HiLoResult }
+  | { type: 'wolf'; result: WolfResult }
+  | { type: 'six_point'; result: SixPointResult }
+  | { type: 'chair'; result: ChairResult };
 
 // ──────────────────────────────────────────────
 // Group-scoped result wrapper
@@ -131,6 +152,31 @@ export function calculateCompetitionResults(
       return { type: 'nearest_pin', result: null };
     case 'longest_drive':
       return { type: 'longest_drive', result: null };
+    case 'rumble':
+      return {
+        type: 'rumble',
+        result: calculateRumble(input, config.config),
+      };
+    case 'hi_lo':
+      return {
+        type: 'hi_lo',
+        result: calculateHiLo(input, config.config),
+      };
+    case 'wolf':
+      return {
+        type: 'wolf',
+        result: calculateWolf(input, input.gameDecisions ?? []),
+      };
+    case 'six_point':
+      return {
+        type: 'six_point',
+        result: calculateSixPoint(input, config.config),
+      };
+    case 'chair':
+      return {
+        type: 'chair',
+        result: calculateChair(input),
+      };
     default:
       config satisfies never;
       throw new Error(`Unknown format type`);
@@ -142,6 +188,11 @@ export type { StablefordResult } from './stableford';
 export type { StrokePlayResult } from './stroke-play';
 export type { MatchPlayResult, MatchResult } from './match-play';
 export type { BestBallResult, BestBallMatchResult } from './best-ball';
+export type { RumbleResult, RumbleTeamResult } from './rumble';
+export type { HiLoResult, HiLoMatchResult } from './hi-lo';
+export type { WolfResult, WolfHoleResult, WolfPlayerResult } from './wolf';
+export type { SixPointResult, SixPointPlayerResult } from './six-point';
+export type { ChairResult, ChairPlayerResult } from './chair';
 
 // ──────────────────────────────────────────────
 // Group-aware calculation

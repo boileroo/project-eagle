@@ -98,6 +98,18 @@ export function ConfigureMatchesDialog({
       (rp) => rp.roundGroupId === groupId && !assignedIds.has(rp.id),
     );
 
+  /** Returns the two distinct team IDs present in a group (in insertion order), or [] if not exactly 2. */
+  const getGroupTeamIds = (groupId: string): [string, string] | [] => {
+    const seen = new Map<string, boolean>();
+    for (const rp of participants.filter((p) => p.roundGroupId === groupId)) {
+      const teamId =
+        rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id ?? null;
+      if (teamId && !seen.has(teamId)) seen.set(teamId, true);
+    }
+    const ids = [...seen.keys()];
+    return ids.length === 2 ? [ids[0], ids[1]] : [];
+  };
+
   const handleAddPairing = (groupId: string) => {
     const { playerA, playerB } = getAddState(groupId);
     if (!playerA || !playerB || playerA === playerB) return;
@@ -245,100 +257,127 @@ export function ConfigureMatchesDialog({
 
                   {available.length >= 2 ? (
                     <div className="flex items-end gap-2">
-                      <div className="flex-1">
-                        <Select
-                          className="h-9 px-2"
-                          value={playerA}
-                          onChange={(e) =>
-                            setGroupPlayerA(group.id, e.target.value)
+                      {(() => {
+                        const teamIds = getGroupTeamIds(group.id);
+                        const hasTeamSplit = teamIds.length === 2;
+                        const teamAId = hasTeamSplit ? teamIds[0] : null;
+                        const teamBId = hasTeamSplit ? teamIds[1] : null;
+
+                        const availableForA = available.filter((rp) => {
+                          if (rp.id === playerB) return false;
+                          if (teamAId) {
+                            const rpTeamId =
+                              rp.tournamentParticipant?.teamMemberships?.[0]
+                                ?.team?.id ?? null;
+                            return rpTeamId === teamAId;
                           }
-                        >
-                          <option value="" disabled>
-                            Player A
-                          </option>
-                          {available
-                            .filter((rp) => {
-                              if (rp.id === playerB) return false;
-                              if (playerB) {
-                                const selectedTeamId = getPlayerTeamId(playerB);
-                                const rpTeamId =
-                                  rp.tournamentParticipant?.teamMemberships?.[0]
-                                    ?.team?.id ?? null;
-                                if (
-                                  selectedTeamId &&
-                                  rpTeamId &&
-                                  selectedTeamId === rpTeamId
-                                )
-                                  return false;
-                              }
-                              return true;
-                            })
-                            .map((rp) => {
-                              const team =
-                                rp.tournamentParticipant?.teamMemberships?.[0]
-                                  ?.team?.name;
-                              return (
-                                <option key={rp.id} value={rp.id}>
-                                  {rp.person.displayName}
-                                  {team ? ` (${team})` : ''}
-                                </option>
-                              );
-                            })}
-                        </Select>
-                      </div>
-                      <span className="text-muted-foreground pb-2 text-sm">
-                        vs
-                      </span>
-                      <div className="flex-1">
-                        <Select
-                          className="h-9 px-2"
-                          value={playerB}
-                          onChange={(e) =>
-                            setGroupPlayerB(group.id, e.target.value)
+                          // No team split: fall back to excluding same team as playerB
+                          if (playerB) {
+                            const selectedTeamId = getPlayerTeamId(playerB);
+                            const rpTeamId =
+                              rp.tournamentParticipant?.teamMemberships?.[0]
+                                ?.team?.id ?? null;
+                            if (
+                              selectedTeamId &&
+                              rpTeamId &&
+                              selectedTeamId === rpTeamId
+                            )
+                              return false;
                           }
-                        >
-                          <option value="" disabled>
-                            Player B
-                          </option>
-                          {available
-                            .filter((rp) => {
-                              if (rp.id === playerA) return false;
-                              if (playerA) {
-                                const selectedTeamId = getPlayerTeamId(playerA);
-                                const rpTeamId =
-                                  rp.tournamentParticipant?.teamMemberships?.[0]
-                                    ?.team?.id ?? null;
-                                if (
-                                  selectedTeamId &&
-                                  rpTeamId &&
-                                  selectedTeamId === rpTeamId
-                                )
-                                  return false;
-                              }
-                              return true;
-                            })
-                            .map((rp) => {
-                              const team =
-                                rp.tournamentParticipant?.teamMemberships?.[0]
-                                  ?.team?.name;
-                              return (
-                                <option key={rp.id} value={rp.id}>
-                                  {rp.person.displayName}
-                                  {team ? ` (${team})` : ''}
+                          return true;
+                        });
+
+                        const availableForB = available.filter((rp) => {
+                          if (rp.id === playerA) return false;
+                          if (teamBId) {
+                            const rpTeamId =
+                              rp.tournamentParticipant?.teamMemberships?.[0]
+                                ?.team?.id ?? null;
+                            return rpTeamId === teamBId;
+                          }
+                          // No team split: fall back to excluding same team as playerA
+                          if (playerA) {
+                            const selectedTeamId = getPlayerTeamId(playerA);
+                            const rpTeamId =
+                              rp.tournamentParticipant?.teamMemberships?.[0]
+                                ?.team?.id ?? null;
+                            if (
+                              selectedTeamId &&
+                              rpTeamId &&
+                              selectedTeamId === rpTeamId
+                            )
+                              return false;
+                          }
+                          return true;
+                        });
+
+                        return (
+                          <>
+                            <div className="flex-1">
+                              <Select
+                                className="h-9 px-2"
+                                value={playerA}
+                                onChange={(e) =>
+                                  setGroupPlayerA(group.id, e.target.value)
+                                }
+                              >
+                                <option value="" disabled>
+                                  Player A
                                 </option>
-                              );
-                            })}
-                        </Select>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-9"
-                        disabled={!playerA || !playerB || playerA === playerB}
-                        onClick={() => handleAddPairing(group.id)}
-                      >
-                        Add
-                      </Button>
+                                {availableForA.map((rp) => {
+                                  const team =
+                                    rp.tournamentParticipant
+                                      ?.teamMemberships?.[0]?.team?.name;
+                                  return (
+                                    <option key={rp.id} value={rp.id}>
+                                      {rp.person.displayName}
+                                      {team ? ` (${team})` : ''}
+                                    </option>
+                                  );
+                                })}
+                              </Select>
+                            </div>
+                            <span className="text-muted-foreground pb-2 text-sm">
+                              vs
+                            </span>
+                            <div className="flex-1">
+                              <Select
+                                className="h-9 px-2"
+                                value={playerB}
+                                onChange={(e) =>
+                                  setGroupPlayerB(group.id, e.target.value)
+                                }
+                              >
+                                <option value="" disabled>
+                                  Player B
+                                </option>
+                                {availableForB.map((rp) => {
+                                  const team =
+                                    rp.tournamentParticipant
+                                      ?.teamMemberships?.[0]?.team?.name;
+                                  return (
+                                    <option key={rp.id} value={rp.id}>
+                                      {rp.person.displayName}
+                                      {team ? ` (${team})` : ''}
+                                    </option>
+                                  );
+                                })}
+                              </Select>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-9"
+                              disabled={
+                                !playerA || !playerB || playerA === playerB
+                              }
+                              onClick={() => handleAddPairing(group.id)}
+                            >
+                              Add
+                            </Button>
+                          </>
+                        );
+                      })()}
                     </div>
                   ) : groupPairings.length > 0 && available.length === 0 ? (
                     <p className="text-muted-foreground text-xs">

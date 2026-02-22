@@ -39,9 +39,26 @@ export const tournamentStatusEnum = pgEnum('tournament_status', [
   'complete',
 ]);
 
+/**
+ * @deprecated participantTypeEnum is kept for legacy data only.
+ * New competitions use competitionCategoryEnum instead.
+ */
 export const participantTypeEnum = pgEnum('participant_type', [
   'individual',
   'team',
+]);
+
+export const competitionCategoryEnum = pgEnum('competition_category', [
+  'match',
+  'game',
+  'bonus',
+]);
+
+export const primaryScoringBasisEnum = pgEnum('primary_scoring_basis', [
+  'gross_strokes',
+  'net_strokes',
+  'stableford',
+  'total',
 ]);
 
 export const recordedByRoleEnum = pgEnum('recorded_by_role', [
@@ -152,6 +169,7 @@ export const tournaments = pgTable('tournaments', {
   description: text('description'),
   status: tournamentStatusEnum('status').notNull().default('setup'),
   isSingleRound: boolean('is_single_round').notNull().default(false),
+  primaryScoringBasis: primaryScoringBasisEnum('primary_scoring_basis'),
   createdByUserId: uuid('created_by_user_id')
     .references(() => profiles.id, { onDelete: 'set null' })
     .notNull(),
@@ -250,6 +268,7 @@ export const rounds = pgTable('rounds', {
   teeTime: text('tee_time'), // HH:mm format
   format: text('format'), // display label e.g. "Irish Rumble", "Singles"
   status: roundStatusEnum('status').notNull().default('draft'),
+  primaryScoringBasis: primaryScoringBasisEnum('primary_scoring_basis'),
   createdByUserId: uuid('created_by_user_id').references(() => profiles.id, {
     onDelete: 'set null',
   }),
@@ -328,35 +347,6 @@ export const roundParticipants = pgTable(
 );
 
 // ──────────────────────────────────────────────
-// Round Teams (per-round composition)
-// ──────────────────────────────────────────────
-
-export const roundTeams = pgTable('round_teams', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  roundId: uuid('round_id')
-    .references(() => rounds.id, { onDelete: 'cascade' })
-    .notNull(),
-  tournamentTeamId: uuid('tournament_team_id').references(
-    () => tournamentTeams.id,
-    { onDelete: 'set null' },
-  ),
-  name: text('name').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
-
-export const roundTeamMembers = pgTable('round_team_members', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  roundTeamId: uuid('round_team_id')
-    .references(() => roundTeams.id, { onDelete: 'cascade' })
-    .notNull(),
-  roundParticipantId: uuid('round_participant_id')
-    .references(() => roundParticipants.id, { onDelete: 'cascade' })
-    .notNull(),
-});
-
-// ──────────────────────────────────────────────
 // Score Events (immutable, append-only)
 // ──────────────────────────────────────────────
 
@@ -393,9 +383,9 @@ export const competitions = pgTable('competitions', {
     .references(() => rounds.id, { onDelete: 'cascade' })
     .notNull(),
   name: text('name').notNull(),
-  participantType: participantTypeEnum('participant_type')
-    .notNull()
-    .default('individual'),
+  competitionCategory: competitionCategoryEnum(
+    'competition_category',
+  ).notNull(),
   groupScope: groupScopeEnum('group_scope').notNull().default('all'),
   formatType: text('format_type').notNull(),
   configJson: jsonb('config_json').$type<Record<string, JsonValue>>(),
@@ -408,7 +398,9 @@ export const competitions = pgTable('competitions', {
 });
 
 // ──────────────────────────────────────────────
-// Tournament Standings (aggregation of round competitions)
+// Tournament Standings (DEPRECATED — legacy read only)
+// No new writes. Auto-computed leaderboards replace this table.
+// Kept for legacy data display only.
 // ──────────────────────────────────────────────
 
 export const tournamentStandings = pgTable('tournament_standings', {
@@ -445,6 +437,31 @@ export const bonusAwards = pgTable('bonus_awards', {
   awardedByUserId: uuid('awarded_by_user_id').references(() => profiles.id, {
     onDelete: 'set null',
   }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// ──────────────────────────────────────────────
+// Game Decisions (immutable, append-only)
+// Per-hole game declarations (e.g. Wolf partner choice).
+// Latest record per (competitionId, holeNumber) wins.
+// ──────────────────────────────────────────────
+
+export const gameDecisions = pgTable('game_decisions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  competitionId: uuid('competition_id')
+    .references(() => competitions.id, { onDelete: 'cascade' })
+    .notNull(),
+  roundId: uuid('round_id')
+    .references(() => rounds.id, { onDelete: 'cascade' })
+    .notNull(),
+  holeNumber: integer('hole_number').notNull(),
+  /** Format-specific data. Wolf: { wolfPlayerId, partnerPlayerId | null } */
+  data: jsonb('data').$type<Record<string, JsonValue>>().notNull(),
+  recordedByUserId: uuid('recorded_by_user_id')
+    .references(() => profiles.id, { onDelete: 'set null' })
+    .notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -525,7 +542,6 @@ export const tournamentTeamsRelations = relations(
       references: [tournaments.id],
     }),
     members: many(tournamentTeamMembers),
-    roundTeams: many(roundTeams),
   }),
 );
 
@@ -558,9 +574,9 @@ export const roundsRelations = relations(rounds, ({ one, many }) => ({
   }),
   groups: many(roundGroups),
   participants: many(roundParticipants),
-  teams: many(roundTeams),
   scoreEvents: many(scoreEvents),
   competitions: many(competitions),
+  gameDecisions: many(gameDecisions),
 }));
 
 export const roundGroupsRelations = relations(roundGroups, ({ one, many }) => ({
@@ -591,33 +607,6 @@ export const roundParticipantsRelations = relations(
       references: [tournamentParticipants.id],
     }),
     scoreEvents: many(scoreEvents),
-    teamMemberships: many(roundTeamMembers),
-  }),
-);
-
-export const roundTeamsRelations = relations(roundTeams, ({ one, many }) => ({
-  round: one(rounds, {
-    fields: [roundTeams.roundId],
-    references: [rounds.id],
-  }),
-  tournamentTeam: one(tournamentTeams, {
-    fields: [roundTeams.tournamentTeamId],
-    references: [tournamentTeams.id],
-  }),
-  members: many(roundTeamMembers),
-}));
-
-export const roundTeamMembersRelations = relations(
-  roundTeamMembers,
-  ({ one }) => ({
-    roundTeam: one(roundTeams, {
-      fields: [roundTeamMembers.roundTeamId],
-      references: [roundTeams.id],
-    }),
-    roundParticipant: one(roundParticipants, {
-      fields: [roundTeamMembers.roundParticipantId],
-      references: [roundParticipants.id],
-    }),
   }),
 );
 
@@ -648,6 +637,7 @@ export const competitionsRelations = relations(
       references: [rounds.id],
     }),
     bonusAwards: many(bonusAwards),
+    gameDecisions: many(gameDecisions),
   }),
 );
 
@@ -662,6 +652,21 @@ export const bonusAwardsRelations = relations(bonusAwards, ({ one }) => ({
   }),
   awardedBy: one(profiles, {
     fields: [bonusAwards.awardedByUserId],
+    references: [profiles.id],
+  }),
+}));
+
+export const gameDecisionsRelations = relations(gameDecisions, ({ one }) => ({
+  competition: one(competitions, {
+    fields: [gameDecisions.competitionId],
+    references: [competitions.id],
+  }),
+  round: one(rounds, {
+    fields: [gameDecisions.roundId],
+    references: [rounds.id],
+  }),
+  recordedBy: one(profiles, {
+    fields: [gameDecisions.recordedByUserId],
     references: [profiles.id],
   }),
 }));

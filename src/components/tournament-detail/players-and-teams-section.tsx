@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   removeParticipantFn,
   updateParticipantFn,
@@ -11,6 +11,7 @@ import {
   addTeamMemberFn,
   removeTeamMemberFn,
 } from '@/lib/teams.server';
+import { getTeamColour } from '@/lib/team-colours';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,18 @@ export function PlayersAndTeamsSection({
 }) {
   // When readOnly, suppress all commissioner edit controls
   const canEdit = isCommissioner && !readOnly;
+
+  // Build participantId → team colour map
+  const participantTeamColours = useMemo(() => {
+    const map = new Map<string, string>();
+    tournament.teams.forEach((team, idx) => {
+      const colour = getTeamColour(idx);
+      for (const m of team.members) {
+        map.set(m.participantId, colour);
+      }
+    });
+    return map;
+  }, [tournament.teams]);
   // ── Teams state ────────────────────────────────
   const hasTeams = tournament.teams.length > 0;
   const [teamsEnabled, setTeamsEnabled] = useState(hasTeams);
@@ -221,6 +234,14 @@ export function PlayersAndTeamsSection({
                 p.person.userId === userId && 'bg-primary/5',
                 p.person.userId == null && 'border-dashed',
               )}
+              style={
+                participantTeamColours.has(p.id)
+                  ? {
+                      borderLeftColor: participantTeamColours.get(p.id),
+                      borderLeftWidth: '3px',
+                    }
+                  : undefined
+              }
             >
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">
@@ -336,12 +357,18 @@ export function PlayersAndTeamsSection({
               }}
               className="scale-75"
             />
-            <Label
-              htmlFor="tournament-teams-toggle"
-              className="text-muted-foreground cursor-pointer text-sm font-medium"
-            >
-              Enable Teams
-            </Label>
+            <div>
+              <Label
+                htmlFor="tournament-teams-toggle"
+                className="text-muted-foreground cursor-pointer text-sm font-medium"
+              >
+                Enable Teams
+              </Label>
+              <p className="text-muted-foreground text-xs">
+                Allows team-based competitions (Singles, Best Ball, Hi-Lo,
+                Rumble) for this tournament.
+              </p>
+            </div>
           </div>
         </>
       )}
@@ -375,8 +402,15 @@ export function PlayersAndTeamsSection({
             </p>
           ) : (
             <div className="space-y-4">
-              {tournament.teams.map((team) => (
-                <div key={team.id} className="space-y-2 rounded-lg border p-3">
+              {tournament.teams.map((team, teamIdx) => (
+                <div
+                  key={team.id}
+                  className="space-y-2 rounded-lg border p-3"
+                  style={{
+                    borderLeftColor: getTeamColour(teamIdx),
+                    borderLeftWidth: '4px',
+                  }}
+                >
                   <div className="flex items-center justify-between">
                     {editingTeamId === team.id ? (
                       <div className="mr-2 flex flex-1 gap-2">
@@ -542,8 +576,15 @@ export function PlayersAndTeamsSection({
             </Badge>
           </div>
           <div className="space-y-4">
-            {tournament.teams.map((team) => (
-              <div key={team.id} className="space-y-2 rounded-lg border p-3">
+            {tournament.teams.map((team, teamIdx) => (
+              <div
+                key={team.id}
+                className="space-y-2 rounded-lg border p-3"
+                style={{
+                  borderLeftColor: getTeamColour(teamIdx),
+                  borderLeftWidth: '4px',
+                }}
+              >
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold">{team.name}</span>
                   <Badge variant="outline" className="text-xs">

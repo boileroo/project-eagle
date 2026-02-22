@@ -41,6 +41,7 @@ import type { TournamentData } from './types';
 export function SingleRoundPlayersSection({
   tournament,
   roundId,
+  roundStatus,
   isCommissioner,
   userId,
   myPerson,
@@ -49,6 +50,7 @@ export function SingleRoundPlayersSection({
 }: {
   tournament: TournamentData;
   roundId: string;
+  roundStatus: string;
   isCommissioner: boolean;
   userId: string;
   myPerson: { id: string } | null;
@@ -63,6 +65,8 @@ export function SingleRoundPlayersSection({
     name: string;
   } | null>(null);
   const [sectionOpen, setSectionOpen] = useState(defaultOpen);
+
+  const isDraft = roundStatus === 'draft';
 
   const iAmParticipant = myPerson
     ? tournament.participants.some((p) => p.personId === myPerson.id)
@@ -203,7 +207,7 @@ export function SingleRoundPlayersSection({
                   {tournament.participants.length} player
                   {tournament.participants.length !== 1 ? 's' : ''}
                 </Badge>
-                {!iAmParticipant && (
+                {!iAmParticipant && isDraft && (
                   <div
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => {
@@ -220,7 +224,7 @@ export function SingleRoundPlayersSection({
                     </Button>
                   </div>
                 )}
-                {isCommissioner && (
+                {isCommissioner && isDraft && (
                   <div
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => {

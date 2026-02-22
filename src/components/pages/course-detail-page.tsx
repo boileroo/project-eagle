@@ -72,6 +72,11 @@ export function CourseDetailPage({
 
   return (
     <div className="space-y-6">
+      <div className="text-muted-foreground mb-1 text-sm">
+        <Link to="/courses" className="hover:text-primary underline">
+          ← Courses
+        </Link>
+      </div>
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">

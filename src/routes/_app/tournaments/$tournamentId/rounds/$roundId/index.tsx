@@ -9,7 +9,10 @@ import { getRoundFn } from '@/lib/rounds.server';
 import { getTournamentFn, getMyPersonFn } from '@/lib/tournaments.server';
 import { getCoursesFn } from '@/lib/courses.server';
 import { getScorecardFn } from '@/lib/scores.server';
-import { getRoundCompetitionsFn } from '@/lib/competitions.server';
+import {
+  getRoundCompetitionsFn,
+  getIndividualScoreboardFn,
+} from '@/lib/competitions.server';
 import { useAuth } from '@/hooks/use-auth';
 import { useScoreRealtime } from '@/hooks/use-score-realtime';
 import { RoundDetailPage } from '@/components/pages';
@@ -37,6 +40,12 @@ const competitionsQueryOptions = (roundId: string) =>
     queryFn: () => getRoundCompetitionsFn({ data: { roundId } }),
   });
 
+const individualScoreboardQueryOptions = (roundId: string) =>
+  queryOptions({
+    queryKey: ['individual-scoreboard', roundId],
+    queryFn: () => getIndividualScoreboardFn({ data: { roundId } }),
+  });
+
 const tournamentQueryOptions = (tournamentId: string) =>
   queryOptions({
     queryKey: ['tournament', tournamentId],
@@ -59,6 +68,9 @@ export const Route = createFileRoute(
       queryClient.ensureQueryData(coursesQueryOptions),
       queryClient.ensureQueryData(scorecardQueryOptions(params.roundId)),
       queryClient.ensureQueryData(competitionsQueryOptions(params.roundId)),
+      queryClient.ensureQueryData(
+        individualScoreboardQueryOptions(params.roundId),
+      ),
     ]);
 
     let tournament = null;

@@ -116,6 +116,66 @@ export const longestDriveConfigSchema = z.object({
 });
 
 // ──────────────────────────────────────────────
+// Rumble (match, groupScope: 'all')
+// 4-player groups, all same team
+// Holes 1–6: best 1; 7–12: top 2; 13–17: top 3; 18: all 4
+// ──────────────────────────────────────────────
+
+export const rumbleConfigSchema = z.object({
+  formatType: z.literal('rumble'),
+  config: z.object({
+    /** Points awarded to the winning team */
+    pointsPerWin: z.number().min(0).default(1),
+  }),
+});
+
+// ──────────────────────────────────────────────
+// Hi-Lo (match, groupScope: 'within_group')
+// 2v2 per group: high ball match + low ball match per hole
+// ──────────────────────────────────────────────
+
+export const hiLoConfigSchema = z.object({
+  formatType: z.literal('hi_lo'),
+  config: z.object({
+    pointsPerWin: z.number().min(0).default(1),
+    pointsPerHalf: z.number().min(0).default(0.5),
+  }),
+});
+
+// ──────────────────────────────────────────────
+// Wolf (game, groupScope: 'within_group')
+// Fixed rotation. Per-hole declarations in gameDecisions.
+// ──────────────────────────────────────────────
+
+export const wolfConfigSchema = z.object({
+  formatType: z.literal('wolf'),
+  config: z.object({}),
+});
+
+// ──────────────────────────────────────────────
+// Six Point (game, groupScope: 'within_group')
+// 3 players per group, fixed 4/2/0 distribution
+// ──────────────────────────────────────────────
+
+export const sixPointConfigSchema = z.object({
+  formatType: z.literal('six_point'),
+  config: z.object({
+    /** Whether to score by stableford points (higher = better) or gross strokes (lower = better) */
+    scoringBasis: z.enum(['stableford', 'gross']).default('stableford'),
+  }),
+});
+
+// ──────────────────────────────────────────────
+// Chair (game, groupScope: 'within_group')
+// Win a hole outright → take the chair; chair holder earns 1pt/hole
+// ──────────────────────────────────────────────
+
+export const chairConfigSchema = z.object({
+  formatType: z.literal('chair'),
+  config: z.object({}),
+});
+
+// ──────────────────────────────────────────────
 // Discriminated union of all configs
 // ──────────────────────────────────────────────
 
@@ -126,6 +186,11 @@ export const competitionConfigSchema = z.discriminatedUnion('formatType', [
   bestBallConfigSchema,
   nearestPinConfigSchema,
   longestDriveConfigSchema,
+  rumbleConfigSchema,
+  hiLoConfigSchema,
+  wolfConfigSchema,
+  sixPointConfigSchema,
+  chairConfigSchema,
 ]);
 export type CompetitionConfig = z.infer<typeof competitionConfigSchema>;
 
@@ -136,6 +201,11 @@ export type MatchPlayConfig = z.infer<typeof matchPlayConfigSchema>;
 export type BestBallConfig = z.infer<typeof bestBallConfigSchema>;
 export type NearestPinConfig = z.infer<typeof nearestPinConfigSchema>;
 export type LongestDriveConfig = z.infer<typeof longestDriveConfigSchema>;
+export type RumbleConfig = z.infer<typeof rumbleConfigSchema>;
+export type HiLoConfig = z.infer<typeof hiLoConfigSchema>;
+export type WolfConfig = z.infer<typeof wolfConfigSchema>;
+export type SixPointConfig = z.infer<typeof sixPointConfigSchema>;
+export type ChairConfig = z.infer<typeof chairConfigSchema>;
 
 // ──────────────────────────────────────────────
 // Format type labels (for UI display)
@@ -147,10 +217,15 @@ export const FORMAT_TYPE_LABELS: Record<
 > = {
   stableford: 'Stableford',
   stroke_play: 'Stroke Play',
-  match_play: 'Match Play',
+  match_play: 'Singles',
   best_ball: 'Best Ball',
   nearest_pin: 'Nearest the Pin',
   longest_drive: 'Longest Drive',
+  rumble: 'Rumble',
+  hi_lo: 'Hi-Lo',
+  wolf: 'Wolf',
+  six_point: 'Six Point',
+  chair: 'Chair',
 };
 
 export const FORMAT_TYPES = Object.keys(
@@ -164,7 +239,11 @@ export const FORMAT_TYPES = Object.keys(
 export function isTeamFormat(
   formatType: CompetitionConfig['formatType'],
 ): boolean {
-  return formatType === 'best_ball';
+  return (
+    formatType === 'best_ball' ||
+    formatType === 'hi_lo' ||
+    formatType === 'rumble'
+  );
 }
 
 // ──────────────────────────────────────────────
@@ -174,7 +253,12 @@ export function isTeamFormat(
 export function isMatchFormat(
   formatType: CompetitionConfig['formatType'],
 ): boolean {
-  return formatType === 'match_play' || formatType === 'best_ball';
+  return (
+    formatType === 'match_play' ||
+    formatType === 'best_ball' ||
+    formatType === 'hi_lo' ||
+    formatType === 'rumble'
+  );
 }
 
 // ──────────────────────────────────────────────

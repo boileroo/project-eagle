@@ -10,6 +10,7 @@ import {
   type ResolvedScore,
 } from '@/lib/domain';
 import { resolveEffectiveHandicap, getPlayingHandicap } from '@/lib/handicaps';
+import { buildTeamColourMap } from '@/lib/team-colours';
 import { CompetitionResults } from '@/components/competition-results';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +25,7 @@ import { AddBonusCompDialog } from './add-bonus-comp-dialog';
 import { BonusCompRow } from './bonus-comp-row';
 import type { RoundData, ScorecardData, CompetitionsData } from './types';
 
-export function CompetitionsSection({
+export function TeamCompetitionsSection({
   round,
   scorecard,
   competitions,
@@ -40,6 +41,7 @@ export function CompetitionsSection({
   onChanged: () => void;
 }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const isDraft = round.status === 'draft';
 
   const engineInputs = useMemo(() => {
     const holes: HoleData[] = round.course.holes.map((h) => ({
@@ -80,6 +82,35 @@ export function CompetitionsSection({
     return { holes, participants, scores };
   }, [round, scorecard]);
 
+  // Build team colour maps from participant team membership data
+  const { participantTeamColours, teamColours } = useMemo(() => {
+    // Collect unique teams from all participants, sorted by createdAt for stable ordering
+    const teamMap = new Map<string, { id: string; createdAt: Date | string }>();
+    for (const rp of round.participants) {
+      for (const tm of rp.tournamentParticipant?.teamMemberships ?? []) {
+        if (!teamMap.has(tm.team.id)) {
+          teamMap.set(tm.team.id, tm.team);
+        }
+      }
+    }
+    const sortedTeams = [...teamMap.values()].sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+    const tColours = buildTeamColourMap(sortedTeams);
+
+    // Map roundParticipantId → hex colour via their team membership
+    const pColours = new Map<string, string>();
+    for (const rp of round.participants) {
+      const teamId = rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id;
+      if (teamId) {
+        const colour = tColours.get(teamId);
+        if (colour) pColours.set(rp.id, colour);
+      }
+    }
+    return { participantTeamColours: pColours, teamColours: tColours };
+  }, [round.participants]);
+
   const handleDelete = async (compId: string) => {
     setDeletingId(compId);
     try {
@@ -109,19 +140,22 @@ export function CompetitionsSection({
             <span>Competitions</span>
             <div className="flex items-center gap-2">
               <Badge variant="secondary">{competitions.length}</Badge>
-              {isCommissioner && (
+              {isCommissioner && isDraft && (
                 <>
-                  <AddIndividualCompDialog
-                    tournamentId={round.tournamentId}
-                    roundId={round.id}
-                    hasTeams={hasTeams}
-                    onSaved={onChanged}
-                  />
+                  {!hasTeams && (
+                    <AddIndividualCompDialog
+                      tournamentId={round.tournamentId}
+                      roundId={round.id}
+                      hasTeams={hasTeams}
+                      onSaved={onChanged}
+                    />
+                  )}
                   {hasTeams && (
                     <AddTeamCompDialog
                       tournamentId={round.tournamentId}
                       roundId={round.id}
                       round={round}
+                      competitions={competitions}
                       onSaved={onChanged}
                     />
                   )}
@@ -139,7 +173,7 @@ export function CompetitionsSection({
           {competitions.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               No competitions set up for this round.
-              {isCommissioner && ' Click + to add one.'}
+              {isCommissioner && isDraft && ' Click + to add one.'}
             </p>
           ) : (
             <div className="space-y-6">
@@ -180,12 +214,14 @@ export function CompetitionsSection({
                           ] ?? comp.formatType}
                         </Badge>
                         <Badge variant="secondary" className="text-xs">
-                          {comp.participantType === 'team'
-                            ? 'Team'
-                            : 'Individual'}
+                          {comp.competitionCategory === 'match'
+                            ? 'Match'
+                            : comp.competitionCategory === 'game'
+                              ? 'Game'
+                              : 'Bonus'}
                         </Badge>
                       </div>
-                      {isCommissioner && (
+                      {isCommissioner && isDraft && (
                         <div className="flex items-center gap-1">
                           <EditCompetitionDialog
                             comp={comp}
@@ -213,7 +249,11 @@ export function CompetitionsSection({
                       )}
                     </div>
                     {result ? (
-                      <CompetitionResults result={result} />
+                      <CompetitionResults
+                        result={result}
+                        participantTeamColours={participantTeamColours}
+                        teamColours={teamColours}
+                      />
                     ) : (
                       <p className="text-muted-foreground text-sm">
                         Unable to calculate results.
@@ -242,7 +282,7 @@ export function CompetitionsSection({
                           holeNumber={holeNumber}
                           award={award}
                           participants={round.participants}
-                          isCommissioner={isCommissioner}
+                          isCommissioner={isCommissioner && isDraft}
                           roundStatus={round.status}
                           hasGroups={round.groups.length > 0}
                           onChanged={onChanged}

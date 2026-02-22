@@ -20,50 +20,44 @@ import { INDIVIDUAL_FORMATS } from './constants';
 export function AddIndividualCompDialog({
   tournamentId,
   roundId,
-  hasTeams,
   onSaved,
 }: {
   tournamentId: string;
   roundId: string;
-  hasTeams: boolean;
+  /** Kept for API compatibility but no longer used */
+  hasTeams?: boolean;
   onSaved: () => void;
 }) {
-  const availableFormats = hasTeams
-    ? INDIVIDUAL_FORMATS.filter((f) => f.value !== 'match_play')
-    : INDIVIDUAL_FORMATS;
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
   const [formatType, setFormatType] =
-    useState<CompetitionConfig['formatType']>('stableford');
+    useState<CompetitionConfig['formatType']>('wolf');
 
-  const [scoringBasis, setScoringBasis] = useState<
-    'net_strokes' | 'gross_strokes'
-  >('net_strokes');
-  const [pointsPerWin, setPointsPerWin] = useState(1);
-  const [pointsPerHalf, setPointsPerHalf] = useState(0.5);
+  // Six Point scoring basis: stableford or gross
+  const [sixPointScoringBasis, setSixPointScoringBasis] = useState<
+    'stableford' | 'gross'
+  >('stableford');
 
   const resetForm = () => {
     setName('');
-    setFormatType('stableford');
-    setScoringBasis('net_strokes');
-    setPointsPerWin(1);
-    setPointsPerHalf(0.5);
+    setFormatType('wolf');
+    setSixPointScoringBasis('stableford');
   };
 
   const buildConfig = (): CompetitionConfig => {
     switch (formatType) {
-      case 'stableford':
-        return { formatType: 'stableford', config: {} };
-      case 'stroke_play':
-        return { formatType: 'stroke_play', config: { scoringBasis } };
-      case 'match_play':
+      case 'wolf':
+        return { formatType: 'wolf', config: {} };
+      case 'six_point':
         return {
-          formatType: 'match_play',
-          config: { pointsPerWin, pointsPerHalf, pairings: [] },
+          formatType: 'six_point',
+          config: { scoringBasis: sixPointScoringBasis },
         };
+      case 'chair':
+        return { formatType: 'chair', config: {} };
       default:
-        return { formatType: 'stableford', config: {} };
+        return { formatType: 'wolf', config: {} };
     }
   };
 
@@ -78,19 +72,19 @@ export function AddIndividualCompDialog({
         data: {
           tournamentId,
           name: name.trim(),
-          participantType: 'individual',
-          groupScope: 'all',
+          competitionCategory: 'game',
+          groupScope: 'within_group',
           roundId,
           competitionConfig: buildConfig(),
         },
       });
-      toast.success('Competition created.');
+      toast.success('Game created.');
       setOpen(false);
       resetForm();
       onSaved();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to create competition',
+        error instanceof Error ? error.message : 'Failed to create game',
       );
     }
     setSaving(false);
@@ -106,22 +100,22 @@ export function AddIndividualCompDialog({
     >
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          + Individual
+          + Game
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Individual Competition</DialogTitle>
+          <DialogTitle>Add Game</DialogTitle>
           <DialogDescription>
-            Create a competition scored per player.
+            Create a within-group game (Wolf, Six Point, or Chair).
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="indiv-comp-name">Name</Label>
+            <Label htmlFor="game-name">Name</Label>
             <Input
-              id="indiv-comp-name"
-              placeholder="e.g. Day 1 Stableford"
+              id="game-name"
+              placeholder="e.g. Wolf"
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoFocus
@@ -129,15 +123,15 @@ export function AddIndividualCompDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="indiv-comp-format">Format</Label>
+            <Label htmlFor="game-format">Format</Label>
             <Select
-              id="indiv-comp-format"
+              id="game-format"
               value={formatType}
               onChange={(e) =>
                 setFormatType(e.target.value as CompetitionConfig['formatType'])
               }
             >
-              {availableFormats.map((ft) => (
+              {INDIVIDUAL_FORMATS.map((ft) => (
                 <option key={ft.value} value={ft.value}>
                   {ft.label}
                 </option>
@@ -145,55 +139,52 @@ export function AddIndividualCompDialog({
             </Select>
           </div>
 
-          {formatType === 'stroke_play' && (
-            <div className="space-y-2">
-              <Label>Scoring Basis</Label>
-              <Select
-                value={scoringBasis}
-                onChange={(e) =>
-                  setScoringBasis(
-                    e.target.value as 'net_strokes' | 'gross_strokes',
-                  )
-                }
-              >
-                <option value="net_strokes">Net Strokes</option>
-                <option value="gross_strokes">Gross Strokes</option>
-              </Select>
+          {formatType === 'wolf' && (
+            <p className="text-muted-foreground text-xs">
+              Wolf rotates by group position. Points: wolf+partner win = 2 each;
+              lone wolf win = 4; lone wolf loss = 2 to each of the other 3.
+            </p>
+          )}
+
+          {formatType === 'six_point' && (
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-xs">
+                3-player game. Fixed distribution: 1st = 4 pts, 2nd = 2 pts, 3rd
+                = 0 pts. Ties share points.
+              </p>
+              <div className="space-y-2">
+                <Label>Scoring Basis</Label>
+                <div className="flex gap-3">
+                  {(
+                    [
+                      { value: 'stableford', label: 'Stableford' },
+                      { value: 'gross', label: 'Gross Strokes' },
+                    ] as const
+                  ).map((opt) => (
+                    <label
+                      key={opt.value}
+                      className="flex cursor-pointer items-center gap-1.5 text-sm"
+                    >
+                      <input
+                        type="radio"
+                        name="six-point-basis"
+                        value={opt.value}
+                        checked={sixPointScoringBasis === opt.value}
+                        onChange={() => setSixPointScoringBasis(opt.value)}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
-          {formatType === 'match_play' && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Points per Win</Label>
-                  <Input
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    value={pointsPerWin}
-                    onChange={(e) =>
-                      setPointsPerWin(parseFloat(e.target.value) || 0)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Points per Half</Label>
-                  <Input
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    value={pointsPerHalf}
-                    onChange={(e) =>
-                      setPointsPerHalf(parseFloat(e.target.value) || 0)
-                    }
-                  />
-                </div>
-              </div>
-              <p className="text-muted-foreground text-xs">
-                Pairings can be configured after creation.
-              </p>
-            </div>
+          {formatType === 'chair' && (
+            <p className="text-muted-foreground text-xs">
+              Win a hole outright to take the chair. Tie = chair holder retains.
+              1 point per hole the chair is held.
+            </p>
           )}
         </div>
         <DialogFooter>
