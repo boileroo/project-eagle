@@ -13,6 +13,7 @@ import { Route as OfflineRouteImport } from './routes/offline'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as JoinCodeRouteImport } from './routes/join.$code'
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AppAccountRouteImport } from './routes/_app/account'
@@ -47,6 +48,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const JoinCodeRoute = JoinCodeRouteImport.update({
+  id: '/join/$code',
+  path: '/join/$code',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
   id: '/signup',
@@ -139,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AppAccountRoute
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
+  '/join/$code': typeof JoinCodeRoute
   '/courses/new': typeof AppCoursesNewRoute
   '/rounds/$roundId': typeof AppRoundsRoundIdRoute
   '/rounds/new': typeof AppRoundsNewRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByTo {
   '/account': typeof AppAccountRoute
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
+  '/join/$code': typeof JoinCodeRoute
   '/courses/new': typeof AppCoursesNewRoute
   '/rounds/$roundId': typeof AppRoundsRoundIdRoute
   '/rounds/new': typeof AppRoundsNewRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/_app/account': typeof AppAccountRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/signup': typeof AuthSignupRoute
+  '/join/$code': typeof JoinCodeRoute
   '/_app/': typeof AppIndexRoute
   '/_app/courses/new': typeof AppCoursesNewRoute
   '/_app/rounds/$roundId': typeof AppRoundsRoundIdRoute
@@ -204,6 +213,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/login'
     | '/signup'
+    | '/join/$code'
     | '/courses/new'
     | '/rounds/$roundId'
     | '/rounds/new'
@@ -224,6 +234,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/login'
     | '/signup'
+    | '/join/$code'
     | '/courses/new'
     | '/rounds/$roundId'
     | '/rounds/new'
@@ -245,6 +256,7 @@ export interface FileRouteTypes {
     | '/_app/account'
     | '/_auth/login'
     | '/_auth/signup'
+    | '/join/$code'
     | '/_app/'
     | '/_app/courses/new'
     | '/_app/rounds/$roundId'
@@ -265,6 +277,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   OfflineRoute: typeof OfflineRoute
+  JoinCodeRoute: typeof JoinCodeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -296,6 +309,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/join/$code': {
+      id: '/join/$code'
+      path: '/join/$code'
+      fullPath: '/join/$code'
+      preLoaderRoute: typeof JoinCodeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_auth/signup': {
       id: '/_auth/signup'
@@ -468,6 +488,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   OfflineRoute: OfflineRoute,
+  JoinCodeRoute: JoinCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

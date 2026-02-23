@@ -4,7 +4,6 @@ import {
   removeParticipantFn,
   ensureMyPersonFn,
 } from '@/lib/tournaments.server';
-import { addRoundParticipantFn } from '@/lib/rounds.server';
 import { cn } from '@/lib/utils';
 import {
   createTeamFn,
@@ -40,7 +39,6 @@ import type { TournamentData } from './types';
 
 export function SingleRoundPlayersSection({
   tournament,
-  roundId,
   roundStatus,
   isCommissioner,
   userId,
@@ -49,7 +47,6 @@ export function SingleRoundPlayersSection({
   defaultOpen = true,
 }: {
   tournament: TournamentData;
-  roundId: string;
   roundStatus: string;
   isCommissioner: boolean;
   userId: string;
@@ -82,19 +79,11 @@ export function SingleRoundPlayersSection({
   const handleAddMyself = async () => {
     try {
       const person = myPerson ?? (await ensureMyPersonFn());
-      const tp = await addParticipantFn({
+      await addParticipantFn({
         data: {
           tournamentId: tournament.id,
           personId: person.id,
           role: 'player',
-        },
-      });
-      await addRoundParticipantFn({
-        data: {
-          roundId,
-          personId: person.id,
-          tournamentParticipantId: tp.participantId,
-          handicapSnapshot: '0',
         },
       });
       toast.success('You joined the round!');
@@ -235,38 +224,22 @@ export function SingleRoundPlayersSection({
                     <AddPlayerDialog
                       tournamentId={tournament.id}
                       onAddPerson={async (person) => {
-                        const tp = await addParticipantFn({
+                        await addParticipantFn({
                           data: {
                             tournamentId: tournament.id,
                             personId: person.id,
                             role: 'player',
-                          },
-                        });
-                        await addRoundParticipantFn({
-                          data: {
-                            roundId,
-                            personId: person.id,
-                            tournamentParticipantId: tp.participantId,
-                            handicapSnapshot: person.currentHandicap ?? '0',
                           },
                         });
                         toast.success('Player added!');
                         onChanged();
                       }}
-                      onAddGuest={async (personId, name, handicap) => {
-                        const tp = await addParticipantFn({
+                      onAddGuest={async (personId, name) => {
+                        await addParticipantFn({
                           data: {
                             tournamentId: tournament.id,
                             personId,
                             role: 'player',
-                          },
-                        });
-                        await addRoundParticipantFn({
-                          data: {
-                            roundId,
-                            personId,
-                            tournamentParticipantId: tp.participantId,
-                            handicapSnapshot: handicap || '0',
                           },
                         });
                         toast.success(`${name} added!`);

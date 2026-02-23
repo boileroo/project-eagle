@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { and, eq, ilike } from 'drizzle-orm';
+import { and, eq, ilike, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
 import {
@@ -20,11 +20,60 @@ import {
   addParticipantSchema,
   createGuestSchema,
   createTournamentSchema,
+  joinByCodeSchema,
   updateParticipantSchema,
   updateTournamentSchema,
 } from './validators';
 import { isTournamentInSetup } from './tournament-status';
 import { safeHandler } from './server-utils';
+
+const GOLF_WORDS = [
+  'ace',
+  'albatross',
+  'birdie',
+  'bogey',
+  'bunker',
+  'chip',
+  'double',
+  'eagle',
+  'fairway',
+  'green',
+  'grip',
+  'hook',
+  'iron',
+  'links',
+  'loft',
+  'pars',
+  'pitch',
+  'putt',
+  'rough',
+  'sand',
+  'score',
+  'slice',
+  'spike',
+  'stable',
+  'swing',
+  'tee',
+  'turn',
+  'wedge',
+  'wood',
+  'yard',
+  'ace',
+  'bogey',
+  'eagle',
+  'birdie',
+];
+
+function generateInviteCode(): string {
+  const word =
+    GOLF_WORDS[Math.floor(Math.random() * GOLF_WORDS.length)].toUpperCase();
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let suffix = '';
+  for (let i = 0; i < 4; i++) {
+    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `${word}-${suffix}`.toUpperCase();
+}
 
 // ──────────────────────────────────────────────
 // Helper: require tournament to be in setup status
@@ -50,7 +99,14 @@ async function requireSetup(tournamentId: string) {
 
 export const getTournamentsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    await requireAuth();
+    const user = await requireAuth();
+
+    // Get the user's person ID
+    const person = await db.query.persons.findFirst({
+      where: eq(persons.userId, user.id),
+    });
+
+    // Get all tournaments
     const allTournaments = await db.query.tournaments.findMany({
       orderBy: (tournaments, { desc }) => [desc(tournaments.createdAt)],
       with: {
@@ -63,7 +119,15 @@ export const getTournamentsFn = createServerFn({ method: 'GET' }).handler(
         },
       },
     });
-    return allTournaments;
+
+    // Filter to tournaments where user is creator OR participant
+    const filteredTournaments = allTournaments.filter(
+      (t) =>
+        t.createdByUserId === user.id ||
+        (person && t.participants.some((p) => p.personId === person.id)),
+    );
+
+    return filteredTournaments;
   },
 );
 
@@ -77,6 +141,18 @@ export const getTournamentFn = createServerFn({ method: 'GET' })
     await requireTournamentParticipant(data.tournamentId);
     const tournament = await db.query.tournaments.findFirst({
       where: eq(tournaments.id, data.tournamentId),
+      columns: {
+        id: true,
+        name: true,
+        description: true,
+        status: true,
+        isSingleRound: true,
+        inviteCode: true,
+        primaryScoringBasis: true,
+        createdByUserId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
       with: {
         participants: {
           with: {
@@ -118,12 +194,15 @@ export const createTournamentFn = createServerFn({ method: 'POST' })
     safeHandler(async ({ data }) => {
       const user = await requireAuth();
 
+      const inviteCode = generateInviteCode();
+
       const [tournament] = await db
         .insert(tournaments)
         .values({
           name: data.name,
           description: data.description || null,
           createdByUserId: user.id,
+          inviteCode,
         })
         .returning();
 
@@ -587,4 +666,145 @@ export const unlockTournamentFn = createServerFn({ method: 'POST' })
       .where(eq(tournaments.id, data.tournamentId));
 
     return { success: true };
+  });
+
+// ──────────────────────────────────────────────
+// Get tournament by invite code (public, no auth)
+// ──────────────────────────────────────────────
+
+export const getTournamentByInviteCodeFn = createServerFn({ method: 'GET' })
+  .inputValidator(z.object({ code: z.string() }))
+  .handler(async ({ data }) => {
+    const code = data.code.trim().toUpperCase();
+
+    // Use ilike for case-insensitive comparison
+    const tournament = await db.query.tournaments.findFirst({
+      where: ilike(tournaments.inviteCode, code),
+      columns: { id: true, name: true, status: true },
+    });
+
+    if (!tournament) {
+      throw new Error('Tournament not found');
+    }
+
+    return tournament;
+  });
+
+// ──────────────────────────────────────────────
+// Join tournament by invite code
+// ──────────────────────────────────────────────
+
+export const joinTournamentByCodeFn = createServerFn({ method: 'POST' })
+  .inputValidator(joinByCodeSchema)
+  .handler(
+    safeHandler(async ({ data }) => {
+      const user = await requireAuth();
+
+      // Find the tournament by invite code (case-insensitive)
+      const tournament = await db.query.tournaments.findFirst({
+        where: ilike(tournaments.inviteCode, data.code.trim().toUpperCase()),
+      });
+
+      if (!tournament) {
+        throw new Error('Invalid invite code');
+      }
+
+      // Check tournament status - only allow join in setup or scheduled
+      if (tournament.status !== 'setup' && tournament.status !== 'scheduled') {
+        throw new Error(
+          'This tournament has already started and is not accepting new players',
+        );
+      }
+
+      // Get user's person record
+      const person = await db.query.persons.findFirst({
+        where: eq(persons.userId, user.id),
+      });
+
+      if (!person) {
+        throw new Error('Your profile is not set up. Please try again.');
+      }
+
+      // Check if already a participant
+      const existingParticipant =
+        await db.query.tournamentParticipants.findFirst({
+          where: and(
+            eq(tournamentParticipants.tournamentId, tournament.id),
+            eq(tournamentParticipants.personId, person.id),
+          ),
+        });
+
+      if (existingParticipant) {
+        // Already a member - return special flag to trigger redirect
+        return {
+          tournamentId: tournament.id,
+          tournamentName: tournament.name,
+          alreadyJoined: true,
+        };
+      }
+
+      // Add as participant (default role is player)
+      const [participant] = await db
+        .insert(tournamentParticipants)
+        .values({
+          tournamentId: tournament.id,
+          personId: person.id,
+          role: 'player',
+        })
+        .returning();
+
+      // Auto-add to all draft/scheduled rounds
+      const openRounds = await db.query.rounds.findMany({
+        where: and(
+          eq(rounds.tournamentId, tournament.id),
+          or(eq(rounds.status, 'draft'), eq(rounds.status, 'scheduled')),
+        ),
+      });
+
+      for (const round of openRounds) {
+        const [rp] = await db
+          .insert(roundParticipants)
+          .values({
+            roundId: round.id,
+            personId: person.id,
+            tournamentParticipantId: participant.id,
+            handicapSnapshot: person.currentHandicap ?? '0',
+          })
+          .returning();
+
+        // Auto-assign to default group if there's exactly one
+        const groups = await db.query.roundGroups.findMany({
+          where: eq(roundGroups.roundId, round.id),
+        });
+        if (groups.length === 1) {
+          await db
+            .update(roundParticipants)
+            .set({ roundGroupId: groups[0].id })
+            .where(eq(roundParticipants.id, rp.id));
+        }
+      }
+
+      return { tournamentId: tournament.id, tournamentName: tournament.name };
+    }),
+  );
+
+// ──────────────────────────────────────────────
+// Get tournament invite code (commissioner only)
+// ──────────────────────────────────────────────
+
+export const getTournamentInviteCodeFn = createServerFn({ method: 'GET' })
+  .inputValidator(z.object({ tournamentId: z.string().uuid() }))
+  .handler(async ({ data }) => {
+    await requireCommissioner(data.tournamentId);
+
+    const tournament = await db.query.tournaments.findFirst({
+      where: eq(tournaments.id, data.tournamentId),
+      columns: { id: true, name: true, inviteCode: true },
+    });
+
+    if (!tournament) {
+      throw new Error('Tournament not found');
+    }
+
+    return tournament;
   });

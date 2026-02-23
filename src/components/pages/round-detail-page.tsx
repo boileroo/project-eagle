@@ -619,7 +619,6 @@ export function RoundDetailPage({
       {isSingleRound && tournament && (
         <SingleRoundPlayersSection
           tournament={tournament}
-          roundId={round.id}
           roundStatus={round.status}
           isCommissioner={isCommissioner}
           userId={userId}

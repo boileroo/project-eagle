@@ -163,23 +163,32 @@ export const courseHoles = pgTable(
 // Tournaments
 // ──────────────────────────────────────────────
 
-export const tournaments = pgTable('tournaments', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  description: text('description'),
-  status: tournamentStatusEnum('status').notNull().default('setup'),
-  isSingleRound: boolean('is_single_round').notNull().default(false),
-  primaryScoringBasis: primaryScoringBasisEnum('primary_scoring_basis'),
-  createdByUserId: uuid('created_by_user_id')
-    .references(() => profiles.id, { onDelete: 'set null' })
-    .notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const tournaments = pgTable(
+  'tournaments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    description: text('description'),
+    status: tournamentStatusEnum('status').notNull().default('setup'),
+    isSingleRound: boolean('is_single_round').notNull().default(false),
+    inviteCode: text('invite_code').notNull(),
+    primaryScoringBasis: primaryScoringBasisEnum('primary_scoring_basis'),
+    createdByUserId: uuid('created_by_user_id')
+      .references(() => profiles.id, { onDelete: 'set null' })
+      .notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    inviteCodeUnique: uniqueIndex('tournaments_invite_code_unique').on(
+      table.inviteCode,
+    ),
+  }),
+);
 
 // ──────────────────────────────────────────────
 // Tournament Participants

@@ -105,6 +105,11 @@ export const updateTournamentSchema = createTournamentSchema.extend({
 });
 export type UpdateTournamentInput = z.infer<typeof updateTournamentSchema>;
 
+export const joinByCodeSchema = z.object({
+  code: z.string().min(1, 'Invite code is required').max(20),
+});
+export type JoinByCodeInput = z.infer<typeof joinByCodeSchema>;
+
 export const createSingleRoundSchema = z.object({
   courseId: z.string().uuid('Please select a course'),
   date: z.string().optional(),

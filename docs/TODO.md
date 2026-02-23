@@ -387,3 +387,5 @@ When adding a player, the UI occasionally showed a "player already added" toast 
 - Rate limiting added to `computeStandingsFn` (30 req/user/min)
 - `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` added to `env.ts` validation; `supabase.server.ts` updated to use `env.*`
 - Dual lockfile resolved: `yarn.lock` deleted; npm (`package-lock.json`) is the single package manager
+
+## D. User Thoughts and Findings

@@ -30,6 +30,7 @@ import {
 } from '@/components/tournament-detail';
 import { PlayersAndTeamsSection } from '@/components/tournament-detail/players-and-teams-section';
 import { CollapsibleSection } from '@/components/tournament-detail/collapsible-section';
+import { ShareDialog } from '@/components/tournament-detail/share-dialog';
 import type {
   StandingConfig,
   ComputedStanding,
@@ -230,7 +231,7 @@ export function TournamentDetailPage({
               </Button>
             )}
 
-            <Button variant="outline" asChild>
+            <Button variant="outline" size="sm" asChild>
               <Link
                 to="/tournaments/$tournamentId/edit"
                 params={{ tournamentId: tournament.id }}
@@ -239,13 +240,20 @@ export function TournamentDetailPage({
               </Link>
             </Button>
 
+            <ShareDialog
+              tournamentName={tournament.name}
+              inviteCode={tournament.inviteCode}
+            />
+
             {isSetup && (
               <Dialog
                 open={deleteDialogOpen}
                 onOpenChange={setDeleteDialogOpen}
               >
                 <DialogTrigger asChild>
-                  <Button variant="destructive">Delete</Button>
+                  <Button variant="outline" size="sm">
+                    Delete
+                  </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>

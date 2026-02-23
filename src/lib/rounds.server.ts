@@ -25,6 +25,54 @@ import {
 import { deriveTournamentStatus } from './tournament-status';
 import { safeHandler } from './server-utils';
 
+const GOLF_WORDS = [
+  'ace',
+  'albatross',
+  'birdie',
+  'bogey',
+  'bunker',
+  'chip',
+  'double',
+  'eagle',
+  'fairway',
+  'green',
+  'grip',
+  'hook',
+  'iron',
+  'links',
+  'loft',
+  'pars',
+  'pitch',
+  'putt',
+  'rough',
+  'sand',
+  'score',
+  'slice',
+  'spike',
+  'stable',
+  'swing',
+  'tee',
+  'turn',
+  'wedge',
+  'wood',
+  'yard',
+  'ace',
+  'bogey',
+  'eagle',
+  'birdie',
+];
+
+function generateInviteCode(): string {
+  const word =
+    GOLF_WORDS[Math.floor(Math.random() * GOLF_WORDS.length)].toUpperCase();
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let suffix = '';
+  for (let i = 0; i < 4; i++) {
+    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `${word}-${suffix}`.toUpperCase();
+}
+
 // ──────────────────────────────────────────────
 // Helper: re-sort round numbers by date/teeTime
 // when any rounds have dates, sort chronologically
@@ -675,6 +723,7 @@ export const createSingleRoundFn = createServerFn({ method: 'POST' })
         name: tournamentName,
         isSingleRound: true,
         createdByUserId: user.id,
+        inviteCode: generateInviteCode(),
       })
       .returning();
 
