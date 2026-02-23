@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { and, eq, ilike, or } from 'drizzle-orm';
+import { and, eq, ilike, isNotNull, isNull, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
 import {
@@ -22,6 +22,8 @@ import {
   createTournamentSchema,
   joinByCodeSchema,
   updateParticipantSchema,
+  updateGuestSchema,
+  deleteGuestSchema,
   updateTournamentSchema,
 } from './validators';
 import { isTournamentInSetup } from './tournament-status';
@@ -293,9 +295,12 @@ export const searchPersonsFn = createServerFn({ method: 'GET' })
     // Escape ILIKE metacharacters to prevent wildcard injection
     const escapedQuery = data.query.replace(/[%_\\]/g, (c) => `\\${c}`);
 
-    // Search persons by display name
+    // Search registered users (userId IS NOT NULL) by display name
     const results = await db.query.persons.findMany({
-      where: ilike(persons.displayName, `%${escapedQuery}%`),
+      where: and(
+        ilike(persons.displayName, `%${escapedQuery}%`),
+        isNotNull(persons.userId), // Only registered users, not guests
+      ),
       with: {
         user: true,
       },
@@ -309,7 +314,7 @@ export const searchPersonsFn = createServerFn({ method: 'GET' })
         id: p.id,
         displayName: p.displayName,
         currentHandicap: p.currentHandicap,
-        isGuest: p.userId == null,
+        isGuest: false,
         email: p.user?.email ?? null,
       }));
   });
@@ -334,6 +339,104 @@ export const createGuestPersonFn = createServerFn({ method: 'POST' })
       .returning();
 
     return { personId: person.id };
+  });
+
+// ──────────────────────────────────────────────
+// Get my guests (created by current user, not deleted)
+// ──────────────────────────────────────────────
+
+export const getMyGuestsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const user = await requireAuth();
+
+    const guests = await db.query.persons.findMany({
+      where: and(
+        isNull(persons.userId), // userId IS NULL = guest (no account)
+        eq(persons.createdByUserId, user.id), // created by current user
+        isNull(persons.deletedAt), // not soft deleted
+      ),
+      orderBy: (persons, { desc }) => [desc(persons.createdAt)],
+    });
+
+    return guests.map((g) => ({
+      id: g.id,
+      displayName: g.displayName,
+      currentHandicap: g.currentHandicap,
+      createdAt: g.createdAt,
+    }));
+  },
+);
+
+// ──────────────────────────────────────────────
+// Update a guest (name and handicap for future use)
+// ──────────────────────────────────────────────
+
+export const updateGuestFn = createServerFn({ method: 'POST' })
+  .inputValidator(updateGuestSchema)
+  .handler(async ({ data }) => {
+    const user = await requireAuth();
+
+    // Verify guest exists and was created by this user
+    const guest = await db.query.persons.findFirst({
+      where: eq(persons.id, data.personId),
+    });
+
+    if (!guest) {
+      throw new Error('Guest not found');
+    }
+
+    if (guest.createdByUserId !== user.id) {
+      throw new Error('You can only update guests you created');
+    }
+
+    if (guest.deletedAt) {
+      throw new Error('This guest has been deleted');
+    }
+
+    await db
+      .update(persons)
+      .set({
+        displayName: data.displayName,
+        currentHandicap: data.currentHandicap?.toString() ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(persons.id, data.personId));
+
+    return { success: true };
+  });
+
+// ──────────────────────────────────────────────
+// Soft delete a guest (preserves data in existing tournaments)
+// ──────────────────────────────────────────────
+
+export const deleteGuestFn = createServerFn({ method: 'POST' })
+  .inputValidator(deleteGuestSchema)
+  .handler(async ({ data }) => {
+    const user = await requireAuth();
+
+    // Verify guest exists and was created by this user
+    const guest = await db.query.persons.findFirst({
+      where: eq(persons.id, data.personId),
+    });
+
+    if (!guest) {
+      throw new Error('Guest not found');
+    }
+
+    if (guest.createdByUserId !== user.id) {
+      throw new Error('You can only delete guests you created');
+    }
+
+    // Soft delete
+    await db
+      .update(persons)
+      .set({
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(persons.id, data.personId));
+
+    return { success: true };
   });
 
 // ──────────────────────────────────────────────

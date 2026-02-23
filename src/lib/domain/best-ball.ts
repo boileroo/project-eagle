@@ -29,6 +29,8 @@ export interface BestBallHoleResult {
 export interface BestBallMatchResult {
   teamA: { teamId: string; name: string };
   teamB: { teamId: string; name: string };
+  teamAPlayers: { roundParticipantId: string; displayName: string }[];
+  teamBPlayers: { roundParticipantId: string; displayName: string }[];
   holeResults: BestBallHoleResult[];
   /** Positive = A leads, negative = B leads, 0 = all square */
   matchScore: number;
@@ -39,6 +41,8 @@ export interface BestBallMatchResult {
   winner: 'A' | 'B' | 'halved' | null;
   pointsA: number;
   pointsB: number;
+  groupId?: string;
+  groupName?: string | null;
 }
 
 export interface BestBallResult {
@@ -63,6 +67,65 @@ export function calculateBestBall(
     input.participants.map((p) => [p.roundParticipantId, p]),
   );
 
+  // If groups are provided, auto-detect pairings from groups (within_group mode)
+  const groups = input.groups ?? [];
+  if (groups.length > 0) {
+    const matches: BestBallMatchResult[] = [];
+
+    for (const group of groups) {
+      const members = group.memberParticipantIds
+        .map((id) => participantMap.get(id))
+        .filter(Boolean) as NonNullable<
+        ReturnType<typeof participantMap.get>
+      >[];
+
+      if (members.length < 4) continue;
+
+      // Split by team
+      const teamSplits = new Map<
+        string,
+        NonNullable<ReturnType<typeof participantMap.get>>[]
+      >();
+      for (const member of members) {
+        const team = (input.teams ?? []).find((t) =>
+          t.memberParticipantIds.includes(member.roundParticipantId),
+        );
+        if (!team) continue;
+        if (!teamSplits.has(team.teamId)) teamSplits.set(team.teamId, []);
+        teamSplits.get(team.teamId)!.push(member);
+      }
+
+      const teamIds = [...teamSplits.keys()];
+      if (teamIds.length < 2) continue;
+
+      const teamAId = teamIds[0];
+      const teamBId = teamIds[1];
+      const teamAData = teamMap.get(teamAId);
+      const teamBData = teamMap.get(teamBId);
+      if (!teamAData || !teamBData) continue;
+
+      const teamAMembers = teamSplits.get(teamAId)!;
+      const teamBMembers = teamSplits.get(teamBId)!;
+
+      const matchResult = calculateBestBallMatch(
+        { teamId: teamAId, name: teamAData.name },
+        teamAMembers,
+        { teamId: teamBId, name: teamBData.name },
+        teamBMembers,
+        sortedHoles,
+        scoreLookup,
+        config.pointsPerWin,
+        config.pointsPerHalf,
+      );
+      matchResult.groupId = group.roundGroupId;
+      matchResult.groupName = group.name;
+      matches.push(matchResult);
+    }
+
+    return { matches };
+  }
+
+  // Fall back to explicit pairings for 'all' scope
   const matches: BestBallMatchResult[] = config.pairings.map((pairing) => {
     const teamA = teamMap.get(pairing.teamA);
     const teamB = teamMap.get(pairing.teamB);
@@ -244,6 +307,14 @@ function calculateBestBallMatch(
   return {
     teamA: teamAInfo,
     teamB: teamBInfo,
+    teamAPlayers: teamAMembers.map((p) => ({
+      roundParticipantId: p.roundParticipantId,
+      displayName: p.displayName,
+    })),
+    teamBPlayers: teamBMembers.map((p) => ({
+      roundParticipantId: p.roundParticipantId,
+      displayName: p.displayName,
+    })),
     holeResults,
     matchScore,
     holesCompleted,

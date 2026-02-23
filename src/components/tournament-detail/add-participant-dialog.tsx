@@ -19,7 +19,7 @@ export function AddParticipantDialog({
         toast.success('Player added!');
         onAdded();
       }}
-      onAddGuest={async (personId, name) => {
+      onAddGuest={async (personId, name, _handicap) => {
         await addParticipantFn({
           data: { tournamentId, personId, role: 'player' },
         });

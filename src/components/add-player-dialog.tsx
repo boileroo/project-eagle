@@ -1,9 +1,12 @@
-import { useState, useCallback } from 'react';
-import { searchPersonsFn, createGuestPersonFn } from '@/lib/tournaments.server';
+import { useState, useCallback, useEffect } from 'react';
+import {
+  searchPersonsFn,
+  createGuestPersonFn,
+  getMyGuestsFn,
+} from '@/lib/tournaments.server';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -23,15 +26,20 @@ export type PersonSearchResult = {
   email: string | null;
 };
 
+export type Guest = {
+  id: string;
+  displayName: string;
+  currentHandicap: string | null;
+  createdAt: Date;
+};
+
 /**
- * Shared dialog for searching existing players and creating guests.
+ * Shared dialog for adding players to a tournament.
  *
- * Consumers provide:
- * - `tournamentId` — used to scope the search (excludes existing participants)
- * - `onAddPerson` — called when the user clicks "Add" on a search result
- * - `onAddGuest` — called when the user submits the guest form (receives the
- *   newly-created `personId` plus the entered handicap string)
- * - `triggerLabel` — optional button label (defaults to "Add Player")
+ * Three tabs:
+ * - Search: Search for registered users (non-guests)
+ * - Previous Guests: Add guests you've used before
+ * - Add Guest: Create a new guest
  */
 export function AddPlayerDialog({
   tournamentId,
@@ -49,12 +57,17 @@ export function AddPlayerDialog({
   triggerLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<'search' | 'guest'>('search');
+  const [tab, setTab] = useState<'search' | 'previous' | 'guest'>('search');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PersonSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState(false);
 
+  // Previous guests
+  const [previousGuests, setPreviousGuests] = useState<Guest[]>([]);
+  const [loadingGuests, setLoadingGuests] = useState(false);
+
+  // New guest form
   const [guestName, setGuestName] = useState('');
   const [guestHandicap, setGuestHandicap] = useState('');
 
@@ -65,6 +78,16 @@ export function AddPlayerDialog({
     setGuestName('');
     setGuestHandicap('');
   };
+
+  // Load previous guests when switching to that tab
+  useEffect(() => {
+    if (tab === 'previous' && previousGuests.length === 0) {
+      setLoadingGuests(true);
+      getMyGuestsFn()
+        .then(setPreviousGuests)
+        .finally(() => setLoadingGuests(false));
+    }
+  }, [tab]);
 
   const handleSearch = useCallback(
     async (q: string) => {
@@ -86,6 +109,24 @@ export function AddPlayerDialog({
     },
     [tournamentId],
   );
+
+  const handleAddPreviousGuest = async (guest: Guest) => {
+    setAdding(true);
+    try {
+      await onAddGuest(
+        guest.id,
+        guest.displayName,
+        guest.currentHandicap ?? '',
+      );
+      setOpen(false);
+      resetState();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to add guest',
+      );
+    }
+    setAdding(false);
+  };
 
   const handleAddPerson = async (person: PersonSearchResult) => {
     setAdding(true);
@@ -138,7 +179,7 @@ export function AddPlayerDialog({
         <DialogHeader>
           <DialogTitle>Add Player</DialogTitle>
           <DialogDescription>
-            Search for an existing player or add a guest.
+            Search for a player, add a previous guest, or create a new guest.
           </DialogDescription>
         </DialogHeader>
 
@@ -152,14 +193,21 @@ export function AddPlayerDialog({
           </Button>
           <Button
             size="sm"
+            variant={tab === 'previous' ? 'default' : 'outline'}
+            onClick={() => setTab('previous')}
+          >
+            Previous Guests
+          </Button>
+          <Button
+            size="sm"
             variant={tab === 'guest' ? 'default' : 'outline'}
             onClick={() => setTab('guest')}
           >
-            Add Guest
+            New Guest
           </Button>
         </div>
 
-        {tab === 'search' ? (
+        {tab === 'search' && (
           <div className="space-y-3">
             <Input
               placeholder="Search by name…"
@@ -181,11 +229,6 @@ export function AddPlayerDialog({
                       <span className="text-sm font-medium">
                         {person.displayName}
                       </span>
-                      {person.isGuest && (
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          Guest
-                        </Badge>
-                      )}
                       {person.email && (
                         <span className="text-muted-foreground ml-2 text-xs">
                           {person.email}
@@ -211,21 +254,55 @@ export function AddPlayerDialog({
             )}
             {query.length >= 2 && results.length === 0 && !searching && (
               <p className="text-muted-foreground text-sm">
-                No matches found.{' '}
-                <button
-                  type="button"
-                  className="text-primary underline"
-                  onClick={() => {
-                    setTab('guest');
-                    setGuestName(query);
-                  }}
-                >
-                  Add as guest instead?
-                </button>
+                No registered users found. Try a different search or add a
+                guest.
               </p>
             )}
           </div>
-        ) : (
+        )}
+
+        {tab === 'previous' && (
+          <div className="space-y-3">
+            {loadingGuests ? (
+              <p className="text-muted-foreground text-sm">Loading…</p>
+            ) : previousGuests.length > 0 ? (
+              <div className="max-h-60 space-y-1 overflow-y-auto">
+                {previousGuests.map((guest) => (
+                  <div
+                    key={guest.id}
+                    className="flex items-center justify-between rounded-md border px-3 py-2"
+                  >
+                    <div>
+                      <span className="text-sm font-medium">
+                        {guest.displayName}
+                      </span>
+                      {guest.currentHandicap && (
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          HC {guest.currentHandicap}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAddPreviousGuest(guest)}
+                      disabled={adding}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                No previous guests. Create a new guest to add them to this
+                tournament.
+              </p>
+            )}
+          </div>
+        )}
+
+        {tab === 'guest' && (
           <div className="space-y-3">
             <div>
               <Label htmlFor="addPlayerGuestName">Name</Label>

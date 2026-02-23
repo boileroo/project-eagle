@@ -111,6 +111,7 @@ export const persons = pgTable('persons', {
     precision: 4,
     scale: 1,
   }),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),

@@ -197,46 +197,85 @@ function HiLoResults({
     );
   }
 
+  const matchesWithGroup = result.matches.filter((m) => m.groupId);
+  const matchesWithoutGroup = result.matches.filter((m) => !m.groupId);
+
+  const groupedMatches = matchesWithGroup.reduce((acc, match) => {
+    const key = match.groupId ?? 'unknown';
+    if (!acc.has(key)) acc.set(key, []);
+    acc.get(key)!.push(match);
+    return acc;
+  }, new Map<string, typeof result.matches>());
+
+  const renderMatch = (
+    match: (typeof result.matches)[number],
+    key: number | string,
+  ) => {
+    const teamAPlayers = match.teamAPlayers
+      .map((p) => p.displayName)
+      .join(' & ');
+    const teamBPlayers = match.teamBPlayers
+      .map((p) => p.displayName)
+      .join(' & ');
+    return (
+      <div
+        key={key}
+        className="flex items-center justify-between rounded-md border px-4 py-3"
+      >
+        <div className="flex flex-1 items-center gap-3">
+          <span
+            className={`text-sm font-medium ${match.winner === 'A' ? 'text-primary' : ''}`}
+            style={
+              teamColours?.has(match.teamA.teamId)
+                ? { color: teamColours.get(match.teamA.teamId) }
+                : undefined
+            }
+          >
+            {teamAPlayers}
+          </span>
+          <span className="text-muted-foreground text-xs">vs</span>
+          <span
+            className={`text-sm font-medium ${match.winner === 'B' ? 'text-primary' : ''}`}
+            style={
+              teamColours?.has(match.teamB.teamId)
+                ? { color: teamColours.get(match.teamB.teamId) }
+                : undefined
+            }
+          >
+            {teamBPlayers}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant={match.winner !== null ? 'default' : 'secondary'}>
+            {match.resultText}
+          </Badge>
+          <span className="text-muted-foreground text-xs">
+            ({match.holesCompleted}/{match.totalHoles})
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-3">
-      {result.matches.map((match, i) => (
-        <div
-          key={i}
-          className="flex items-center justify-between rounded-md border px-4 py-3"
-        >
-          <div className="flex flex-1 items-center gap-3">
-            <span
-              className={`text-sm font-medium ${match.winner === 'A' ? 'text-primary' : ''}`}
-              style={
-                teamColours?.has(match.teamA.teamId)
-                  ? { color: teamColours.get(match.teamA.teamId) }
-                  : undefined
-              }
-            >
-              {match.teamA.name}
-            </span>
-            <span className="text-muted-foreground text-xs">vs</span>
-            <span
-              className={`text-sm font-medium ${match.winner === 'B' ? 'text-primary' : ''}`}
-              style={
-                teamColours?.has(match.teamB.teamId)
-                  ? { color: teamColours.get(match.teamB.teamId) }
-                  : undefined
-              }
-            >
-              {match.teamB.name}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={match.winner !== null ? 'default' : 'secondary'}>
-              {match.resultText}
-            </Badge>
-            <span className="text-muted-foreground text-xs">
-              ({match.holesCompleted}/{match.totalHoles})
-            </span>
+    <div className="space-y-4">
+      {Array.from(groupedMatches.entries()).map(([groupId, matches]) => (
+        <div key={groupId}>
+          <h4 className="text-muted-foreground mb-2 text-sm font-medium">
+            {matches[0]?.groupName ?? `Group ${groupId.slice(0, 8)}`}
+          </h4>
+          <div className="space-y-2">
+            {matches.map((match, i) => renderMatch(match, `${groupId}-${i}`))}
           </div>
         </div>
       ))}
+      {matchesWithoutGroup.length > 0 && (
+        <div className="space-y-2">
+          {matchesWithoutGroup.map((match, i) =>
+            renderMatch(match, `no-group-${i}`),
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -425,56 +464,87 @@ function MatchPlayResults({
     );
   }
 
-  return (
-    <div className="space-y-3">
-      {result.matches.map((match, i) => (
-        <div
-          key={i}
-          className="flex items-center justify-between rounded-md border px-4 py-3"
+  const matchesWithGroup = result.matches.filter((m) => m.groupId);
+  const matchesWithoutGroup = result.matches.filter((m) => !m.groupId);
+
+  const groupedMatches = matchesWithGroup.reduce((acc, match) => {
+    const key = match.groupId ?? 'unknown';
+    if (!acc.has(key)) acc.set(key, []);
+    acc.get(key)!.push(match);
+    return acc;
+  }, new Map<string, typeof result.matches>());
+
+  const renderMatch = (
+    match: (typeof result.matches)[number],
+    key: number | string,
+  ) => (
+    <div
+      key={key}
+      className="flex items-center justify-between rounded-md border px-4 py-3"
+    >
+      <div className="flex flex-1 items-center gap-3">
+        <span
+          className={`text-sm font-medium ${match.winner === 'A' ? 'text-primary' : ''}`}
+          style={
+            participantTeamColours?.has(match.playerA.roundParticipantId)
+              ? {
+                  color: participantTeamColours.get(
+                    match.playerA.roundParticipantId,
+                  ),
+                }
+              : undefined
+          }
         >
-          <div className="flex flex-1 items-center gap-3">
-            <span
-              className={`text-sm font-medium ${match.winner === 'A' ? 'text-primary' : ''}`}
-              style={
-                participantTeamColours?.has(match.playerA.roundParticipantId)
-                  ? {
-                      color: participantTeamColours.get(
-                        match.playerA.roundParticipantId,
-                      ),
-                    }
-                  : undefined
-              }
-            >
-              {match.playerA.displayName}
-            </span>
-            <span className="text-muted-foreground text-xs">vs</span>
-            <span
-              className={`text-sm font-medium ${match.winner === 'B' ? 'text-primary' : ''}`}
-              style={
-                participantTeamColours?.has(match.playerB.roundParticipantId)
-                  ? {
-                      color: participantTeamColours.get(
-                        match.playerB.roundParticipantId,
-                      ),
-                    }
-                  : undefined
-              }
-            >
-              {match.playerB.displayName}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={match.isDecided ? 'default' : 'secondary'}>
-              {match.resultText}
-            </Badge>
-            {match.isDecided && (
-              <span className="text-muted-foreground text-xs">
-                ({match.holesCompleted}/{match.totalHoles})
-              </span>
-            )}
+          {match.playerA.displayName}
+        </span>
+        <span className="text-muted-foreground text-xs">vs</span>
+        <span
+          className={`text-sm font-medium ${match.winner === 'B' ? 'text-primary' : ''}`}
+          style={
+            participantTeamColours?.has(match.playerB.roundParticipantId)
+              ? {
+                  color: participantTeamColours.get(
+                    match.playerB.roundParticipantId,
+                  ),
+                }
+              : undefined
+          }
+        >
+          {match.playerB.displayName}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge variant={match.isDecided ? 'default' : 'secondary'}>
+          {match.resultText}
+        </Badge>
+        {match.isDecided && (
+          <span className="text-muted-foreground text-xs">
+            ({match.holesCompleted}/{match.totalHoles})
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {Array.from(groupedMatches.entries()).map(([groupId, matches]) => (
+        <div key={groupId}>
+          <h4 className="text-muted-foreground mb-2 text-sm font-medium">
+            {matches[0]?.groupName ?? `Group ${groupId.slice(0, 8)}`}
+          </h4>
+          <div className="space-y-2">
+            {matches.map((match, i) => renderMatch(match, `${groupId}-${i}`))}
           </div>
         </div>
       ))}
+      {matchesWithoutGroup.length > 0 && (
+        <div className="space-y-2">
+          {matchesWithoutGroup.map((match, i) =>
+            renderMatch(match, `no-group-${i}`),
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -500,48 +570,87 @@ function BestBallResults({
     );
   }
 
+  const matchesWithGroup = result.matches.filter((m) => m.groupId);
+  const matchesWithoutGroup = result.matches.filter((m) => !m.groupId);
+
+  const groupedMatches = matchesWithGroup.reduce((acc, match) => {
+    const key = match.groupId ?? 'unknown';
+    if (!acc.has(key)) acc.set(key, []);
+    acc.get(key)!.push(match);
+    return acc;
+  }, new Map<string, typeof result.matches>());
+
+  const renderMatch = (
+    match: (typeof result.matches)[number],
+    key: number | string,
+  ) => {
+    const teamAPlayers = match.teamAPlayers
+      .map((p) => p.displayName)
+      .join(' & ');
+    const teamBPlayers = match.teamBPlayers
+      .map((p) => p.displayName)
+      .join(' & ');
+    return (
+      <div
+        key={key}
+        className="flex items-center justify-between rounded-md border px-4 py-3"
+      >
+        <div className="flex flex-1 items-center gap-3">
+          <span
+            className={`text-sm font-medium ${match.winner === 'A' ? 'text-primary' : ''}`}
+            style={
+              teamColours?.has(match.teamA.teamId)
+                ? { color: teamColours.get(match.teamA.teamId) }
+                : undefined
+            }
+          >
+            {teamAPlayers}
+          </span>
+          <span className="text-muted-foreground text-xs">vs</span>
+          <span
+            className={`text-sm font-medium ${match.winner === 'B' ? 'text-primary' : ''}`}
+            style={
+              teamColours?.has(match.teamB.teamId)
+                ? { color: teamColours.get(match.teamB.teamId) }
+                : undefined
+            }
+          >
+            {teamBPlayers}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant={match.isDecided ? 'default' : 'secondary'}>
+            {match.resultText}
+          </Badge>
+          {match.isDecided && (
+            <span className="text-muted-foreground text-xs">
+              ({match.holesCompleted}/{match.totalHoles})
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-3">
-      {result.matches.map((match, i) => (
-        <div
-          key={i}
-          className="flex items-center justify-between rounded-md border px-4 py-3"
-        >
-          <div className="flex flex-1 items-center gap-3">
-            <span
-              className={`text-sm font-medium ${match.winner === 'A' ? 'text-primary' : ''}`}
-              style={
-                teamColours?.has(match.teamA.teamId)
-                  ? { color: teamColours.get(match.teamA.teamId) }
-                  : undefined
-              }
-            >
-              {match.teamA.name}
-            </span>
-            <span className="text-muted-foreground text-xs">vs</span>
-            <span
-              className={`text-sm font-medium ${match.winner === 'B' ? 'text-primary' : ''}`}
-              style={
-                teamColours?.has(match.teamB.teamId)
-                  ? { color: teamColours.get(match.teamB.teamId) }
-                  : undefined
-              }
-            >
-              {match.teamB.name}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={match.isDecided ? 'default' : 'secondary'}>
-              {match.resultText}
-            </Badge>
-            {match.isDecided && (
-              <span className="text-muted-foreground text-xs">
-                ({match.holesCompleted}/{match.totalHoles})
-              </span>
-            )}
+    <div className="space-y-4">
+      {Array.from(groupedMatches.entries()).map(([groupId, matches]) => (
+        <div key={groupId}>
+          <h4 className="text-muted-foreground mb-2 text-sm font-medium">
+            {matches[0]?.groupName ?? `Group ${groupId.slice(0, 8)}`}
+          </h4>
+          <div className="space-y-2">
+            {matches.map((match, i) => renderMatch(match, `${groupId}-${i}`))}
           </div>
         </div>
       ))}
+      {matchesWithoutGroup.length > 0 && (
+        <div className="space-y-2">
+          {matchesWithoutGroup.map((match, i) =>
+            renderMatch(match, `no-group-${i}`),
+          )}
+        </div>
+      )}
     </div>
   );
 }

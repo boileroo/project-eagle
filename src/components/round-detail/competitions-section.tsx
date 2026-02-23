@@ -8,6 +8,8 @@ import {
   type HoleData,
   type ParticipantData,
   type ResolvedScore,
+  type GroupData,
+  type TeamData,
 } from '@/lib/domain';
 import { resolveEffectiveHandicap, getPlayingHandicap } from '@/lib/handicaps';
 import { buildTeamColourMap } from '@/lib/team-colours';
@@ -79,7 +81,38 @@ export function TeamCompetitionsSection({
       }
     }
 
-    return { holes, participants, scores };
+    const groups: GroupData[] = (round.groups ?? []).map((g) => ({
+      roundGroupId: g.id,
+      groupNumber: g.groupNumber,
+      name: g.name ?? null,
+      memberParticipantIds: round.participants
+        .filter((rp) => rp.roundGroupId === g.id)
+        .map((rp) => rp.id),
+    }));
+
+    const teamMap = new Map<
+      string,
+      { teamId: string; name: string; memberParticipantIds: string[] }
+    >();
+    for (const rp of round.participants) {
+      for (const tm of rp.tournamentParticipant?.teamMemberships ?? []) {
+        const entry = teamMap.get(tm.team.id) ?? {
+          teamId: tm.team.id,
+          name: tm.team.name,
+          memberParticipantIds: [],
+        };
+        if (!entry.memberParticipantIds.includes(rp.id)) {
+          entry.memberParticipantIds.push(rp.id);
+        }
+        teamMap.set(tm.team.id, entry);
+      }
+    }
+    const teams: TeamData[] = [...teamMap.values()].map((t) => ({
+      ...t,
+      tournamentTeamId: t.teamId,
+    }));
+
+    return { holes, participants, scores, groups, teams };
   }, [round, scorecard]);
 
   // Build team colour maps from participant team membership data
@@ -187,19 +220,22 @@ export function TeamCompetitionsSection({
 
                 let result;
                 try {
+                  const groupScope = (comp.groupScope ?? 'all') as
+                    | 'all'
+                    | 'within_group';
                   const input: CompetitionInput = {
                     competition: {
                       id: comp.id,
                       name: comp.name,
                       config,
-                      groupScope: (comp.groupScope ?? 'all') as
-                        | 'all'
-                        | 'within_group',
+                      groupScope,
                     },
                     ...engineInputs,
                   };
+
                   result = calculateCompetitionResults(input);
-                } catch {
+                } catch (e) {
+                  console.error('Error calculating results:', e);
                   result = null;
                 }
 

@@ -46,6 +46,8 @@ export interface HiLoHoleResult {
 export interface HiLoMatchResult {
   teamA: { teamId: string; name: string };
   teamB: { teamId: string; name: string };
+  teamAPlayers: { roundParticipantId: string; displayName: string }[];
+  teamBPlayers: { roundParticipantId: string; displayName: string }[];
   holeResults: HiLoHoleResult[];
   totalPointsA: number;
   totalPointsB: number;
@@ -55,6 +57,8 @@ export interface HiLoMatchResult {
   winner: 'A' | 'B' | 'halved' | null;
   pointsA: number;
   pointsB: number;
+  groupId?: string;
+  groupName?: string | null;
 }
 
 export interface HiLoResult {
@@ -217,6 +221,14 @@ function calculateHiLoMatch(
   return {
     teamA: teamAInfo,
     teamB: teamBInfo,
+    teamAPlayers: teamAMembers.map((p) => ({
+      roundParticipantId: p.roundParticipantId,
+      displayName: p.displayName,
+    })),
+    teamBPlayers: teamBMembers.map((p) => ({
+      roundParticipantId: p.roundParticipantId,
+      displayName: p.displayName,
+    })),
     holeResults,
     totalPointsA,
     totalPointsB,
@@ -291,6 +303,8 @@ export function calculateHiLo(
         config.pointsPerHalf,
       ),
     );
+    matches[matches.length - 1].groupId = group.roundGroupId;
+    matches[matches.length - 1].groupName = group.name;
   }
 
   return { matches };

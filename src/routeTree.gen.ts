@@ -16,6 +16,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as JoinCodeRouteImport } from './routes/join.$code'
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
+import { Route as AppGuestsRouteImport } from './routes/_app/guests'
 import { Route as AppAccountRouteImport } from './routes/_app/account'
 import { Route as AppTournamentsIndexRouteImport } from './routes/_app/tournaments/index'
 import { Route as AppRoundsIndexRouteImport } from './routes/_app/rounds/index'
@@ -63,6 +64,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => AuthRoute,
+} as any)
+const AppGuestsRoute = AppGuestsRouteImport.update({
+  id: '/guests',
+  path: '/guests',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppAccountRoute = AppAccountRouteImport.update({
   id: '/account',
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/offline': typeof OfflineRoute
   '/account': typeof AppAccountRoute
+  '/guests': typeof AppGuestsRoute
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
   '/join/$code': typeof JoinCodeRoute
@@ -164,6 +171,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/offline': typeof OfflineRoute
   '/account': typeof AppAccountRoute
+  '/guests': typeof AppGuestsRoute
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
   '/join/$code': typeof JoinCodeRoute
@@ -187,6 +195,7 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/offline': typeof OfflineRoute
   '/_app/account': typeof AppAccountRoute
+  '/_app/guests': typeof AppGuestsRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/signup': typeof AuthSignupRoute
   '/join/$code': typeof JoinCodeRoute
@@ -211,6 +220,7 @@ export interface FileRouteTypes {
     | '/'
     | '/offline'
     | '/account'
+    | '/guests'
     | '/login'
     | '/signup'
     | '/join/$code'
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/'
     | '/offline'
     | '/account'
+    | '/guests'
     | '/login'
     | '/signup'
     | '/join/$code'
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/_auth'
     | '/offline'
     | '/_app/account'
+    | '/_app/guests'
     | '/_auth/login'
     | '/_auth/signup'
     | '/join/$code'
@@ -330,6 +342,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/login'
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/_app/guests': {
+      id: '/_app/guests'
+      path: '/guests'
+      fullPath: '/guests'
+      preLoaderRoute: typeof AppGuestsRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/account': {
       id: '/_app/account'
@@ -434,6 +453,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppAccountRoute: typeof AppAccountRoute
+  AppGuestsRoute: typeof AppGuestsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCoursesNewRoute: typeof AppCoursesNewRoute
   AppRoundsRoundIdRoute: typeof AppRoundsRoundIdRoute
@@ -452,6 +472,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAccountRoute: AppAccountRoute,
+  AppGuestsRoute: AppGuestsRoute,
   AppIndexRoute: AppIndexRoute,
   AppCoursesNewRoute: AppCoursesNewRoute,
   AppRoundsRoundIdRoute: AppRoundsRoundIdRoute,

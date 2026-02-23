@@ -52,6 +52,8 @@ export interface MatchResult {
   /** Points awarded to each side */
   pointsA: number;
   pointsB: number;
+  groupId?: string;
+  groupName?: string | null;
 }
 
 export interface MatchPlayResult {
@@ -74,6 +76,48 @@ export function calculateMatchPlay(
     input.participants.map((p) => [p.roundParticipantId, p]),
   );
 
+  // If groups are provided, auto-detect pairings from groups (within_group mode)
+  const groups = input.groups ?? [];
+  if (groups.length > 0) {
+    const matches: MatchResult[] = [];
+
+    for (const group of groups) {
+      const members = group.memberParticipantIds
+        .map((id) => participantMap.get(id))
+        .filter(Boolean) as NonNullable<
+        ReturnType<typeof participantMap.get>
+      >[];
+
+      if (members.length < 2) continue;
+
+      // Pair players sequentially within the group
+      for (let i = 0; i < members.length - 1; i += 2) {
+        const pA = members[i];
+        const pB = members[i + 1];
+        if (!pA || !pB) continue;
+
+        const matchResult = calculateMatch(
+          pA.roundParticipantId,
+          pA.displayName,
+          pA.playingHandicap,
+          pB.roundParticipantId,
+          pB.displayName,
+          pB.playingHandicap,
+          sortedHoles,
+          scoreLookup,
+          config.pointsPerWin,
+          config.pointsPerHalf,
+        );
+        matchResult.groupId = group.roundGroupId;
+        matchResult.groupName = group.name;
+        matches.push(matchResult);
+      }
+    }
+
+    return { matches };
+  }
+
+  // Fall back to explicit pairings for 'all' scope
   const matches: MatchResult[] = config.pairings.map((pairing) => {
     const pA = participantMap.get(pairing.playerA);
     const pB = participantMap.get(pairing.playerB);

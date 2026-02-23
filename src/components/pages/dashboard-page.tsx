@@ -251,6 +251,15 @@ export function DashboardPage({
               Browse and manage the course library
             </p>
           </Link>
+          <Link
+            to="/guests"
+            className="group bg-card hover:bg-background rounded-lg border p-5 transition-colors"
+          >
+            <h3 className="mb-1 text-sm font-medium">Guests</h3>
+            <p className="text-muted-foreground text-xs">
+              Manage your saved guests
+            </p>
+          </Link>
         </div>
       </section>
     </div>

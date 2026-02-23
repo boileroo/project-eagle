@@ -160,6 +160,24 @@ export const createGuestSchema = z.object({
 });
 export type CreateGuestInput = z.infer<typeof createGuestSchema>;
 
+export const updateGuestSchema = z.object({
+  personId: z.string().uuid(),
+  displayName: z.string().min(2, 'Name must be at least 2 characters').max(100),
+  currentHandicap: z
+    .number()
+    .min(-10)
+    .max(54)
+    .multipleOf(0.1)
+    .nullable()
+    .optional(),
+});
+export type UpdateGuestInput = z.infer<typeof updateGuestSchema>;
+
+export const deleteGuestSchema = z.object({
+  personId: z.string().uuid(),
+});
+export type DeleteGuestInput = z.infer<typeof deleteGuestSchema>;
+
 // ──────────────────────────────────────────────
 // Tournament team schemas
 // ──────────────────────────────────────────────

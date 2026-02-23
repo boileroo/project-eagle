@@ -64,6 +64,8 @@ export function PlayersAndGroupsSection({
   const ungrouped = round.participants.filter((rp) => !rp.roundGroupId);
   const groups = round.groups ?? [];
 
+  const canAddGroups = canEditGroups && (showGroups || groups.length > 0);
+
   const groupParticipantsMap = useMemo(() => {
     const g = round.groups ?? [];
     const map = new Map<string, RoundData['participants']>();
@@ -291,7 +293,7 @@ export function PlayersAndGroupsSection({
                   {round.participants.length} player
                   {round.participants.length !== 1 ? 's' : ''}
                 </Badge>
-                {canEditGroups && showGroups && (
+                {canAddGroups && (
                   <div
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => {

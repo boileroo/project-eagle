@@ -229,7 +229,7 @@ export function calculateGroupedResults(
       groupParticipantIds.has(s.roundParticipantId),
     );
     const groupTeams = input.teams?.filter((t) =>
-      t.memberParticipantIds.some((id) => groupParticipantIds.has(id)),
+      t.memberParticipantIds.every((id) => groupParticipantIds.has(id)),
     );
 
     const groupInput: CompetitionInput = {
@@ -237,6 +237,7 @@ export function calculateGroupedResults(
       participants: groupParticipants,
       scores: groupScores,
       teams: groupTeams,
+      groups: [group],
     };
 
     groupResults.push({

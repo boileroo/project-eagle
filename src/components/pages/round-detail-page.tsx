@@ -316,10 +316,22 @@ export function RoundDetailPage({
     // ── Hi-Lo ─────────────────────────────────────
     const hiLoComp = competitions.find((c) => c.formatType === 'hi_lo');
     if (hiLoComp) {
+      const hiLoConfig = hiLoComp.configJson as
+        | Record<string, unknown>
+        | undefined;
       const config: CompetitionConfig = {
         formatType: 'hi_lo',
-        config: (hiLoComp.configJson ?? {}) as CompetitionConfig['config'],
-      } as CompetitionConfig;
+        config: {
+          pointsPerWin:
+            typeof hiLoConfig?.pointsPerWin === 'number'
+              ? hiLoConfig.pointsPerWin
+              : 1,
+          pointsPerHalf:
+            typeof hiLoConfig?.pointsPerHalf === 'number'
+              ? hiLoConfig.pointsPerHalf
+              : 0.5,
+        },
+      };
 
       // Build team data from tournament participant memberships
       const teamMap = new Map<
@@ -393,14 +405,26 @@ export function RoundDetailPage({
               if (match.totalPointsA === match.totalPointsB) {
                 scoreLabel = 'A/S';
               } else {
-                scoreLabel = `${match.teamA.name} ${match.totalPointsA} – ${match.teamB.name} ${match.totalPointsB}`;
+                const teamAPlayers = match.teamAPlayers
+                  .map((p) => p.displayName)
+                  .join(' & ');
+                const teamBPlayers = match.teamBPlayers
+                  .map((p) => p.displayName)
+                  .join(' & ');
+                scoreLabel = `${teamAPlayers} ${match.totalPointsA} – ${teamBPlayers} ${match.totalPointsB}`;
               }
             }
 
+            const teamAPlayers = match.teamAPlayers
+              .map((p) => p.displayName)
+              .join(' & ');
+            const teamBPlayers = match.teamBPlayers
+              .map((p) => p.displayName)
+              .join(' & ');
             const pairing: SectionPairing = {
               kind: 'hi_lo',
               match,
-              label: `${match.teamA.name} vs ${match.teamB.name} (Hi-Lo)`,
+              label: `${teamAPlayers} vs ${teamBPlayers} (Hi-Lo)`,
               scoreLabel,
               participantIds: allParticipantIds,
             };
@@ -628,16 +652,14 @@ export function RoundDetailPage({
         />
       )}
 
-      {/* Players & Groups — hidden for single rounds */}
-      {!isSingleRound && (
-        <PlayersAndGroupsSection
-          round={round}
-          isCommissioner={isCommissioner}
-          userId={userId}
-          onChanged={() => invalidateRoundData()}
-          defaultOpen={isDraft || isScheduled}
-        />
-      )}
+      {/* Players & Groups */}
+      <PlayersAndGroupsSection
+        round={round}
+        isCommissioner={isCommissioner}
+        userId={userId}
+        onChanged={() => invalidateRoundData()}
+        defaultOpen={isDraft || isScheduled}
+      />
 
       {/* Quick Score button — shown when round is open and user can score */}
       {round.status === 'open' && editableParticipantIds.size > 0 && (

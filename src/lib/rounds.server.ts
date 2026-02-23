@@ -236,7 +236,11 @@ export const getRoundFn = createServerFn({ method: 'GET' })
             },
           },
         },
-        tournament: true,
+        tournament: {
+          with: {
+            teams: true,
+          },
+        },
         groups: {
           orderBy: (g, { asc }) => [asc(g.groupNumber)],
           with: {
