@@ -37,10 +37,9 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   EditRoundDialog,
-  PlayersAndGroupsSection,
   TeamCompetitionsSection,
   IndividualScoreboardSection,
-  SingleRoundPlayersSection,
+  ParticipantsSection,
 } from '@/components/round-detail';
 import {
   statusColors,
@@ -639,24 +638,15 @@ export function RoundDetailPage({
         </div>
       )}
 
-      {/* For single rounds: show tournament-level Players panel */}
-      {isSingleRound && tournament && (
-        <SingleRoundPlayersSection
-          tournament={tournament}
-          roundStatus={round.status}
-          isCommissioner={isCommissioner}
-          userId={userId}
-          myPerson={myPerson}
-          onChanged={() => invalidateRoundData()}
-          defaultOpen={isDraft || isScheduled}
-        />
-      )}
-
-      {/* Players & Groups */}
-      <PlayersAndGroupsSection
+      {/* Participants Section - handles Players, Teams, and Groups tabs */}
+      <ParticipantsSection
+        tournament={tournament ?? undefined}
         round={round}
+        isSingleRound={isSingleRound}
+        competitions={competitions}
         isCommissioner={isCommissioner}
         userId={userId}
+        myPerson={myPerson}
         onChanged={() => invalidateRoundData()}
         defaultOpen={isDraft || isScheduled}
       />
@@ -701,7 +691,7 @@ export function RoundDetailPage({
             }
           }
           if (ungrouped.length > 0) {
-            sections.push({ label: 'Ungrouped', participants: ungrouped });
+            sections.push({ label: 'Scorecard', participants: ungrouped });
           }
           if (sections.length === 0) {
             sections.push({

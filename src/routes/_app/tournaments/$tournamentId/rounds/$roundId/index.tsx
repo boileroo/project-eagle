@@ -73,14 +73,12 @@ export const Route = createFileRoute(
       ),
     ]);
 
-    let tournament = null;
-    let myPerson = null;
-    if (round.tournament?.isSingleRound) {
-      [tournament, myPerson] = await Promise.all([
-        queryClient.ensureQueryData(tournamentQueryOptions(round.tournamentId)),
-        queryClient.ensureQueryData(myPersonQueryOptions),
-      ]);
-    }
+    // Always load tournament data for all rounds (not just single rounds)
+    // This provides access to tournament-level players and teams
+    const [tournament, myPerson] = await Promise.all([
+      queryClient.ensureQueryData(tournamentQueryOptions(round.tournamentId)),
+      queryClient.ensureQueryData(myPersonQueryOptions),
+    ]);
 
     return { round, courses, scorecard, competitions, tournament, myPerson };
   },
@@ -95,15 +93,11 @@ function RouteComponent() {
   const { data: competitions } = useSuspenseQuery(
     competitionsQueryOptions(roundId),
   );
-  const shouldLoadTournament = round.tournament?.isSingleRound ?? false;
-  const { data: tournament } = useQuery({
-    ...tournamentQueryOptions(round.tournamentId),
-    enabled: shouldLoadTournament,
-  });
-  const { data: myPerson } = useQuery({
-    ...myPersonQueryOptions,
-    enabled: shouldLoadTournament,
-  });
+  // Always load tournament data for all rounds (not just single rounds)
+  const { data: tournament } = useQuery(
+    tournamentQueryOptions(round.tournamentId),
+  );
+  const { data: myPerson } = useQuery(myPersonQueryOptions);
   const { user, accessToken } = useAuth();
 
   useScoreRealtime(roundId, user!.id, accessToken);
@@ -121,8 +115,8 @@ function RouteComponent() {
       courses={courses}
       scorecard={scorecard}
       competitions={competitions}
-      tournament={shouldLoadTournament ? (tournament ?? null) : null}
-      myPerson={shouldLoadTournament ? (myPerson ?? null) : null}
+      tournament={tournament ?? null}
+      myPerson={myPerson ?? null}
       userId={user!.id}
     />
   );

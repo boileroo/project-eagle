@@ -272,6 +272,25 @@ export function isBonusFormat(
 }
 
 // ──────────────────────────────────────────────
+// Helper: is this a game/competition that should be deleted when enabling teams?
+// (all match-based formats that require specific player/group setups)
+// ──────────────────────────────────────────────
+
+export function isGameFormat(
+  formatType: CompetitionConfig['formatType'],
+): boolean {
+  return (
+    formatType === 'match_play' ||
+    formatType === 'best_ball' ||
+    formatType === 'hi_lo' ||
+    formatType === 'rumble' ||
+    formatType === 'wolf' ||
+    formatType === 'six_point' ||
+    formatType === 'chair'
+  );
+}
+
+// ──────────────────────────────────────────────
 // Participant type labels
 // ──────────────────────────────────────────────
 

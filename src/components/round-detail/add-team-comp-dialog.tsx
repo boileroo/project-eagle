@@ -33,7 +33,6 @@ export function AddTeamCompDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [name, setName] = useState('');
   const [formatType, setFormatType] =
     useState<CompetitionConfig['formatType']>('match_play');
 
@@ -44,8 +43,13 @@ export function AddTeamCompDialog({
     (c) => c.formatType === 'match_play',
   );
 
+  const getFormatLabel = () => {
+    return (
+      TEAM_FORMATS.find((f) => f.value === formatType)?.label ?? formatType
+    );
+  };
+
   const resetForm = () => {
-    setName('');
     setFormatType('match_play');
     setPointsPerWin(1);
     setPointsPerHalf(0.5);
@@ -153,7 +157,7 @@ export function AddTeamCompDialog({
   };
 
   const isDisabled = () => {
-    if (saving || !name.trim()) return true;
+    if (saving) return true;
     if (formatType === 'match_play' && hasMatchPlayComp) return true;
     if (formatType === 'best_ball' && validBestBallGroups === 0) return true;
     if (formatType === 'hi_lo' && validHiLoGroups === 0) return true;
@@ -172,16 +176,12 @@ export function AddTeamCompDialog({
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      toast.error('Competition name is required.');
-      return;
-    }
     setSaving(true);
     try {
       await createCompetitionFn({
         data: {
           tournamentId,
-          name: name.trim(),
+          name: getFormatLabel(),
           competitionCategory: 'match',
           groupScope: groupScope(),
           roundId,
@@ -222,17 +222,6 @@ export function AddTeamCompDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="team-comp-name">Name</Label>
-            <Input
-              id="team-comp-name"
-              placeholder="e.g. Day 1 Match Play"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="team-comp-format">Format</Label>
             <Select
               id="team-comp-format"
@@ -240,6 +229,7 @@ export function AddTeamCompDialog({
               onChange={(e) =>
                 setFormatType(e.target.value as CompetitionConfig['formatType'])
               }
+              autoFocus
             >
               {TEAM_FORMATS.map((ft) => (
                 <option key={ft.value} value={ft.value}>

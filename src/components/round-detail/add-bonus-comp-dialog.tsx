@@ -28,7 +28,6 @@ export function AddBonusCompDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [name, setName] = useState('');
   const [formatType, setFormatType] =
     useState<CompetitionConfig['formatType']>('nearest_pin');
   const [holeNumber, setHoleNumber] = useState(1);
@@ -37,8 +36,13 @@ export function AddBonusCompDialog({
   );
   const [bonusPoints, setBonusPoints] = useState(1);
 
+  const getFormatLabel = () => {
+    const label =
+      BONUS_FORMATS.find((f) => f.value === formatType)?.label ?? formatType;
+    return `${label} - Hole ${holeNumber}`;
+  };
+
   const resetForm = () => {
-    setName('');
     setFormatType('nearest_pin');
     setHoleNumber(1);
     setBonusMode('standalone');
@@ -66,16 +70,12 @@ export function AddBonusCompDialog({
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      toast.error('Competition name is required.');
-      return;
-    }
     setSaving(true);
     try {
       await createCompetitionFn({
         data: {
           tournamentId,
-          name: name.trim(),
+          name: getFormatLabel(),
           competitionCategory: 'bonus',
           groupScope: 'all',
           roundId,
@@ -116,17 +116,6 @@ export function AddBonusCompDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="bonus-comp-name">Name</Label>
-            <Input
-              id="bonus-comp-name"
-              placeholder="e.g. NTP Hole 7"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="bonus-comp-format">Type</Label>
             <Select
               id="bonus-comp-format"
@@ -134,6 +123,7 @@ export function AddBonusCompDialog({
               onChange={(e) =>
                 setFormatType(e.target.value as CompetitionConfig['formatType'])
               }
+              autoFocus
             >
               {BONUS_FORMATS.map((ft) => (
                 <option key={ft.value} value={ft.value}>
@@ -192,7 +182,7 @@ export function AddBonusCompDialog({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving || !name.trim()}>
+          <Button onClick={handleSave} disabled={saving}>
             {saving ? 'Creating…' : 'Create'}
           </Button>
         </DialogFooter>

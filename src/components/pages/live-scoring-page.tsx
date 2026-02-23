@@ -96,8 +96,12 @@ export function LiveScoringPage({
   const activeGroup = round.groups.find((g) => g.id === activeGroupId);
 
   // Resolve full participant data for each group member
+  // If no groups exist, show all participants
   const groupParticipants = useMemo(() => {
-    if (!activeGroup) return [];
+    if (!activeGroup) {
+      // No groups - show all participants (e.g., for quick rounds with ≤4 players)
+      return round.participants;
+    }
     return activeGroup.participants
       .map((gp) => round.participants.find((rp) => rp.id === gp.id))
       .filter((rp): rp is NonNullable<typeof rp> => rp != null);

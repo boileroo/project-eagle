@@ -28,8 +28,8 @@ import {
   StandingsSection,
   LeaderboardSection,
 } from '@/components/tournament-detail';
-import { PlayersAndTeamsSection } from '@/components/tournament-detail/players-and-teams-section';
 import { CollapsibleSection } from '@/components/tournament-detail/collapsible-section';
+import { ParticipantsSection } from '@/components/round-detail/participants-section';
 import { ShareDialog } from '@/components/tournament-detail/share-dialog';
 import type {
   StandingConfig,
@@ -318,12 +318,14 @@ export function TournamentDetailPage({
           ) : undefined
         }
       >
-        <PlayersAndTeamsSection
+        <ParticipantsSection
           tournament={tournament}
           isCommissioner={isCommissioner}
-          readOnly={!isSetup}
           userId={userId}
+          myPerson={myPerson}
           onChanged={() => router.invalidate()}
+          defaultOpen={isSetup}
+          competitions={[]}
         />
       </CollapsibleSection>
 

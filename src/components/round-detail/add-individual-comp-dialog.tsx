@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { createCompetitionFn } from '@/lib/competitions.server';
 import type { CompetitionConfig } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import {
@@ -30,7 +29,6 @@ export function AddIndividualCompDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [name, setName] = useState('');
   const [formatType, setFormatType] =
     useState<CompetitionConfig['formatType']>('wolf');
 
@@ -39,8 +37,14 @@ export function AddIndividualCompDialog({
     'stableford' | 'gross'
   >('stableford');
 
+  const getFormatLabel = () => {
+    return (
+      INDIVIDUAL_FORMATS.find((f) => f.value === formatType)?.label ??
+      formatType
+    );
+  };
+
   const resetForm = () => {
-    setName('');
     setFormatType('wolf');
     setSixPointScoringBasis('stableford');
   };
@@ -62,16 +66,12 @@ export function AddIndividualCompDialog({
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      toast.error('Competition name is required.');
-      return;
-    }
     setSaving(true);
     try {
       await createCompetitionFn({
         data: {
           tournamentId,
-          name: name.trim(),
+          name: getFormatLabel(),
           competitionCategory: 'game',
           groupScope: 'within_group',
           roundId,
@@ -112,17 +112,6 @@ export function AddIndividualCompDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="game-name">Name</Label>
-            <Input
-              id="game-name"
-              placeholder="e.g. Wolf"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="game-format">Format</Label>
             <Select
               id="game-format"
@@ -130,6 +119,7 @@ export function AddIndividualCompDialog({
               onChange={(e) =>
                 setFormatType(e.target.value as CompetitionConfig['formatType'])
               }
+              autoFocus
             >
               {INDIVIDUAL_FORMATS.map((ft) => (
                 <option key={ft.value} value={ft.value}>
@@ -191,7 +181,7 @@ export function AddIndividualCompDialog({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving || !name.trim()}>
+          <Button onClick={handleSave} disabled={saving}>
             {saving ? 'Creating…' : 'Create'}
           </Button>
         </DialogFooter>
