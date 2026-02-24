@@ -1,63 +1,12 @@
-import { Link, useNavigate, useRouter } from '@tanstack/react-router';
-import {
-  getTournamentFn,
-  deleteTournamentFn,
-  addParticipantFn,
-  ensureMyPersonFn,
-  lockTournamentFn,
-  unlockTournamentFn,
-} from '@/lib/tournaments.server';
-import { Button } from '@/components/ui/button';
+import { useRouter } from '@tanstack/react-router';
+import { getTournamentFn } from '@/lib/tournaments.server';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { useState } from 'react';
-import { toast } from 'sonner';
-import {
-  RoundsSection,
-  LeaderboardSection,
-} from '@/components/tournament-detail';
-import { ParticipantsSection } from '@/components/pages/tournament-detail-page/components/participants-section';
-import { ShareDialog } from '@/components/tournament-detail/share-dialog';
-
-// ──────────────────────────────────────────────
-// Tournament Status UI Constants
-// ──────────────────────────────────────────────
-
-const tournamentStatusLabels: Record<string, string> = {
-  setup: 'Draft',
-  scheduled: 'Awaiting Start',
-  underway: 'Underway',
-  complete: 'Finished',
-};
-
-const tournamentStatusColors: Record<
-  string,
-  'default' | 'secondary' | 'outline' | 'warning'
-> = {
-  setup: 'outline',
-  scheduled: 'secondary',
-  underway: 'warning',
-  complete: 'default',
-};
-
-// ──────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────
+import { ParticipantsSection } from './components/participants/participants-section';
+import { RoundsSection } from './components/rounds/rounds-section';
+import { LeaderboardSection } from './components/leaderboard/leaderboard-section';
+import { TournamentHeader } from './components/tournament-header/tournament-header';
 
 type TournamentLoaderData = Awaited<ReturnType<typeof getTournamentFn>>;
-
-// ──────────────────────────────────────────────
-// Main Page Component
-// ──────────────────────────────────────────────
 
 export function TournamentDetailPage({
   userId,
@@ -75,12 +24,7 @@ export function TournamentDetailPage({
     numberOfHoles: number;
   }[];
 }) {
-  const navigate = useNavigate();
   const router = useRouter();
-  const [deleting, setDeleting] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [locking, setLocking] = useState(false);
-  const [lockDialogOpen, setLockDialogOpen] = useState(false);
 
   const isCreator = userId === tournament.createdByUserId;
   const isCommissioner =
@@ -90,193 +34,15 @@ export function TournamentDetailPage({
           (p) => p.personId === myPerson.id && p.role === 'commissioner',
         )
       : false);
-  const iAmParticipant = myPerson
-    ? tournament.participants.some((p) => p.personId === myPerson.id)
-    : false;
 
   const isSetup = tournament.status === 'setup';
-  const isScheduled = tournament.status === 'scheduled';
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await deleteTournamentFn({ data: { tournamentId: tournament.id } });
-      toast.success('Tournament deleted.');
-      navigate({ to: '/tournaments' });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to delete tournament',
-      );
-      setDeleting(false);
-      setDeleteDialogOpen(false);
-    }
-  };
-
-  const handleAddMyself = async () => {
-    try {
-      const person = myPerson ?? (await ensureMyPersonFn());
-      await addParticipantFn({
-        data: {
-          tournamentId: tournament.id,
-          personId: person.id,
-          role:
-            isCreator && tournament.participants.length === 0
-              ? 'commissioner'
-              : 'player',
-        },
-      });
-      toast.success('Added to the tournament!');
-      router.invalidate();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to add yourself',
-      );
-    }
-  };
-
-  const handleLock = async () => {
-    setLocking(true);
-    try {
-      await lockTournamentFn({ data: { tournamentId: tournament.id } });
-      toast.success('Tournament locked. Rounds are now awaiting start.');
-      setLockDialogOpen(false);
-      router.invalidate();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to lock tournament',
-      );
-    }
-    setLocking(false);
-  };
-
-  const handleUnlock = async () => {
-    setLocking(true);
-    try {
-      await unlockTournamentFn({ data: { tournamentId: tournament.id } });
-      toast.success('Tournament unlocked. Back to draft.');
-      router.invalidate();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to unlock tournament',
-      );
-    }
-    setLocking(false);
-  };
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">
-            {tournament.name}
-          </h1>
-          <Badge variant={tournamentStatusColors[tournament.status ?? 'setup']}>
-            {tournamentStatusLabels[tournament.status ?? 'setup']}
-          </Badge>
-        </div>
-
-        {isCommissioner && (
-          <div className="flex items-center gap-2">
-            {/* Lock / Unlock */}
-            {isSetup && tournament.rounds.length > 0 && (
-              <Dialog open={lockDialogOpen} onOpenChange={setLockDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">Lock Tournament</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Lock tournament?</DialogTitle>
-                    <DialogDescription>
-                      All draft rounds will be moved to &quot;scheduled&quot;.
-                      Players, teams, and rounds will be locked from editing
-                      until you unlock.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setLockDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button onClick={handleLock} disabled={locking}>
-                      {locking ? 'Locking…' : 'Lock'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
-
-            {isScheduled && (
-              <Button
-                variant="outline"
-                onClick={handleUnlock}
-                disabled={locking}
-              >
-                {locking ? 'Unlocking…' : 'Unlock Tournament'}
-              </Button>
-            )}
-
-            <Button variant="outline" size="sm" asChild>
-              <Link
-                to="/tournaments/$tournamentId/edit"
-                params={{ tournamentId: tournament.id }}
-              >
-                Edit
-              </Link>
-            </Button>
-
-            <ShareDialog
-              tournamentName={tournament.name}
-              inviteCode={tournament.inviteCode}
-            />
-
-            {isSetup && (
-              <Dialog
-                open={deleteDialogOpen}
-                onOpenChange={setDeleteDialogOpen}
-              >
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    Delete
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Delete tournament?</DialogTitle>
-                    <DialogDescription>
-                      This will permanently delete{' '}
-                      <strong>{tournament.name}</strong> and all its
-                      participants, rounds, scores, and competitions. This
-                      action cannot be undone.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setDeleteDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={handleDelete}
-                      disabled={deleting}
-                    >
-                      {deleting ? 'Deleting…' : 'Delete'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-        )}
-      </div>
-
-      {tournament.description && (
-        <p className="text-muted-foreground">{tournament.description}</p>
-      )}
+      <TournamentHeader
+        tournament={tournament}
+        isCommissioner={isCommissioner}
+      />
 
       <Separator />
 
@@ -290,7 +56,6 @@ export function TournamentDetailPage({
         competitions={[]}
       />
 
-      {/* Step 2: Rounds */}
       <RoundsSection
         tournament={tournament}
         isCommissioner={isCommissioner}
@@ -298,7 +63,6 @@ export function TournamentDetailPage({
         courses={courses}
       />
 
-      {/* Step 3: Leaderboard (auto-computed) */}
       <LeaderboardSection tournamentId={tournament.id} />
     </div>
   );

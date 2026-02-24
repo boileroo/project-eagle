@@ -1,0 +1,103 @@
+import { useState } from 'react';
+import { deleteAllTeamsFn } from '@/lib/teams.server';
+import { deleteCompetitionFn } from '@/lib/competitions.server';
+import { isGameFormat } from '@/lib/competitions';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { toast } from 'sonner';
+
+type CompetitionData = {
+  id: string;
+  formatType: string;
+  name: string;
+};
+
+type DisableTeamsDialogProps = {
+  open: boolean;
+  tournamentId: string;
+  teamsCount: number;
+  competitions: CompetitionData[];
+  onClose: () => void;
+  onDisabled: () => void;
+};
+
+export function DisableTeamsDialog({
+  open,
+  tournamentId,
+  teamsCount,
+  competitions,
+  onClose,
+  onDisabled,
+}: DisableTeamsDialogProps) {
+  const [disabling, setDisabling] = useState(false);
+
+  const handleDisable = async () => {
+    setDisabling(true);
+    try {
+      const gamesToDelete = competitions.filter((c: CompetitionData) =>
+        isGameFormat(
+          c.formatType as
+            | 'match_play'
+            | 'best_ball'
+            | 'hi_lo'
+            | 'rumble'
+            | 'wolf'
+            | 'six_point'
+            | 'chair',
+        ),
+      );
+
+      for (const comp of gamesToDelete) {
+        try {
+          await deleteCompetitionFn({ data: { competitionId: comp.id } });
+        } catch (error) {
+          console.error('Failed to delete game:', error);
+        }
+      }
+
+      await deleteAllTeamsFn({ data: { tournamentId } });
+
+      toast.success('Teams disabled and all games removed.');
+      onDisabled();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to disable teams',
+      );
+    }
+    setDisabling(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Disable teams?</DialogTitle>
+          <DialogDescription>
+            This will delete all {teamsCount} team
+            {teamsCount !== 1 ? 's' : ''} and remove all player assignments. All
+            games (Best Ball, Hi-Lo, Rumble, etc.) will also be deleted.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={disabling}
+            onClick={handleDisable}
+          >
+            {disabling ? 'Disabling...' : 'Disable Teams'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
