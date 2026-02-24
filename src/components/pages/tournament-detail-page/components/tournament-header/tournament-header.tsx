@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { TournamentActions } from './tournament-actions/tournament-actions';
-import { getTournamentFn } from '@/lib/tournaments.server';
 import { useNavigate, useRouter } from '@tanstack/react-router';
+import type { TournamentLoaderData } from '@/types';
 
 const STATUS_LABELS: Record<string, string> = {
   setup: 'Draft',
@@ -19,8 +19,6 @@ const STATUS_COLORS: Record<
   underway: 'warning',
   complete: 'default',
 };
-
-type TournamentLoaderData = Awaited<ReturnType<typeof getTournamentFn>>;
 
 type TournamentHeaderProps = {
   tournament: TournamentLoaderData;

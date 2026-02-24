@@ -11,10 +11,7 @@ import { EditRoundHandicapDialog } from '@/components/round-detail/edit-round-ha
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import type {
-  TournamentData,
-  RoundData,
-} from '@/components/round-detail/types';
+import type { TournamentData, RoundData } from '@/types';
 
 type PlayersTabProps = {
   tournament?: TournamentData;

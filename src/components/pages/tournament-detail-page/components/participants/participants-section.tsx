@@ -11,16 +11,7 @@ import {
 import { PlayersTab } from './players-tab';
 import { TeamsTab } from '../teams/teams-tab';
 import { GroupsTab } from '../groups/groups-tab';
-import type {
-  TournamentData,
-  RoundData,
-} from '@/components/round-detail/types';
-
-type CompetitionData = {
-  id: string;
-  formatType: string;
-  name: string;
-};
+import type { TournamentData, RoundData, CompetitionData } from '@/types';
 
 type ParticipantsSectionProps = {
   tournament?: TournamentData;

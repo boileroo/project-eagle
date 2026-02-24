@@ -1,12 +1,10 @@
 import { useRouter } from '@tanstack/react-router';
-import { getTournamentFn } from '@/lib/tournaments.server';
 import { Separator } from '@/components/ui/separator';
 import { ParticipantsSection } from './components/participants/participants-section';
 import { RoundsSection } from './components/rounds/rounds-section';
 import { LeaderboardSection } from './components/leaderboard/leaderboard-section';
 import { TournamentHeader } from './components/tournament-header/tournament-header';
-
-type TournamentLoaderData = Awaited<ReturnType<typeof getTournamentFn>>;
+import type { TournamentLoaderData, Course, MyPerson } from '@/types';
 
 export function TournamentDetailPage({
   userId,
@@ -15,14 +13,9 @@ export function TournamentDetailPage({
   courses,
 }: {
   userId: string;
-  myPerson: { id: string } | null;
+  myPerson: MyPerson;
   tournament: TournamentLoaderData;
-  courses: {
-    id: string;
-    name: string;
-    location: string | null;
-    numberOfHoles: number;
-  }[];
+  courses: Course[];
 }) {
   const router = useRouter();
 

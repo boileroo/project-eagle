@@ -10,10 +10,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { isBonusFormat } from '@/lib/competitions';
 import type { CompetitionConfig } from '@/lib/competitions';
-import type {
-  CompetitionsData,
-  RoundData,
-} from '@/components/round-detail/types';
+import type { CompetitionsData, RoundData } from '@/types';
 
 type BonusAwardControlProps = {
   competitions: CompetitionsData;

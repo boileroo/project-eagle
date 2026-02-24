@@ -21,11 +21,7 @@ import {
   WolfDeclarationControl,
 } from '@/components/live-scoring';
 import { Button } from '@/components/ui/button';
-import type {
-  RoundData,
-  ScorecardData,
-  CompetitionsData,
-} from '@/components/round-detail/types';
+import type { RoundData, ScorecardData, CompetitionsData } from '@/types';
 
 // ──────────────────────────────────────────────
 // Types

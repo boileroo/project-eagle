@@ -8,7 +8,7 @@ export { NewTournamentPage } from './new-tournament-page';
 export { EditTournamentPage } from './edit-tournament-page';
 export { RoundsPage } from './rounds-page';
 export { NewRoundPage } from './new-round-page';
-export { AccountPage } from './account-page';
+export { AccountPage } from './account-page/account-page';
 export { LoginPage } from './login-page';
 export { SignupPage } from './signup-page';
 export { RoundDetailPage } from './round-detail-page';

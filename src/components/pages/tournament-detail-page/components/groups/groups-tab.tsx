@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
-import type { RoundData } from '@/components/round-detail/types';
+import type { RoundData } from '@/types';
 import { AutoAssignDialog } from './auto-assign-dialog';
 
 type GroupsTabProps = {

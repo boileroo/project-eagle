@@ -6,19 +6,11 @@ import {
   statusColors,
   statusLabels,
 } from '@/components/round-detail/constants';
-
-type RoundItemType = {
-  id: string;
-  roundNumber: number | null;
-  date: string | Date | null;
-  teeTime: string | null;
-  status: string;
-  course: { id: string; name: string } | null;
-};
+import type { RoundItem } from '@/types';
 
 type RoundListProps = {
   tournamentId: string;
-  rounds: RoundItemType[];
+  rounds: RoundItem[];
   isCommissioner: boolean;
   onChanged: () => void;
 };

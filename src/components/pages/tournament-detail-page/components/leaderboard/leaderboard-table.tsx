@@ -1,15 +1,5 @@
 import { TrophyIcon } from './trophy-icon';
-
-type LeaderboardRow = {
-  personId: string;
-  displayName: string;
-  rank: number;
-  roundsPlayed: number;
-  grossStrokes: number;
-  netStrokes: number;
-  stableford: number;
-  total: number;
-};
+import type { LeaderboardRow } from '@/types';
 
 type LeaderboardTableProps = {
   rows: LeaderboardRow[];

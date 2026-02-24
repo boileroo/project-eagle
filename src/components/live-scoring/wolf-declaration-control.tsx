@@ -12,8 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import type { RoundData } from '@/components/round-detail/types';
-import type { CompetitionsData } from '@/components/round-detail/types';
+import type { RoundData, CompetitionsData } from '@/types';
 
 // ──────────────────────────────────────────────
 // Types

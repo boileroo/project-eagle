@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { ScorecardData } from '@/components/round-detail/types';
+import type { ScorecardData } from '@/types';
 import type { SubmitScoreInput } from '@/lib/validators';
 
 // ──────────────────────────────────────────────

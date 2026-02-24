@@ -3,9 +3,7 @@ import { DeleteTournamentButton } from './actions/delete-tournament-button';
 import { LockTournamentButton } from './actions/lock-tournament-button';
 import { UnlockTournamentButton } from './actions/unlock-tournament-button';
 import { EditTournamentLink } from './actions/edit-tournament-link';
-import { getTournamentFn } from '@/lib/tournaments.server';
-
-type TournamentLoaderData = Awaited<ReturnType<typeof getTournamentFn>>;
+import type { TournamentLoaderData } from '@/types';
 
 type TournamentActionsProps = {
   tournament: TournamentLoaderData;

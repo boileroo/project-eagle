@@ -10,30 +10,17 @@ import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RoundList } from './round-list';
 import { AddRoundDialog } from '@/components/tournament-detail/add-round-dialog';
-
-type RoundItemType = {
-  id: string;
-  roundNumber: number | null;
-  date: string | Date | null;
-  teeTime: string | null;
-  status: string;
-  course: { id: string; name: string } | null;
-};
+import type { RoundItem, Course } from '@/types';
 
 type RoundsSectionProps = {
   tournament: {
     id: string;
     status: string;
-    rounds: RoundItemType[];
+    rounds: RoundItem[];
   };
   isCommissioner: boolean;
   onChanged: () => void;
-  courses: {
-    id: string;
-    name: string;
-    location: string | null;
-    numberOfHoles: number;
-  }[];
+  courses: Course[];
 };
 
 export function RoundsSection({

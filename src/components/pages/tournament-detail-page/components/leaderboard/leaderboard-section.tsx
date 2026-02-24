@@ -12,8 +12,7 @@ import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TrophyIcon } from './trophy-icon';
 import { LeaderboardTable } from './leaderboard-table';
-
-type LeaderboardData = Awaited<ReturnType<typeof getTournamentLeaderboardFn>>;
+import type { LeaderboardData } from '@/types';
 
 export function LeaderboardSection({ tournamentId }: { tournamentId: string }) {
   const { data } = useSuspenseQuery({

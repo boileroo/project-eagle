@@ -5,7 +5,7 @@
 
 import { cn } from '@/lib/utils';
 import { scoreDiffColorClass } from '@/lib/scoring-utils';
-import type { ScorecardData } from '@/components/round-detail/types';
+import type { ScorecardData } from '@/types';
 
 type Hole = { holeNumber: number; par: number };
 
