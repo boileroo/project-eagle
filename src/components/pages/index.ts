@@ -12,7 +12,7 @@ export { AccountPage } from './account-page';
 export { LoginPage } from './login-page';
 export { SignupPage } from './signup-page';
 export { RoundDetailPage } from './round-detail-page';
-export { TournamentDetailPage } from './tournament-detail-page';
+export { TournamentDetailPage } from './tournament-detail-page/tournament-detail-page';
 export { LiveScoringPage } from './live-scoring-page';
 export { JoinPage } from './join-page';
 export { GuestsPage } from './guests-page';

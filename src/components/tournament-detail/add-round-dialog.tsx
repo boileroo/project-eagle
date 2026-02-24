@@ -77,9 +77,11 @@ export function AddRoundDialog({
         }
       }}
     >
-      <DialogTrigger asChild>
-        <Button size="sm">Add Round</Button>
-      </DialogTrigger>
+      <div className="mt-2 flex justify-end">
+        <DialogTrigger asChild>
+          <Button size="sm">Add Round</Button>
+        </DialogTrigger>
+      </div>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add Round</DialogTitle>

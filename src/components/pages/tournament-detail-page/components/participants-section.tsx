@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 import { X, ChevronDown } from 'lucide-react';
 import { AddPlayerDialog } from '@/components/add-player-dialog';
 import { EditHandicapDialog } from '@/components/tournament-detail/edit-handicap-dialog';
-import { EditRoundHandicapDialog } from './edit-round-handicap-dialog';
+import { EditRoundHandicapDialog } from '../../../round-detail/edit-round-handicap-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -51,7 +51,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
-import type { TournamentData, RoundData } from './types';
+import type { TournamentData, RoundData } from '../../../round-detail/types';
 
 type CompetitionData = {
   id: string;
@@ -98,6 +98,7 @@ export function ParticipantsSection({
 
   const roundStatus = round?.status ?? 'draft';
   const isDraft = roundStatus === 'draft';
+  const isScheduled = roundStatus === 'scheduled';
 
   // Determine what can be edited
   // Tournament detail (no round): always edit players & teams

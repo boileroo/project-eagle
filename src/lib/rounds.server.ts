@@ -27,16 +27,12 @@ import { safeHandler } from './server-utils';
 
 const GOLF_WORDS = [
   'ace',
-  'albatross',
   'birdie',
   'bogey',
   'bunker',
   'chip',
-  'double',
   'eagle',
-  'fairway',
   'green',
-  'grip',
   'hook',
   'iron',
   'links',
@@ -45,21 +41,12 @@ const GOLF_WORDS = [
   'pitch',
   'putt',
   'rough',
-  'sand',
   'score',
   'slice',
-  'spike',
-  'stable',
   'swing',
   'tee',
-  'turn',
   'wedge',
   'wood',
-  'yard',
-  'ace',
-  'bogey',
-  'eagle',
-  'birdie',
 ];
 
 function generateInviteCode(): string {

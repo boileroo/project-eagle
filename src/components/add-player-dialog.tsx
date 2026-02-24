@@ -172,9 +172,11 @@ export function AddPlayerDialog({
         if (!v) resetState();
       }}
     >
-      <DialogTrigger asChild>
-        <Button size="sm">{triggerLabel}</Button>
-      </DialogTrigger>
+      <div className="mt-2 flex justify-end">
+        <DialogTrigger asChild>
+          <Button size="sm">{triggerLabel}</Button>
+        </DialogTrigger>
+      </div>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add Player</DialogTitle>

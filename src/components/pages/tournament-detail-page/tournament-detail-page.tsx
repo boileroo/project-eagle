@@ -22,19 +22,11 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
-  AddParticipantDialog,
-  AddRoundDialog,
   RoundsSection,
-  StandingsSection,
   LeaderboardSection,
 } from '@/components/tournament-detail';
-import { CollapsibleSection } from '@/components/tournament-detail/collapsible-section';
-import { ParticipantsSection } from '@/components/round-detail/participants-section';
+import { ParticipantsSection } from '@/components/pages/tournament-detail-page/components/participants-section';
 import { ShareDialog } from '@/components/tournament-detail/share-dialog';
-import type {
-  StandingConfig,
-  ComputedStanding,
-} from '@/components/tournament-detail/types';
 
 // ──────────────────────────────────────────────
 // Tournament Status UI Constants
@@ -68,30 +60,25 @@ type TournamentLoaderData = Awaited<ReturnType<typeof getTournamentFn>>;
 // ──────────────────────────────────────────────
 
 export function TournamentDetailPage({
-  tournament,
-  myPerson,
-  courses,
-  standings,
-  computedStandings,
   userId,
+  myPerson,
+  tournament,
+  courses,
 }: {
-  tournament: TournamentLoaderData;
+  userId: string;
   myPerson: { id: string } | null;
+  tournament: TournamentLoaderData;
   courses: {
     id: string;
     name: string;
     location: string | null;
     numberOfHoles: number;
   }[];
-  standings: StandingConfig[];
-  computedStandings: Record<string, ComputedStanding>;
-  userId: string;
 }) {
   const navigate = useNavigate();
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [createStandingOpen, setCreateStandingOpen] = useState(false);
   const [locking, setLocking] = useState(false);
   const [lockDialogOpen, setLockDialogOpen] = useState(false);
 
@@ -293,97 +280,26 @@ export function TournamentDetailPage({
 
       <Separator />
 
-      {/* Step 1: Players & Teams */}
-      <CollapsibleSection
-        step={1}
-        title="Players & Teams"
-        count={tournament.participants.length}
-        countLabel="player"
-        defaultOpen={true}
-        actions={
-          isSetup ? (
-            <div className="flex items-center gap-2">
-              {!iAmParticipant && (
-                <Button size="sm" variant="outline" onClick={handleAddMyself}>
-                  Join
-                </Button>
-              )}
-              {isCommissioner && (
-                <AddParticipantDialog
-                  tournamentId={tournament.id}
-                  onAdded={() => router.invalidate()}
-                />
-              )}
-            </div>
-          ) : undefined
-        }
-      >
-        <ParticipantsSection
-          tournament={tournament}
-          isCommissioner={isCommissioner}
-          userId={userId}
-          myPerson={myPerson}
-          onChanged={() => router.invalidate()}
-          defaultOpen={isSetup}
-          competitions={[]}
-        />
-      </CollapsibleSection>
+      <ParticipantsSection
+        tournament={tournament}
+        isCommissioner={isCommissioner}
+        userId={userId}
+        myPerson={myPerson}
+        onChanged={() => router.invalidate()}
+        defaultOpen={isSetup}
+        competitions={[]}
+      />
 
       {/* Step 2: Rounds */}
-      <CollapsibleSection
-        step={2}
-        title="Rounds"
-        count={tournament.rounds.length}
-        countLabel="round"
-        defaultOpen={tournament.rounds.length > 0}
-        actions={
-          isCommissioner && isSetup ? (
-            <AddRoundDialog
-              tournamentId={tournament.id}
-              courses={courses}
-              onAdded={() => router.invalidate()}
-            />
-          ) : undefined
-        }
-      >
-        <RoundsSection
-          tournament={tournament}
-          isCommissioner={isCommissioner}
-          onChanged={() => router.invalidate()}
-        />
-      </CollapsibleSection>
+      <RoundsSection
+        tournament={tournament}
+        isCommissioner={isCommissioner}
+        onChanged={() => router.invalidate()}
+        courses={courses}
+      />
 
       {/* Step 3: Leaderboard (auto-computed) */}
-      <CollapsibleSection step={3} title="Leaderboard" defaultOpen={true}>
-        <LeaderboardSection tournamentId={tournament.id} />
-      </CollapsibleSection>
-
-      {/* Legacy Standings (deprecated — shown only if manual standings exist) */}
-      {standings.length > 0 && (
-        <CollapsibleSection
-          title="Standings (Legacy)"
-          count={standings.length}
-          countLabel="standing"
-          defaultOpen={false}
-          actions={
-            isCommissioner ? (
-              <Button size="sm" onClick={() => setCreateStandingOpen(true)}>
-                Add Standing
-              </Button>
-            ) : undefined
-          }
-        >
-          <StandingsSection
-            tournamentId={tournament.id}
-            standings={standings}
-            computedStandings={computedStandings}
-            isCommissioner={isCommissioner}
-            onChanged={() => router.invalidate()}
-            createOpen={createStandingOpen}
-            onCreateOpenChange={setCreateStandingOpen}
-          />
-        </CollapsibleSection>
-      )}
+      <LeaderboardSection tournamentId={tournament.id} />
     </div>
   );
 }
