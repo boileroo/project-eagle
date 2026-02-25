@@ -53,6 +53,13 @@ export interface BestBallResult {
 // Calculate best ball for all team pairings
 // ──────────────────────────────────────────────
 
+/**
+ * Calculates best-ball match results for all team pairings in a competition.
+ *
+ * In best-ball, each team contributes their highest stableford score per hole
+ * (best ball). The team with the higher best-ball score wins the hole.
+ * When groups are provided, pairings are derived from group membership.
+ */
 export function calculateBestBall(
   input: CompetitionInput,
   config: BestBallConfig['config'],
@@ -116,9 +123,9 @@ export function calculateBestBall(
         scoreLookup,
         config.pointsPerWin,
         config.pointsPerHalf,
+        group.roundGroupId,
+        group.name,
       );
-      matchResult.groupId = group.roundGroupId;
-      matchResult.groupName = group.name;
       matches.push(matchResult);
     }
 
@@ -179,6 +186,8 @@ function calculateBestBallMatch(
   scoreLookup: Map<string, number>,
   pointsPerWin: number,
   pointsPerHalf: number,
+  groupId?: string,
+  groupName?: string | null,
 ): BestBallMatchResult {
   const totalHoles = holes.length;
   const holeResults: BestBallHoleResult[] = [];
@@ -324,5 +333,7 @@ function calculateBestBallMatch(
     winner,
     pointsA,
     pointsB,
+    groupId,
+    groupName,
   };
 }

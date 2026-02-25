@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { persons, profiles } from '@/db/schema';
-import { requireAuth } from './auth.helpers';
+import { requireAuth } from './server/auth.helpers.server';
 import { updateAccountSchema } from './validators';
 
 // ──────────────────────────────────────────────

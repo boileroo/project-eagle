@@ -11,10 +11,10 @@ import {
 import { PlayersTab } from './players-tab';
 import { TeamsTab } from '../teams/teams-tab';
 import { GroupsTab } from '../groups/groups-tab';
-import type { TournamentData, RoundData, CompetitionData } from '@/types';
+import type { TournamentLoaderData, RoundData, CompetitionData } from '@/types';
 
 type ParticipantsSectionProps = {
-  tournament?: TournamentData;
+  tournament?: TournamentLoaderData;
   round?: RoundData;
   isSingleRound?: boolean;
   competitions?: CompetitionData[];

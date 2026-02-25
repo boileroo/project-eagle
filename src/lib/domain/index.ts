@@ -14,6 +14,7 @@ import { calculateHiLo, type HiLoResult } from './hi-lo';
 import { calculateWolf, type WolfResult } from './wolf';
 import { calculateSixPoint, type SixPointResult } from './six-point';
 import { calculateChair, type ChairResult } from './chair';
+export { assignRanks } from './rank';
 
 // ──────────────────────────────────────────────
 // Engine Input Types (pre-resolved by caller)
@@ -116,8 +117,9 @@ export interface GroupCompetitionResult {
 // ──────────────────────────────────────────────
 
 /**
- * Calculate competition results.
- * For `within_group` competitions, call this once per group
+ * Dispatches to the appropriate scoring engine based on competition format,
+ * then returns the typed result. For `within_group` competitions, the caller
+ * is responsible for filtering the input to a single group first
  * with filtered participants/scores. Or use `calculateGroupedResults`
  * for convenience.
  */
@@ -202,6 +204,15 @@ export type { ChairResult, ChairPlayerResult } from './chair';
 // For `all` competitions, runs once over all data.
 // ──────────────────────────────────────────────
 
+/**
+ * Convenience wrapper that handles group splitting automatically.
+ *
+ * For `within_group` scope competitions, iterates over each group in the input,
+ * filters participants/scores to that group, and calls `calculateCompetitionResults`
+ * once per group. Returns `scope: 'within_group'` with an array of group results.
+ *
+ * For `all` scope competitions, runs once over all data and returns `scope: 'all'`.
+ */
 export function calculateGroupedResults(
   input: CompetitionInput,
 ):

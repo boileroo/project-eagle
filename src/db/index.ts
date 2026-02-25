@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
-import { env } from '@/lib/env';
+import { env } from '@/lib/server/env.server';
 
 // Disable prefetch for Supabase connection pooler
 const client = postgres(env.DATABASE_URL, { prepare: false });

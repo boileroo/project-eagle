@@ -87,7 +87,7 @@ export function AddPlayerDialog({
         .then(setPreviousGuests)
         .finally(() => setLoadingGuests(false));
     }
-  }, [tab]);
+  }, [tab, previousGuests.length]);
 
   const handleSearch = useCallback(
     async (q: string) => {

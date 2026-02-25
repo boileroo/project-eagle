@@ -9,9 +9,12 @@ import {
   persons,
   tournamentParticipants,
 } from '@/db/schema';
-import { requireAuth, verifyTournamentMembership } from './auth.helpers';
+import {
+  requireAuth,
+  verifyTournamentMembership,
+} from './server/auth.helpers.server';
 import { submitScoreSchema } from './validators';
-import { safeHandler } from './server-utils';
+import { safeHandler } from './server/server-utils.server';
 
 // ──────────────────────────────────────────────
 // Shared: resolve latest score per (participant, hole)

@@ -167,16 +167,48 @@ export type CourseData = z.infer<typeof CourseSchema>;
 
 # Server Functions Conventions
 
+## Two-Tier File Structure
+
+Server function files follow a strict two-tier layout:
+
+| Tier              | Location                     | Contains                                                              | Examples                                                              |
+| ----------------- | ---------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **Domain files**  | `src/lib/*.server.ts`        | `createServerFn` definitions (the actual API surface)                 | `competitions.server.ts`, `scoreboards.server.ts`, `rounds.server.ts` |
+| **Utility files** | `src/lib/server/*.server.ts` | Shared helpers, auth, env, rate-limiting — **never** `createServerFn` | `auth.helpers.server.ts`, `env.server.ts`, `rate-limit.server.ts`     |
+
+Domain files import from utility files, never the reverse.
+
+## No Re-Export Barrels for Server Functions
+
+**Never** create barrel/shim files that re-export `createServerFn` definitions from another file. Consumers must import directly from the domain file that defines the function.
+
+```typescript
+// BAD — re-export barrel
+// src/lib/competitions.server.ts
+export { getIndividualScoreboardFn } from './server/scoreboards.server';
+
+// BAD — consumer importing through a barrel
+import { getIndividualScoreboardFn } from '@/lib/competitions.server';
+
+// GOOD — consumer imports directly from the defining file
+import { getIndividualScoreboardFn } from '@/lib/scoreboards.server';
+```
+
+When splitting a large server file, move functions to new domain-tier files in `src/lib/` and update all consumer imports to point there directly. Do not leave re-export shims behind.
+
 ## File Naming
 
-All server-only code must end with `.server.ts`:
+All server-only code must end with `.server.ts`. Domain files sit directly in `src/lib/`; utility/helper files go in `src/lib/server/`:
 
 ```
-src/lib/server/
-├── competitions.server.ts
-├── tournaments.server.ts
-├── auth.server.ts
-└── utils.server.ts
+src/lib/
+├── competitions.server.ts   # domain — contains createServerFn
+├── rounds.server.ts         # domain — contains createServerFn
+├── tournaments.server.ts    # domain — contains createServerFn
+└── server/
+    ├── auth.helpers.server.ts   # utility — no createServerFn
+    ├── env.server.ts            # utility — no createServerFn
+    └── rate-limit.server.ts     # utility — no createServerFn
 ```
 
 ## Error Handling
@@ -264,6 +296,17 @@ Extract to a hook when:
 - Component exceeds ~150 lines and logic can be separated
 - Complex state management that distracts from rendering
 - Side effects (localStorage, event listeners, subscriptions)
+
+## Being Vigilant for Generic / Reusable Logic
+
+When writing new code or refactoring existing code, always be on the lookout for patterns that could be extracted to shared utilities, hooks, or helpers:
+
+- **Repeated inline logic** (e.g., `isCommissioner` checks appearing in 10+ files) → extract to a hook
+- **Duplicated predicates** (e.g., `rp.person.userId === userId` repeated across files) → extract to a utility function
+- **Duplicate `queryOptions` declarations** → centralize in `src/lib/query-options.ts`
+- **Similar component structures** (e.g., multiple files with the same delete-confirm dialog pattern) → extract to a shared component
+
+Ask yourself: "If I needed to change this logic, how many files would I need to update?" If the answer is more than 1, it likely belongs in a shared location.
 
 ## Naming
 

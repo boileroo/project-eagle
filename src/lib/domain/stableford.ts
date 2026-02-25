@@ -12,8 +12,9 @@
 //   (Applied to NET score against par)
 // ──────────────────────────────────────────────
 
+import { assignRanks } from './rank';
 import { getStrokesOnHole } from '../handicaps';
-import type { CompetitionInput, HoleData, ResolvedScore } from './index';
+import type { CompetitionInput, ResolvedScore } from './index';
 
 // ──────────────────────────────────────────────
 // Types
@@ -52,6 +53,13 @@ export interface StablefordResult {
 // Core: Calculate stableford points for a single hole
 // ──────────────────────────────────────────────
 
+/**
+ * Calculates stableford points for a single hole given net strokes,
+ * par, and strokes received from handicap allocation.
+ *
+ * Points: double bogey or worse → 0, bogey → 1, par → 2,
+ * birdie → 3, eagle → 4, albatross → 5.
+ */
 export function stablefordPoints(
   grossStrokes: number,
   par: number,
@@ -67,6 +75,10 @@ export function stablefordPoints(
 // Build a score lookup: (participantId, holeNumber) → strokes
 // ──────────────────────────────────────────────
 
+/**
+ * Builds a lookup map keyed by `"participantId:holeNumber"` → strokes.
+ * Used internally by all scoring engines to avoid nested loops.
+ */
 export function buildScoreLookup(scores: ResolvedScore[]): Map<string, number> {
   const map = new Map<string, number>();
   for (const s of scores) {
@@ -79,12 +91,14 @@ export function buildScoreLookup(scores: ResolvedScore[]): Map<string, number> {
 // Calculate stableford for all participants
 // ──────────────────────────────────────────────
 
+/**
+ * Calculates stableford scores for all participants in a competition,
+ * returning a sorted leaderboard with ranks assigned.
+ *
+ * Uses net scoring (strokes minus handicap allocation per hole).
+ */
 export function calculateStableford(input: CompetitionInput): StablefordResult {
   const scoreLookup = buildScoreLookup(input.scores);
-  const holesByNumber = new Map<number, HoleData>();
-  for (const h of input.holes) {
-    holesByNumber.set(h.holeNumber, h);
-  }
 
   const sortedHoles = [...input.holes].sort(
     (a, b) => a.holeNumber - b.holeNumber,
@@ -148,17 +162,7 @@ export function calculateStableford(input: CompetitionInput): StablefordResult {
   });
 
   // Assign ranks (handle ties)
-  let rank = 1;
-  for (let i = 0; i < playerResults.length; i++) {
-    if (i > 0) {
-      const prev = playerResults[i - 1];
-      const curr = playerResults[i];
-      if (curr.totalPoints < prev.totalPoints) {
-        rank = i + 1;
-      }
-    }
-    playerResults[i].rank = rank;
-  }
+  assignRanks(playerResults, (p) => p.totalPoints);
 
   return { leaderboard: playerResults };
 }

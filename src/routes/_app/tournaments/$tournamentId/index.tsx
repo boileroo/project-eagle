@@ -1,16 +1,9 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { queryOptions } from '@tanstack/react-query';
 import { getTournamentFn, getMyPersonFn } from '@/lib/tournaments.server';
 import { getCoursesFn } from '@/lib/courses.server';
-import { getTournamentLeaderboardFn } from '@/lib/competitions.server';
+import { tournamentLeaderboardQueryOptions } from '@/lib/query-options';
 import { useAuth } from '@/hooks/use-auth';
 import { TournamentDetailPage } from '@/components/pages';
-
-const tournamentLeaderboardQueryOptions = (tournamentId: string) =>
-  queryOptions({
-    queryKey: ['tournament-leaderboard', tournamentId],
-    queryFn: () => getTournamentLeaderboardFn({ data: { tournamentId } }),
-  });
 
 export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
   loader: async ({ params, context }) => {

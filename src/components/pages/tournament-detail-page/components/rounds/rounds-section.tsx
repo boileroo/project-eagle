@@ -9,7 +9,7 @@ import {
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RoundList } from './round-list';
-import { AddRoundDialog } from '@/components/tournament-detail/add-round-dialog';
+import { AddRoundDialog } from '@/components/pages/tournament-detail-page/components/add-round-dialog';
 import type { RoundItem, Course } from '@/types';
 
 type RoundsSectionProps = {

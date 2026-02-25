@@ -96,6 +96,8 @@ function calculateHiLoMatch(
   scoreLookup: Map<string, number>,
   pointsPerWin: number,
   pointsPerHalf: number,
+  groupId?: string,
+  groupName?: string | null,
 ): HiLoMatchResult {
   const sortedHoles = [...holes].sort((a, b) => a.holeNumber - b.holeNumber);
   const holeResults: HiLoHoleResult[] = [];
@@ -238,6 +240,8 @@ function calculateHiLoMatch(
     winner,
     pointsA,
     pointsB,
+    groupId,
+    groupName,
   };
 }
 
@@ -245,6 +249,13 @@ function calculateHiLoMatch(
 // Main entry point
 // ──────────────────────────────────────────────
 
+/**
+ * Calculates hi-lo match results for all team pairings in a competition.
+ *
+ * Hi-Lo is a 2v2 format where each hole has two simultaneous sub-matches:
+ * high ball (best stableford from each side) and low ball (worst stableford
+ * from each side). Two points are available per hole (1 per sub-match).
+ */
 export function calculateHiLo(
   input: CompetitionInput,
   config: HiLoConfig['config'],
@@ -301,10 +312,10 @@ export function calculateHiLo(
         scoreLookup,
         config.pointsPerWin,
         config.pointsPerHalf,
+        group.roundGroupId,
+        group.name,
       ),
     );
-    matches[matches.length - 1].groupId = group.roundGroupId;
-    matches[matches.length - 1].groupName = group.name;
   }
 
   return { matches };

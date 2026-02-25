@@ -32,10 +32,11 @@ export function shortName(name: string): string {
 
 /**
  * Human-readable label for a score diff relative to par.
- * e.g. -2 → "Eagle", -1 → "Birdie", 0 → "Par", 1 → "+1"
+ * e.g. -3 → "Albatross", -2 → "Eagle", -1 → "Birdie", 0 → "Par", 1 → "+1"
  */
 export function parLabel(diff: number): string {
-  if (diff <= -2) return 'Eagle';
+  if (diff <= -3) return 'Albatross';
+  if (diff === -2) return 'Eagle';
   if (diff === -1) return 'Birdie';
   if (diff === 0) return 'Par';
   if (diff === 1) return '+1';

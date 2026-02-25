@@ -9,13 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import type { TournamentData, CompetitionData } from '@/types';
+import type { TournamentLoaderData, CompetitionData } from '@/types';
 import { TeamItem } from './team-item';
 import { DeleteTeamDialog } from './delete-team-dialog';
 import { DisableTeamsDialog } from './disable-teams-dialog';
 
 type TeamsTabProps = {
-  tournament?: TournamentData;
+  tournament?: TournamentLoaderData;
   competitions?: CompetitionData[];
   canEdit: boolean;
   onChanged: () => void;

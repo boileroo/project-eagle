@@ -1,7 +1,6 @@
 import type { getTournamentFn } from '@/lib/tournaments.server';
 
 export type TournamentLoaderData = Awaited<ReturnType<typeof getTournamentFn>>;
-export type TournamentData = TournamentLoaderData;
 
 export type MyPerson = { id: string } | null;
 

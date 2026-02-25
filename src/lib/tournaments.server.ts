@@ -15,7 +15,7 @@ import {
   requireAuth,
   requireCommissioner,
   requireTournamentParticipant,
-} from './auth.helpers';
+} from './server/auth.helpers.server';
 import {
   addParticipantSchema,
   createGuestSchema,
@@ -27,73 +27,9 @@ import {
   updateTournamentSchema,
 } from './validators';
 import { isTournamentInSetup } from './tournament-status';
-import { safeHandler } from './server-utils';
-
-const GOLF_WORDS = [
-  'ace',
-  'albatross',
-  'birdie',
-  'bogey',
-  'bunker',
-  'chip',
-  'double',
-  'eagle',
-  'fairway',
-  'green',
-  'grip',
-  'hook',
-  'iron',
-  'links',
-  'loft',
-  'pars',
-  'pitch',
-  'putt',
-  'rough',
-  'sand',
-  'score',
-  'slice',
-  'spike',
-  'stable',
-  'swing',
-  'tee',
-  'turn',
-  'wedge',
-  'wood',
-  'yard',
-  'ace',
-  'bogey',
-  'eagle',
-  'birdie',
-];
-
-function generateInviteCode(): string {
-  const word =
-    GOLF_WORDS[Math.floor(Math.random() * GOLF_WORDS.length)].toUpperCase();
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let suffix = '';
-  for (let i = 0; i < 4; i++) {
-    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return `${word}-${suffix}`.toUpperCase();
-}
-
-// ──────────────────────────────────────────────
-// Helper: require tournament to be in setup status
-// ──────────────────────────────────────────────
-
-async function requireSetup(tournamentId: string) {
-  const tournament = await db.query.tournaments.findFirst({
-    where: eq(tournaments.id, tournamentId),
-    columns: { status: true },
-  });
-  if (!tournament) throw new Error('Tournament not found');
-  if (!isTournamentInSetup(tournament.status)) {
-    throw new Error(
-      'This action is only available while the tournament is in setup',
-    );
-  }
-  return tournament;
-}
+import { safeHandler } from './server/server-utils.server';
+import { generateInviteCode } from './server/invite-codes.server';
+import { requireTournamentSetup } from './server/tournament-status.server';
 
 // ──────────────────────────────────────────────
 // List all tournaments
@@ -258,7 +194,7 @@ export const deleteTournamentFn = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ tournamentId: z.string().uuid() }))
   .handler(async ({ data }) => {
     await requireCommissioner(data.tournamentId);
-    await requireSetup(data.tournamentId);
+    await requireTournamentSetup(data.tournamentId);
 
     const existing = await db.query.tournaments.findFirst({
       where: eq(tournaments.id, data.tournamentId),
@@ -582,7 +518,7 @@ export const updateParticipantFn = createServerFn({ method: 'POST' })
     if (!existing) throw new Error('Participant not found');
 
     await requireCommissioner(existing.tournamentId);
-    await requireSetup(existing.tournamentId);
+    await requireTournamentSetup(existing.tournamentId);
 
     // Cannot change the role of a commissioner
     if (data.role !== undefined && existing.role === 'commissioner') {
@@ -626,7 +562,7 @@ export const removeParticipantFn = createServerFn({ method: 'POST' })
     if (!existing) throw new Error('Participant not found');
 
     await requireCommissioner(existing.tournamentId);
-    await requireSetup(existing.tournamentId);
+    await requireTournamentSetup(existing.tournamentId);
 
     await db
       .delete(tournamentParticipants)
@@ -711,22 +647,24 @@ export const lockTournamentFn = createServerFn({ method: 'POST' })
       );
     }
 
-    // Bulk-transition all draft rounds to scheduled
-    await db
-      .update(rounds)
-      .set({ status: 'scheduled', updatedAt: new Date() })
-      .where(
-        and(
-          eq(rounds.tournamentId, data.tournamentId),
-          eq(rounds.status, 'draft'),
-        ),
-      );
+    await db.transaction(async (tx) => {
+      // Bulk-transition all draft rounds to scheduled
+      await tx
+        .update(rounds)
+        .set({ status: 'scheduled', updatedAt: new Date() })
+        .where(
+          and(
+            eq(rounds.tournamentId, data.tournamentId),
+            eq(rounds.status, 'draft'),
+          ),
+        );
 
-    // Update tournament status
-    await db
-      .update(tournaments)
-      .set({ status: 'scheduled', updatedAt: new Date() })
-      .where(eq(tournaments.id, data.tournamentId));
+      // Update tournament status
+      await tx
+        .update(tournaments)
+        .set({ status: 'scheduled', updatedAt: new Date() })
+        .where(eq(tournaments.id, data.tournamentId));
+    });
 
     return { success: true };
   });
@@ -751,22 +689,24 @@ export const unlockTournamentFn = createServerFn({ method: 'POST' })
       );
     }
 
-    // Revert all scheduled rounds to draft
-    await db
-      .update(rounds)
-      .set({ status: 'draft', updatedAt: new Date() })
-      .where(
-        and(
-          eq(rounds.tournamentId, data.tournamentId),
-          eq(rounds.status, 'scheduled'),
-        ),
-      );
+    await db.transaction(async (tx) => {
+      // Revert all scheduled rounds to draft
+      await tx
+        .update(rounds)
+        .set({ status: 'draft', updatedAt: new Date() })
+        .where(
+          and(
+            eq(rounds.tournamentId, data.tournamentId),
+            eq(rounds.status, 'scheduled'),
+          ),
+        );
 
-    // Update tournament status
-    await db
-      .update(tournaments)
-      .set({ status: 'setup', updatedAt: new Date() })
-      .where(eq(tournaments.id, data.tournamentId));
+      // Update tournament status
+      await tx
+        .update(tournaments)
+        .set({ status: 'setup', updatedAt: new Date() })
+        .where(eq(tournaments.id, data.tournamentId));
+    });
 
     return { success: true };
   });

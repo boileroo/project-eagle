@@ -3,9 +3,9 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
 import { courses, courseHoles } from '@/db/schema';
-import { requireAuth } from './auth.helpers';
+import { requireAuth } from './server/auth.helpers.server';
 import { createCourseSchema, updateCourseSchema } from './validators';
-import { safeHandler } from './server-utils';
+import { safeHandler } from './server/server-utils.server';
 
 // ──────────────────────────────────────────────
 // List all courses

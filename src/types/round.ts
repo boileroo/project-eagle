@@ -4,6 +4,6 @@ import type { getRoundCompetitionsFn } from '@/lib/competitions.server';
 
 export type RoundData = Awaited<ReturnType<typeof getRoundFn>>;
 export type ScorecardData = Awaited<ReturnType<typeof getScorecardFn>>;
-export type CompetitionsData = Awaited<
+export type RoundCompetitionsData = Awaited<
   ReturnType<typeof getRoundCompetitionsFn>
 >;

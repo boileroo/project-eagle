@@ -3,7 +3,11 @@ import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
 import { roundGroups, roundParticipants, rounds } from '@/db/schema';
-import { requireAuth, requireCommissioner } from './auth.helpers';
+import {
+  requireAuth,
+  requireCommissioner,
+  verifyTournamentMembership,
+} from './server/auth.helpers.server';
 import {
   createRoundGroupSchema,
   assignParticipantToGroupSchema,
@@ -17,7 +21,16 @@ import {
 export const getRoundGroupsFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ roundId: z.string().uuid() }))
   .handler(async ({ data }) => {
-    await requireAuth();
+    const user = await requireAuth();
+
+    // IDOR fix: verify user has access to this round's tournament
+    const round = await db.query.rounds.findFirst({
+      where: eq(rounds.id, data.roundId),
+      columns: { tournamentId: true },
+    });
+    if (!round) throw new Error('Round not found');
+    await verifyTournamentMembership(user.id, round.tournamentId);
+
     return db.query.roundGroups.findMany({
       where: eq(roundGroups.roundId, data.roundId),
       orderBy: (g, { asc }) => [asc(g.groupNumber)],
@@ -212,10 +225,15 @@ export const deriveGroupPairingsFn = createServerFn({ method: 'GET' })
     }),
   )
   .handler(async ({ data }) => {
-    await requireAuth();
+    const user = await requireAuth();
+
+    // IDOR fix: verify user has access to this group's tournament
     const group = await db.query.roundGroups.findFirst({
       where: eq(roundGroups.id, data.roundGroupId),
       with: {
+        round: {
+          columns: { tournamentId: true },
+        },
         participants: {
           with: {
             tournamentParticipant: {
@@ -228,6 +246,7 @@ export const deriveGroupPairingsFn = createServerFn({ method: 'GET' })
       },
     });
     if (!group) throw new Error('Group not found');
+    await verifyTournamentMembership(user.id, group.round.tournamentId);
 
     const participants = group.participants;
 

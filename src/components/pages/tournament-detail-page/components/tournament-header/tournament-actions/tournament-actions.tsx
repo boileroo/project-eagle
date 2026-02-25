@@ -1,4 +1,4 @@
-import { ShareDialog } from '@/components/tournament-detail/share-dialog';
+import { ShareDialog } from '@/components/pages/tournament-detail-page/components/share-dialog';
 import { DeleteTournamentButton } from './actions/delete-tournament-button';
 import { LockTournamentButton } from './actions/lock-tournament-button';
 import { UnlockTournamentButton } from './actions/unlock-tournament-button';

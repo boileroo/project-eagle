@@ -28,6 +28,7 @@
 
 import { getStrokesOnHole } from '../handicaps';
 import { stablefordPoints, buildScoreLookup } from './stableford';
+import { assignRanks } from './rank';
 import type { CompetitionInput, GameDecisionData } from './index';
 
 // ──────────────────────────────────────────────
@@ -74,6 +75,17 @@ function wolfIndexForHole(holeNumber: number, playerCount: number): number {
 // Main entry point
 // ──────────────────────────────────────────────
 
+/**
+ * Calculates wolf scores for a competition.
+ *
+ * Wolf is a 4-player per group game. On each hole the "wolf" (rotating by
+ * hole number) may choose a partner or go lone wolf. The wolf side wins if
+ * their best stableford beats the opposing side's best. Points are fixed
+ * (4 for lone wolf win, 2 per player for partnered win; opponents receive
+ * 2 each when the lone wolf loses). Ties award no points.
+ *
+ * @param gameDecisions - Player decisions (partner selections) per hole.
+ */
 export function calculateWolf(
   input: CompetitionInput,
   gameDecisions: GameDecisionData[],
@@ -265,14 +277,7 @@ export function calculateWolf(
   }));
 
   leaderboard.sort((a, b) => b.totalPoints - a.totalPoints);
-
-  let rank = 1;
-  for (let i = 0; i < leaderboard.length; i++) {
-    if (i > 0 && leaderboard[i].totalPoints < leaderboard[i - 1].totalPoints) {
-      rank = i + 1;
-    }
-    leaderboard[i].rank = rank;
-  }
+  assignRanks(leaderboard, (p) => p.totalPoints);
 
   return { leaderboard };
 }

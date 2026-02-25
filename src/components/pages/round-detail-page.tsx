@@ -1,20 +1,7 @@
-import { Link, useNavigate } from '@tanstack/react-router';
-import {
-  Play,
-  ChevronLeft,
-  ChevronRight,
-  Pencil,
-  Clock,
-  PlayCircle,
-  CheckCircle,
-  Lock,
-} from 'lucide-react';
-import {
-  getRoundFn,
-  deleteRoundFn,
-  transitionRoundFn,
-} from '@/lib/rounds.server';
-import { deleteTournamentFn, getTournamentFn } from '@/lib/tournaments.server';
+import { Link } from '@tanstack/react-router';
+import { Play, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { getRoundFn, transitionRoundFn } from '@/lib/rounds.server';
+import { getTournamentFn } from '@/lib/tournaments.server';
 import { getScorecardFn } from '@/lib/scores.server';
 import { getRoundCompetitionsFn } from '@/lib/competitions.server';
 import { useQueryClient } from '@tanstack/react-query';
@@ -23,15 +10,6 @@ import { ScoreEntryDialog } from '@/components/score-entry-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -40,12 +18,14 @@ import {
   TeamCompetitionsSection,
   IndividualScoreboardSection,
   ParticipantsSection,
-} from '@/components/round-detail';
+} from '@/components/pages/round-detail-page/components';
+import { RoundStepIndicator } from '@/components/pages/round-detail-page/components/round-step-indicator';
+import { DeleteRoundDialog } from '@/components/pages/round-detail-page/components/delete-round-dialog';
 import {
   statusColors,
   statusLabels,
   nextTransitions,
-} from '@/components/round-detail/constants';
+} from '@/components/pages/round-detail-page/components/constants';
 import { buildTeamColourMap } from '@/lib/team-colours';
 import {
   calculateCompetitionResults,
@@ -93,10 +73,7 @@ export function RoundDetailPage({
   myPerson: { id: string } | null;
   userId: string;
 }) {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [deleting, setDeleting] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const invalidateRoundData = () => {
     void queryClient.invalidateQueries({ queryKey: ['round', round.id] });
@@ -440,30 +417,6 @@ export function RoundDetailPage({
 
   const tournamentId = round.tournamentId;
 
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      if (isSingleRound) {
-        await deleteTournamentFn({ data: { tournamentId } });
-        toast.success('Round deleted.');
-        navigate({ to: '/' });
-      } else {
-        await deleteRoundFn({ data: { roundId: round.id } });
-        toast.success('Round deleted.');
-        navigate({
-          to: '/tournaments/$tournamentId',
-          params: { tournamentId },
-        });
-      }
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to delete round',
-      );
-      setDeleting(false);
-      setDeleteDialogOpen(false);
-    }
-  };
-
   const handleTransition = async (
     newStatus: 'draft' | 'scheduled' | 'open' | 'finalized',
   ) => {
@@ -566,38 +519,14 @@ export function RoundDetailPage({
           )}
 
           {isCommissioner && round.status === 'draft' && (
-            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  Delete
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Delete round?</DialogTitle>
-                  <DialogDescription>
-                    This will permanently delete Round{' '}
-                    {round.roundNumber ?? '—'} and all its participants and
-                    scores. This action cannot be undone.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setDeleteDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                  >
-                    {deleting ? 'Deleting…' : 'Delete'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <DeleteRoundDialog
+              roundId={round.id}
+              tournamentId={round.tournamentId}
+              roundNumber={round.roundNumber}
+              isSingleRound={isSingleRound}
+              isCommissioner={isCommissioner}
+              roundStatus={round.status}
+            />
           )}
 
           {/* Forward transitions — right side */}
@@ -869,78 +798,6 @@ export function RoundDetailPage({
         }
         onChanged={() => invalidateRoundData()}
       />
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────
-// Round Step Indicator
-// ──────────────────────────────────────────────
-
-const ROUND_STEPS: {
-  status: string;
-  label: string;
-  Icon: React.ComponentType<{ className?: string }>;
-}[] = [
-  { status: 'draft', label: 'Draft', Icon: Pencil },
-  { status: 'scheduled', label: 'Awaiting Start', Icon: Clock },
-  { status: 'open', label: 'In Play', Icon: PlayCircle },
-  { status: 'finalized', label: 'Finished', Icon: CheckCircle },
-];
-
-const STATUS_ORDER = ['draft', 'scheduled', 'open', 'finalized'];
-
-function RoundStepIndicator({ status }: { status: string }) {
-  const currentIdx = STATUS_ORDER.indexOf(status);
-
-  return (
-    <div className="flex items-center gap-0">
-      {ROUND_STEPS.map((step, idx) => {
-        const isActive = step.status === status;
-        const isPast = idx < currentIdx;
-        const isLast = idx === ROUND_STEPS.length - 1;
-
-        return (
-          <div key={step.status} className="flex min-w-0 flex-1 items-center">
-            {/* Step node */}
-            <div className="flex min-w-0 flex-1 flex-col items-center gap-1">
-              <div
-                className={[
-                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
-                  isActive
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : isPast
-                      ? 'border-primary/40 bg-primary/10 text-primary/60'
-                      : 'border-muted-foreground/30 bg-background text-muted-foreground/40',
-                ].join(' ')}
-              >
-                <step.Icon className="h-3.5 w-3.5" />
-              </div>
-              <span
-                className={[
-                  'truncate text-center text-xs',
-                  isActive
-                    ? 'text-foreground font-medium'
-                    : isPast
-                      ? 'text-muted-foreground'
-                      : 'text-muted-foreground/50',
-                ].join(' ')}
-              >
-                {step.label}
-              </span>
-            </div>
-            {/* Connector line */}
-            {!isLast && (
-              <div
-                className={[
-                  'mb-5 h-0.5 w-full flex-shrink',
-                  idx < currentIdx ? 'bg-primary/40' : 'bg-muted-foreground/20',
-                ].join(' ')}
-              />
-            )}
-          </div>
-        );
-      })}
     </div>
   );
 }

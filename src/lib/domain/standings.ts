@@ -10,6 +10,7 @@
 import type { AggregationConfig } from '../competitions';
 import type { CompetitionResult, CompetitionInput, GroupData } from './index';
 import { calculateCompetitionResults } from './index';
+import { assignRanks } from './rank';
 
 // ──────────────────────────────────────────────
 // Input Types
@@ -78,6 +79,17 @@ function emptyTotalsEntry(displayName: string): TotalsEntry {
   };
 }
 
+/**
+ * Calculates tournament standings by aggregating per-round competition results.
+ *
+ * Supports three aggregation methods: most points (desc), lowest strokes (asc),
+ * and most match wins. Contributor bonus points are applied after aggregation.
+ *
+ * @param config - Aggregation method and configuration.
+ * @param rounds - Per-round competition inputs and results.
+ * @param participantType - Whether to aggregate by individual or team.
+ * @param contributorBonuses - Optional bonus points to add to individual totals.
+ */
 export function calculateStandings(
   config: AggregationConfig,
   rounds: RoundCompetitionData[],
@@ -223,14 +235,7 @@ function aggregateSumStableford(
     }),
   );
   leaderboard.sort((a, b) => b.total - a.total);
-
-  let rank = 1;
-  for (let i = 0; i < leaderboard.length; i++) {
-    if (i > 0 && leaderboard[i].total !== leaderboard[i - 1].total) {
-      rank = i + 1;
-    }
-    leaderboard[i].rank = rank;
-  }
+  assignRanks(leaderboard, (e) => e.total);
 
   return { leaderboard, sortDirection: 'desc' };
 }
@@ -336,14 +341,7 @@ function aggregateLowestStrokes(
     }),
   );
   leaderboard.sort((a, b) => a.total - b.total);
-
-  let rank = 1;
-  for (let i = 0; i < leaderboard.length; i++) {
-    if (i > 0 && leaderboard[i].total !== leaderboard[i - 1].total) {
-      rank = i + 1;
-    }
-    leaderboard[i].rank = rank;
-  }
+  assignRanks(leaderboard, (e) => e.total);
 
   return { leaderboard, sortDirection: 'asc' };
 }
@@ -361,16 +359,7 @@ function aggregateMatchWins(
   participantType: 'individual' | 'team',
   config: { pointsPerWin: number; pointsPerHalf: number },
 ): StandingsResult {
-  const totals = new Map<
-    string,
-    {
-      displayName: string;
-      total: number;
-      roundsPlayed: number;
-      perRound: StandingEntry['perRound'];
-      bonusTotal: number;
-    }
-  >();
+  const totals = new Map<string, TotalsEntry>();
 
   const personLookup = buildPersonLookup(rounds);
 
@@ -518,14 +507,7 @@ function aggregateMatchWins(
     }),
   );
   leaderboard.sort((a, b) => b.total - a.total);
-
-  let rank = 1;
-  for (let i = 0; i < leaderboard.length; i++) {
-    if (i > 0 && leaderboard[i].total !== leaderboard[i - 1].total) {
-      rank = i + 1;
-    }
-    leaderboard[i].rank = rank;
-  }
+  assignRanks(leaderboard, (e) => e.total);
 
   return { leaderboard, sortDirection: 'desc' };
 }

@@ -27,6 +27,10 @@ export interface BonusAward {
 // Helpers
 // ──────────────────────────────────────────────
 
+/**
+ * Returns a human-readable label for a bonus competition,
+ * e.g. "Nearest the Pin — Hole 7" or "Longest Drive — Hole 14".
+ */
 export function formatBonusLabel(
   formatType: 'nearest_pin' | 'longest_drive',
   holeNumber: number,

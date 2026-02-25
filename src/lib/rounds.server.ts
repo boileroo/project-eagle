@@ -16,49 +16,15 @@ import {
   requireAuth,
   requireCommissioner,
   verifyTournamentMembership,
-} from './auth.helpers';
+} from './server/auth.helpers.server';
 import {
   createRoundSchema,
   createSingleRoundSchema,
   updateRoundSchema,
 } from './validators';
 import { deriveTournamentStatus } from './tournament-status';
-import { safeHandler } from './server-utils';
-
-const GOLF_WORDS = [
-  'ace',
-  'birdie',
-  'bogey',
-  'bunker',
-  'chip',
-  'eagle',
-  'green',
-  'hook',
-  'iron',
-  'links',
-  'loft',
-  'pars',
-  'pitch',
-  'putt',
-  'rough',
-  'score',
-  'slice',
-  'swing',
-  'tee',
-  'wedge',
-  'wood',
-];
-
-function generateInviteCode(): string {
-  const word =
-    GOLF_WORDS[Math.floor(Math.random() * GOLF_WORDS.length)].toUpperCase();
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let suffix = '';
-  for (let i = 0; i < 4; i++) {
-    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return `${word}-${suffix}`.toUpperCase();
-}
+import { safeHandler } from './server/server-utils.server';
+import { generateInviteCode } from './server/invite-codes.server';
 
 // ──────────────────────────────────────────────
 // Helper: re-sort round numbers by date/teeTime

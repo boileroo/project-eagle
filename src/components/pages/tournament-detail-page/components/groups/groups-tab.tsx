@@ -6,15 +6,10 @@ import {
 } from '@/lib/groups.server';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import type { RoundData } from '@/types';
 import { AutoAssignDialog } from './auto-assign-dialog';
+import { PlayerRow } from './components/player-row';
 
 type GroupsTabProps = {
   round: RoundData;
@@ -111,81 +106,6 @@ export function GroupsTab({
       );
     }
     setDeletingGroupId(null);
-  };
-
-  const PlayerRow = ({
-    rp,
-    showGroupAssign = true,
-  }: {
-    rp: RoundData['participants'][number];
-    showGroupAssign?: boolean;
-  }) => {
-    const isMe = rp.person.userId === userId;
-    const hcValue = rp.handicapOverride ?? rp.handicapSnapshot;
-    const canMoveGroup =
-      canEditGroups &&
-      showGroupAssign &&
-      canConfigureGroups &&
-      groups.length > 0;
-
-    return (
-      <div
-        className={`flex items-center justify-between rounded-md border px-3 py-2 ${
-          isMe ? 'bg-primary/5' : ''
-        }`}
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">{rp.person.displayName}</span>
-          {isMe && <Badge className="text-xs">You</Badge>}
-          {rp.tournamentParticipant?.teamMemberships?.[0]?.team && (
-            <Badge variant="secondary" className="text-xs">
-              {rp.tournamentParticipant.teamMemberships[0].team.name}
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Badge variant="outline">HC {hcValue}</Badge>
-          {canMoveGroup && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button type="button" className="cursor-pointer">
-                  <Badge
-                    variant="secondary"
-                    className="hover:bg-accent text-xs"
-                  >
-                    {rp.roundGroupId
-                      ? (groups.find((g) => g.id === rp.roundGroupId)?.name ??
-                        'Group')
-                      : 'No group'}
-                  </Badge>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {groups
-                  .filter((g) => g.id !== rp.roundGroupId)
-                  .map((g) => (
-                    <DropdownMenuItem
-                      key={g.id}
-                      disabled={assigning === rp.id}
-                      onClick={() => handleAssignToGroup(rp.id, g.id)}
-                    >
-                      Move to {g.name || `Group ${g.groupNumber}`}
-                    </DropdownMenuItem>
-                  ))}
-                {rp.roundGroupId && (
-                  <DropdownMenuItem
-                    disabled={assigning === rp.id}
-                    onClick={() => handleAssignToGroup(rp.id, null)}
-                  >
-                    Unassign from Group
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </div>
-    );
   };
 
   if (round.participants.length === 0) {
@@ -290,7 +210,17 @@ export function GroupsTab({
                   No players assigned.
                 </p>
               ) : (
-                members.map((rp) => <PlayerRow key={rp.id} rp={rp} />)
+                members.map((rp) => (
+                  <PlayerRow
+                    key={rp.id}
+                    rp={rp}
+                    userId={userId}
+                    groups={groups}
+                    canMoveGroup={canConfigureGroups && groups.length > 0}
+                    assigning={assigning}
+                    onAssignToGroup={handleAssignToGroup}
+                  />
+                ))
               )}
             </div>
           </div>
@@ -309,7 +239,15 @@ export function GroupsTab({
           </div>
           <div className="space-y-1 p-2">
             {ungrouped.map((rp) => (
-              <PlayerRow key={rp.id} rp={rp} />
+              <PlayerRow
+                key={rp.id}
+                rp={rp}
+                userId={userId}
+                groups={groups}
+                canMoveGroup={canConfigureGroups && groups.length > 0}
+                assigning={assigning}
+                onAssignToGroup={handleAssignToGroup}
+              />
             ))}
           </div>
         </div>

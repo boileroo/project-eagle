@@ -13,6 +13,7 @@
 
 import { getStrokesOnHole } from '../handicaps';
 import { stablefordPoints, buildScoreLookup } from './stableford';
+import { assignRanks } from './rank';
 import type { CompetitionInput } from './index';
 
 // ──────────────────────────────────────────────
@@ -47,7 +48,23 @@ export interface ChairResult {
 // Main entry point
 // ──────────────────────────────────────────────
 
+/**
+ * Calculates chair (musical chairs) scores for a 4-player competition group.
+ *
+ * One player starts as the "chair holder". On each hole, the player with the
+ * highest stableford score takes the chair. If the chair holder has the best
+ * (or tied best) score, they earn a point and retain the chair. If another
+ * player has the best score, they take the chair (no point is earned that hole).
+ * Ties for best score result in no chair transfer and no point earned.
+ *
+ * @throws {Error} If the input does not contain exactly 4 participants.
+ */
 export function calculateChair(input: CompetitionInput): ChairResult {
+  if (input.participants.length !== 4) {
+    throw new Error(
+      `Chair requires exactly 4 players per group, got ${input.participants.length}`,
+    );
+  }
   const scoreLookup = buildScoreLookup(input.scores);
   const sortedHoles = [...input.holes].sort(
     (a, b) => a.holeNumber - b.holeNumber,
@@ -165,14 +182,7 @@ export function calculateChair(input: CompetitionInput): ChairResult {
   }));
 
   leaderboard.sort((a, b) => b.totalPoints - a.totalPoints);
-
-  let rank = 1;
-  for (let i = 0; i < leaderboard.length; i++) {
-    if (i > 0 && leaderboard[i].totalPoints < leaderboard[i - 1].totalPoints) {
-      rank = i + 1;
-    }
-    leaderboard[i].rank = rank;
-  }
+  assignRanks(leaderboard, (p) => p.totalPoints);
 
   return { leaderboard };
 }

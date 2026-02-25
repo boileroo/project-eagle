@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { deleteTournamentFn } from '@/lib/tournaments.server';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,23 +23,14 @@ export function DeleteTournamentButton({
   tournamentName,
   onDeleted,
 }: DeleteTournamentButtonProps) {
-  const [deleting, setDeleting] = useState(false);
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, loading, handleConfirm } = useConfirmDialog();
 
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
+  const handleDelete = () =>
+    handleConfirm(async () => {
       await deleteTournamentFn({ data: { tournamentId } });
       toast.success('Tournament deleted.');
       onDeleted();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to delete tournament',
-      );
-      setDeleting(false);
-      setOpen(false);
-    }
-  };
+    });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -64,9 +55,9 @@ export function DeleteTournamentButton({
           <Button
             variant="destructive"
             onClick={handleDelete}
-            disabled={deleting}
+            disabled={loading}
           >
-            {deleting ? 'Deleting…' : 'Delete'}
+            {loading ? 'Deleting…' : 'Delete'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -93,6 +93,14 @@ export interface IndividualScoreboardResult {
 // Main function
 // ──────────────────────────────────────────────
 
+/**
+ * Calculates the individual scoreboard for a round.
+ *
+ * Produces one row per participant containing gross strokes, net strokes,
+ * stableford points, contributor bonus points, standalone badge counts,
+ * a combined total, and a rank. Players are ranked by total descending
+ * with stableford as a tiebreaker and gross strokes as a second tiebreaker.
+ */
 export function calculateIndividualScoreboard(
   input: IndividualScoreboardInput,
 ): IndividualScoreboardResult {

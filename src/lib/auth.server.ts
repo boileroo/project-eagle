@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { profiles } from '@/db/schema';
 import { createSupabaseServerClient } from './supabase.server';
-import { checkRateLimit } from './rate-limit';
+import { checkRateLimit } from './server/rate-limit.server';
 
 // ──────────────────────────────────────────────
 // Get the current authenticated user (or null)

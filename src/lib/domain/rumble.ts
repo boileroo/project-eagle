@@ -128,6 +128,14 @@ function scoreGroup(
 // Main entry point
 // ──────────────────────────────────────────────
 
+/**
+ * Calculates rumble results for a competition.
+ *
+ * Rumble is a team format where each group contributes a score derived from
+ * the top-N stableford scores per hole (1 on holes 1–6, 2 on 7–12,
+ * 3 on 13–17, all 4 on hole 18). Group totals are summed per team.
+ * The team with the highest total wins.
+ */
 export function calculateRumble(
   input: CompetitionInput,
   config: RumbleConfig['config'],

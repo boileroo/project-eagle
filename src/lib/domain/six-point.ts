@@ -15,6 +15,7 @@
 
 import { getStrokesOnHole } from '../handicaps';
 import { stablefordPoints, buildScoreLookup } from './stableford';
+import { assignRanks } from './rank';
 import type { CompetitionInput } from './index';
 import type { SixPointConfig } from '../competitions';
 
@@ -94,10 +95,25 @@ function distributePoints(
 // Main entry point
 // ──────────────────────────────────────────────
 
+/**
+ * Calculates six-point scores for a 3-player competition group.
+ *
+ * On each hole, 6 points are distributed among the three players based on
+ * their stableford or gross-stroke ranking. The player who places 1st
+ * receives 3 points, 2nd receives 2 points, 3rd receives 1 point.
+ * Ties split the points for those positions equally.
+ *
+ * @throws {Error} If the input does not contain exactly 3 participants.
+ */
 export function calculateSixPoint(
   input: CompetitionInput,
   config: SixPointConfig['config'],
 ): SixPointResult {
+  if (input.participants.length !== 3) {
+    throw new Error(
+      `Six-point requires exactly 3 players per group, got ${input.participants.length}`,
+    );
+  }
   const scoreLookup = buildScoreLookup(input.scores);
   const sortedHoles = [...input.holes].sort(
     (a, b) => a.holeNumber - b.holeNumber,
@@ -212,14 +228,7 @@ export function calculateSixPoint(
   );
 
   leaderboard.sort((a, b) => b.totalPoints - a.totalPoints);
-
-  let rank = 1;
-  for (let i = 0; i < leaderboard.length; i++) {
-    if (i > 0 && leaderboard[i].totalPoints < leaderboard[i - 1].totalPoints) {
-      rank = i + 1;
-    }
-    leaderboard[i].rank = rank;
-  }
+  assignRanks(leaderboard, (p) => p.totalPoints);
 
   return { leaderboard };
 }

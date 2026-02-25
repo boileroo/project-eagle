@@ -64,6 +64,12 @@ export interface MatchPlayResult {
 // Calculate match play for all pairings
 // ──────────────────────────────────────────────
 
+/**
+ * Calculates match play results for all pairings in a competition.
+ *
+ * When groups are provided, pairs players sequentially within each group.
+ * Falls back to explicit pairings from config when no groups are present.
+ */
 export function calculateMatchPlay(
   input: CompetitionInput,
   config: MatchPlayConfig['config'],
@@ -107,9 +113,9 @@ export function calculateMatchPlay(
           scoreLookup,
           config.pointsPerWin,
           config.pointsPerHalf,
+          group.roundGroupId,
+          group.name,
         );
-        matchResult.groupId = group.roundGroupId;
-        matchResult.groupName = group.name;
         matches.push(matchResult);
       }
     }
@@ -146,6 +152,14 @@ export function calculateMatchPlay(
 // Calculate a single match between two players
 // ──────────────────────────────────────────────
 
+/**
+ * Calculates a single head-to-head match between two players using
+ * stableford points per hole. Handles ties, dormie detection, and
+ * match concession ("3&2" style result text).
+ *
+ * @param groupId - Optional group this match belongs to.
+ * @param groupName - Optional display name for the group.
+ */
 export function calculateMatch(
   playerAId: string,
   playerAName: string,
@@ -157,6 +171,8 @@ export function calculateMatch(
   scoreLookup: Map<string, number>,
   pointsPerWin: number,
   pointsPerHalf: number,
+  groupId?: string,
+  groupName?: string | null,
 ): MatchResult {
   const totalHoles = holes.length;
   const holeResults: MatchHoleResult[] = [];
@@ -263,5 +279,7 @@ export function calculateMatch(
     winner,
     pointsA,
     pointsB,
+    groupId,
+    groupName,
   };
 }

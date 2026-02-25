@@ -6,15 +6,15 @@ import {
 import { removeRoundParticipantFn } from '@/lib/rounds.server';
 import { X } from 'lucide-react';
 import { AddPlayerDialog } from '@/components/add-player-dialog';
-import { EditHandicapDialog } from '@/components/tournament-detail/edit-handicap-dialog';
-import { EditRoundHandicapDialog } from '@/components/round-detail/edit-round-handicap-dialog';
+import { EditHandicapDialog } from '@/components/pages/tournament-detail-page/components/edit-handicap-dialog';
+import { EditRoundHandicapDialog } from '@/components/pages/round-detail-page/components/edit-round-handicap-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import type { TournamentData, RoundData } from '@/types';
+import type { TournamentLoaderData, RoundData } from '@/types';
 
 type PlayersTabProps = {
-  tournament?: TournamentData;
+  tournament?: TournamentLoaderData;
   round?: RoundData;
   canEdit: boolean;
   userId: string;

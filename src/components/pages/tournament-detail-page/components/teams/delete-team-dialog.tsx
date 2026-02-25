@@ -1,16 +1,8 @@
-import { useState } from 'react';
 import { deleteTeamFn } from '@/lib/teams.server';
 import { deleteCompetitionFn } from '@/lib/competitions.server';
 import { isTeamFormat } from '@/lib/competitions';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { toast } from 'sonner';
 
 type CompetitionData = {
@@ -36,11 +28,10 @@ export function DeleteTeamDialog({
   onClose,
   onDeleted,
 }: DeleteTeamDialogProps) {
-  const [deleting, setDeleting] = useState(false);
+  const { loading, handleConfirm } = useConfirmDialog();
 
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
+  const handleDelete = () =>
+    handleConfirm(async () => {
       const teamGames = competitions.filter((c: CompetitionData) =>
         isTeamFormat(c.formatType as 'best_ball' | 'hi_lo' | 'rumble'),
       );
@@ -53,6 +44,8 @@ export function DeleteTeamDialog({
         }
       }
 
+      await deleteTeamFn({ data: { teamId } });
+
       if (teamGames.length > 0) {
         toast.success(
           `Team deleted. ${teamGames.length} game${teamGames.length > 1 ? 's' : ''} removed.`,
@@ -61,40 +54,25 @@ export function DeleteTeamDialog({
         toast.success('Team deleted.');
       }
 
-      await deleteTeamFn({ data: { teamId } });
       onDeleted();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to delete team',
-      );
-    }
-    setDeleting(false);
-  };
+    });
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete team?</DialogTitle>
-          <DialogDescription>
-            This will delete <strong>{teamName}</strong> and remove all its
-            member assignments. Players will remain in the round. Any team-based
-            games involving this team will also be deleted.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={deleting}
-          >
-            {deleting ? 'Deleting…' : 'Delete'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title="Delete team?"
+      description={
+        <>
+          This will delete <strong>{teamName}</strong> and remove all its member
+          assignments. Players will remain in the round. Any team-based games
+          involving this team will also be deleted.
+        </>
+      }
+      confirmText="Delete"
+      variant="destructive"
+      loading={loading}
+      onConfirm={handleDelete}
+    />
   );
 }

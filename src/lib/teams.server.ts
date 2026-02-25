@@ -8,30 +8,13 @@ import {
   tournamentParticipants,
   tournaments,
 } from '@/db/schema';
-import { requireCommissioner } from './auth.helpers';
+import { requireCommissioner } from './server/auth.helpers.server';
 import {
   createTeamSchema,
   updateTeamSchema,
   addTeamMemberSchema,
 } from './validators';
-import { isTournamentInSetup } from './tournament-status';
-
-// ──────────────────────────────────────────────
-// Helper: require tournament to be in setup status
-// ──────────────────────────────────────────────
-
-async function requireSetup(tournamentId: string) {
-  const tournament = await db.query.tournaments.findFirst({
-    where: eq(tournaments.id, tournamentId),
-    columns: { status: true },
-  });
-  if (!tournament) throw new Error('Tournament not found');
-  if (!isTournamentInSetup(tournament.status)) {
-    throw new Error(
-      'Team changes are only available while the tournament is in setup',
-    );
-  }
-}
+import { requireTournamentSetup } from './server/tournament-status.server';
 
 // ──────────────────────────────────────────────
 // Create a team
@@ -47,7 +30,7 @@ export const createTeamFn = createServerFn({ method: 'POST' })
       where: eq(tournaments.id, data.tournamentId),
     });
     if (!tournament) throw new Error('Tournament not found');
-    await requireSetup(data.tournamentId);
+    await requireTournamentSetup(data.tournamentId);
 
     const [team] = await db
       .insert(tournamentTeams)
@@ -73,7 +56,7 @@ export const updateTeamFn = createServerFn({ method: 'POST' })
     if (!existing) throw new Error('Team not found');
 
     await requireCommissioner(existing.tournamentId);
-    await requireSetup(existing.tournamentId);
+    await requireTournamentSetup(existing.tournamentId);
 
     await db
       .update(tournamentTeams)
@@ -96,7 +79,7 @@ export const deleteTeamFn = createServerFn({ method: 'POST' })
     if (!existing) throw new Error('Team not found');
 
     await requireCommissioner(existing.tournamentId);
-    await requireSetup(existing.tournamentId);
+    await requireTournamentSetup(existing.tournamentId);
 
     await db.delete(tournamentTeams).where(eq(tournamentTeams.id, data.teamId));
 
@@ -117,7 +100,7 @@ export const addTeamMemberFn = createServerFn({ method: 'POST' })
     if (!team) throw new Error('Team not found');
 
     await requireCommissioner(team.tournamentId);
-    await requireSetup(team.tournamentId);
+    await requireTournamentSetup(team.tournamentId);
 
     // Verify participant exists and belongs to the same tournament
     const participant = await db.query.tournamentParticipants.findFirst({
@@ -186,7 +169,7 @@ export const removeTeamMemberFn = createServerFn({ method: 'POST' })
     if (!team) throw new Error('Team not found');
 
     await requireCommissioner(team.tournamentId);
-    await requireSetup(team.tournamentId);
+    await requireTournamentSetup(team.tournamentId);
 
     await db
       .delete(tournamentTeamMembers)
@@ -203,7 +186,7 @@ export const deleteAllTeamsFn = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ tournamentId: z.string().uuid() }))
   .handler(async ({ data }) => {
     await requireCommissioner(data.tournamentId);
-    await requireSetup(data.tournamentId);
+    await requireTournamentSetup(data.tournamentId);
 
     // Cascade on tournament_team_members.team_id handles member cleanup
     await db

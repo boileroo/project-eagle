@@ -1,33 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
-import { getRoundFn } from '@/lib/rounds.server';
-import { getScorecardFn } from '@/lib/scores.server';
-import { getRoundCompetitionsFn } from '@/lib/competitions.server';
+import { useSuspenseQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks';
 import { useScoreRealtime } from '@/hooks/use-score-realtime';
+import {
+  roundQueryOptions,
+  scorecardQueryOptions,
+  competitionsQueryOptions,
+} from '@/lib/query-options';
 import { LiveScoringPage } from '@/components/pages';
-
-// ──────────────────────────────────────────────
-// Query options (reuse same keys as round detail)
-// ──────────────────────────────────────────────
-
-const roundQueryOptions = (roundId: string) =>
-  queryOptions({
-    queryKey: ['round', roundId],
-    queryFn: () => getRoundFn({ data: { roundId } }),
-  });
-
-const scorecardQueryOptions = (roundId: string) =>
-  queryOptions({
-    queryKey: ['round', roundId, 'scorecard'],
-    queryFn: () => getScorecardFn({ data: { roundId } }),
-  });
-
-const competitionsQueryOptions = (roundId: string) =>
-  queryOptions({
-    queryKey: ['competition', 'round', roundId],
-    queryFn: () => getRoundCompetitionsFn({ data: { roundId } }),
-  });
 
 // ──────────────────────────────────────────────
 // Route definition

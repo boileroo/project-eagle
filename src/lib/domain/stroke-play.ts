@@ -46,6 +46,13 @@ export interface StrokePlayResult {
 // Calculate stroke play for all participants
 // ──────────────────────────────────────────────
 
+/**
+ * Calculates stroke play scores for all participants, returning a leaderboard
+ * sorted by lowest ranking score (gross or net strokes depending on config).
+ *
+ * Participants with no scores are sorted to the bottom and left unranked.
+ * Ties are handled with standard competition ranking (1, 2, 2, 4).
+ */
 export function calculateStrokePlay(
   input: CompetitionInput,
   config: { scoringBasis: 'gross_strokes' | 'net_strokes' },

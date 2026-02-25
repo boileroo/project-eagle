@@ -71,6 +71,15 @@ export interface TournamentLeaderboardResult {
 // Main function
 // ──────────────────────────────────────────────
 
+/**
+ * Calculates the tournament-wide individual leaderboard by aggregating
+ * finalised round scoreboard rows.
+ *
+ * Only includes rounds marked as finalised. A player's round is included
+ * only if they have scores for all holes (holesCompleted === totalHoles).
+ * Missing rounds are excluded — not zeroed. Players are ranked by total
+ * descending, with stableford as a tiebreaker and gross strokes second.
+ */
 export function calculateTournamentLeaderboard(
   input: TournamentLeaderboardInput,
 ): TournamentLeaderboardResult {

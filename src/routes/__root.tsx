@@ -13,7 +13,7 @@ import { DevTools } from '@/components/dev-tools';
 import { PwaUpdateToast } from '@/components/pwa-update-toast';
 import { getAuthUser } from '@/lib/auth.server';
 import appCss from '@/styles/globals.css?url';
-import { appleSplashScreens } from '@/lib/apple-splash';
+import { appleSplashScreens } from '@/config/apple-splash';
 import {
   getQueryClient,
   queryPersister,

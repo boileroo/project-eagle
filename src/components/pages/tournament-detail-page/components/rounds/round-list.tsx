@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import {
   statusColors,
   statusLabels,
-} from '@/components/round-detail/constants';
+} from '@/components/pages/round-detail-page/components/constants';
 import type { RoundItem } from '@/types';
 
 type RoundListProps = {
