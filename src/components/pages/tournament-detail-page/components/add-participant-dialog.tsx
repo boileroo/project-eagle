@@ -1,4 +1,4 @@
-import { addParticipantFn } from '@/lib/tournaments.server';
+import { useAddParticipant } from '@/lib/tournaments';
 import { AddPlayerDialog } from '@/components/add-player-dialog';
 import { toast } from 'sonner';
 
@@ -9,22 +9,34 @@ export function AddParticipantDialog({
   tournamentId: string;
   onAdded: () => void;
 }) {
+  const [addParticipant] = useAddParticipant();
+
   return (
     <AddPlayerDialog
       tournamentId={tournamentId}
       onAddPerson={async (person) => {
-        await addParticipantFn({
-          data: { tournamentId, personId: person.id, role: 'player' },
+        await addParticipant({
+          variables: { tournamentId, personId: person.id, role: 'player' },
+          onSuccess: () => {
+            toast.success('Player added!');
+            onAdded();
+          },
+          onError: (error) => {
+            toast.error(error.message);
+          },
         });
-        toast.success('Player added!');
-        onAdded();
       }}
       onAddGuest={async (personId, name, _handicap) => {
-        await addParticipantFn({
-          data: { tournamentId, personId, role: 'player' },
+        await addParticipant({
+          variables: { tournamentId, personId, role: 'player' },
+          onSuccess: () => {
+            toast.success(`${name} added as a guest!`);
+            onAdded();
+          },
+          onError: (error) => {
+            toast.error(error.message);
+          },
         });
-        toast.success(`${name} added as a guest!`);
-        onAdded();
       }}
     />
   );

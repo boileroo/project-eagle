@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { awardBonusFn, removeBonusAwardFn } from '@/lib/competitions.server';
+import { useAwardBonus, useRemoveBonusAward } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
@@ -27,37 +27,39 @@ export function BonusCompRow({
   onChanged: () => void;
 }) {
   const [awarding, setAwarding] = useState(false);
+  const [awardBonus] = useAwardBonus();
+  const [removeBonusAward] = useRemoveBonusAward();
 
   const handleAward = async (roundParticipantId: string) => {
     setAwarding(true);
-    try {
-      await awardBonusFn({
-        data: {
-          competitionId: comp.id,
-          roundParticipantId,
-        },
-      });
-      toast.success('Award saved.');
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to save award',
-      );
-    }
+    await awardBonus({
+      variables: {
+        competitionId: comp.id,
+        roundParticipantId,
+      },
+      onSuccess: () => {
+        toast.success('Award saved.');
+        onChanged();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
     setAwarding(false);
   };
 
   const handleRemoveAward = async () => {
     setAwarding(true);
-    try {
-      await removeBonusAwardFn({ data: { competitionId: comp.id } });
-      toast.success('Award removed.');
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to remove award',
-      );
-    }
+    await removeBonusAward({
+      variables: { competitionId: comp.id },
+      onSuccess: () => {
+        toast.success('Award removed.');
+        onChanged();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
     setAwarding(false);
   };
 

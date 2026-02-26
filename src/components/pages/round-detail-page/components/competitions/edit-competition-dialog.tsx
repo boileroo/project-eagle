@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { updateCompetitionFn } from '@/lib/competitions.server';
+import { useUpdateCompetition } from '@/lib/competitions';
 import { FORMAT_TYPE_LABELS, isBonusFormat } from '@/lib/competitions';
 import type { CompetitionConfig } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,7 @@ export function EditCompetitionDialog({
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [updateCompetition, { isPending: saving }] = useUpdateCompetition();
 
   const formatType = comp.formatType as CompetitionConfig['formatType'];
   const existingConfig = (comp.configJson ?? {}) as Record<string, unknown>;
@@ -154,25 +154,22 @@ export function EditCompetitionDialog({
       toast.error('Competition name is required.');
       return;
     }
-    setSaving(true);
-    try {
-      await updateCompetitionFn({
-        data: {
-          id: comp.id,
-          name: name.trim(),
-          groupScope,
-          competitionConfig: buildConfig(),
-        },
-      });
-      toast.success('Competition updated.');
-      setOpen(false);
-      onSaved();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to update competition',
-      );
-    }
-    setSaving(false);
+    await updateCompetition({
+      variables: {
+        id: comp.id,
+        name: name.trim(),
+        groupScope,
+        competitionConfig: buildConfig(),
+      },
+      onSuccess: () => {
+        toast.success('Competition updated.');
+        setOpen(false);
+        onSaved();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   const formatLabel = FORMAT_TYPE_LABELS[formatType] ?? formatType;

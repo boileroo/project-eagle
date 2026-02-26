@@ -21,13 +21,13 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { loginSchema, type LoginInput } from '@/lib/validators';
-import { signInFn, signInWithOAuthFn } from '@/lib/auth.server';
+import { useSignIn, useSignInWithOAuth } from '@/lib/auth';
 
 export function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [signIn, { isPending }] = useSignIn();
+  const [signInWithOAuth, { isPending: oauthPending }] = useSignInWithOAuth();
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -39,32 +39,25 @@ export function LoginPage() {
 
   async function onSubmit(values: LoginInput) {
     setError(null);
-    setLoading(true);
-
-    const result = await signInFn({ data: values });
-
-    if (result.error) {
-      setError(result.error);
-      setLoading(false);
-      return;
-    }
-
-    await router.navigate({ to: '/', reloadDocument: true });
+    await signIn({
+      variables: values,
+      onSuccess: async () => {
+        await router.navigate({ to: '/', reloadDocument: true });
+      },
+      onError: (err) => {
+        setError(err.message);
+      },
+    });
   }
 
   async function handleGoogleSignIn() {
     setError(null);
-    setGoogleLoading(true);
-    try {
-      await signInWithOAuthFn({ data: { provider: 'google' } });
-    } catch (err) {
-      if (err instanceof Error) {
+    await signInWithOAuth({
+      variables: { provider: 'google' },
+      onError: (err) => {
         setError(err.message);
-      } else {
-        setError('Failed to sign in with Google');
-      }
-      setGoogleLoading(false);
-    }
+      },
+    });
   }
 
   return (
@@ -79,7 +72,7 @@ export function LoginPage() {
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
+            <span className="bg-card text-muted-foreground px-2">
               Or continue with
             </span>
           </div>
@@ -87,11 +80,11 @@ export function LoginPage() {
 
         <Button
           variant="outline"
-          className="w-full mt-4"
+          className="mt-4 w-full"
           onClick={handleGoogleSignIn}
-          disabled={googleLoading}
+          disabled={oauthPending}
         >
-          {googleLoading ? (
+          {oauthPending ? (
             'Signing in...'
           ) : (
             <>
@@ -112,7 +105,10 @@ export function LoginPage() {
         </Button>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="mt-4 space-y-4"
+          >
             {error && (
               <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">
                 {error}
@@ -154,8 +150,8 @@ export function LoginPage() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in…' : 'Sign in'}
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
         </Form>

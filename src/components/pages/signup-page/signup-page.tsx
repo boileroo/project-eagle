@@ -21,13 +21,13 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { signUpSchema, type SignUpInput } from '@/lib/validators';
-import { signUpFn, signInWithOAuthFn } from '@/lib/auth.server';
+import { useSignUp, useSignInWithOAuth } from '@/lib/auth';
 
 export function SignupPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [signUp, { isPending }] = useSignUp();
+  const [signInWithOAuth, { isPending: oauthPending }] = useSignInWithOAuth();
 
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
@@ -41,38 +41,29 @@ export function SignupPage() {
 
   async function onSubmit(values: SignUpInput) {
     setError(null);
-    setLoading(true);
-
-    const result = await signUpFn({
-      data: {
+    await signUp({
+      variables: {
         email: values.email,
         password: values.password,
         displayName: values.displayName,
       },
+      onSuccess: async () => {
+        await router.navigate({ to: '/', reloadDocument: true });
+      },
+      onError: (err) => {
+        setError(err.message);
+      },
     });
-
-    if (result.error) {
-      setError(result.error);
-      setLoading(false);
-      return;
-    }
-
-    await router.navigate({ to: '/', reloadDocument: true });
   }
 
   async function handleGoogleSignUp() {
     setError(null);
-    setGoogleLoading(true);
-    try {
-      await signInWithOAuthFn({ data: { provider: 'google' } });
-    } catch (err) {
-      if (err instanceof Error) {
+    await signInWithOAuth({
+      variables: { provider: 'google' },
+      onError: (err) => {
         setError(err.message);
-      } else {
-        setError('Failed to sign up with Google');
-      }
-      setGoogleLoading(false);
-    }
+      },
+    });
   }
 
   return (
@@ -87,7 +78,7 @@ export function SignupPage() {
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
+            <span className="bg-card text-muted-foreground px-2">
               Or continue with
             </span>
           </div>
@@ -95,11 +86,11 @@ export function SignupPage() {
 
         <Button
           variant="outline"
-          className="w-full mt-4"
+          className="mt-4 w-full"
           onClick={handleGoogleSignUp}
-          disabled={googleLoading}
+          disabled={oauthPending}
         >
-          {googleLoading ? (
+          {oauthPending ? (
             'Signing up...'
           ) : (
             <>
@@ -120,7 +111,10 @@ export function SignupPage() {
         </Button>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="mt-4 space-y-4"
+          >
             {error && (
               <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">
                 {error}
@@ -197,8 +191,8 @@ export function SignupPage() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating account…' : 'Sign up'}
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending ? 'Creating account…' : 'Sign up'}
             </Button>
           </form>
         </Form>

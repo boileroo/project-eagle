@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { updateMyAccountFn } from '@/lib/persons.server';
+import { useUpdateMyAccount } from '@/lib/persons';
 import { updateAccountSchema, type UpdateAccountInput } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,14 +17,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { useState } from 'react';
 import { toast } from 'sonner';
 import { ThemeSelector } from './theme-selector';
 import { type AccountData } from '@/types';
 
 export function AccountForm({ account }: { account: AccountData }) {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
+  const [updateMyAccount, { isPending }] = useUpdateMyAccount();
 
   const form = useForm<UpdateAccountInput>({
     resolver: zodResolver(updateAccountSchema),
@@ -37,18 +36,16 @@ export function AccountForm({ account }: { account: AccountData }) {
   });
 
   const handleSubmit = async (data: UpdateAccountInput) => {
-    setSubmitting(true);
-    try {
-      await updateMyAccountFn({ data });
-      toast.success('Account updated!');
-      navigate({ to: '/account' });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to update account',
-      );
-    } finally {
-      setSubmitting(false);
-    }
+    await updateMyAccount({
+      variables: data,
+      onSuccess: () => {
+        toast.success('Account updated!');
+        navigate({ to: '/account' });
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (
@@ -118,8 +115,8 @@ export function AccountForm({ account }: { account: AccountData }) {
             <ThemeSelector />
 
             <div className="flex justify-end pt-2">
-              <Button type="submit" disabled={submitting}>
-                {submitting ? 'Saving…' : 'Save Changes'}
+              <Button type="submit" disabled={isPending}>
+                {isPending ? 'Saving…' : 'Save Changes'}
               </Button>
             </div>
           </form>

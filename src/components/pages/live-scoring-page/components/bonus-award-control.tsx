@@ -4,7 +4,7 @@
 // ──────────────────────────────────────────────
 
 import { useState } from 'react';
-import { awardBonusFn, removeBonusAwardFn } from '@/lib/competitions.server';
+import { useAwardBonus, useRemoveBonusAward } from '@/lib/competitions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -33,6 +33,8 @@ export function BonusAwardControl({
   onChanged,
 }: BonusAwardControlProps) {
   const [awarding, setAwarding] = useState<string | null>(null);
+  const [awardBonus] = useAwardBonus();
+  const [removeBonusAward] = useRemoveBonusAward();
 
   // Filter to bonus competitions assigned to this hole
   const bonusComps = competitions.filter((comp) => {
@@ -49,29 +51,31 @@ export function BonusAwardControl({
     roundParticipantId: string,
   ) => {
     setAwarding(competitionId);
-    try {
-      await awardBonusFn({ data: { competitionId, roundParticipantId } });
-      toast.success('Award saved.');
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to save award',
-      );
-    }
+    await awardBonus({
+      variables: { competitionId, roundParticipantId },
+      onSuccess: () => {
+        toast.success('Award saved.');
+        onChanged();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
     setAwarding(null);
   };
 
   const handleRemove = async (competitionId: string) => {
     setAwarding(competitionId);
-    try {
-      await removeBonusAwardFn({ data: { competitionId } });
-      toast.success('Award removed.');
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to remove award',
-      );
-    }
+    await removeBonusAward({
+      variables: { competitionId },
+      onSuccess: () => {
+        toast.success('Award removed.');
+        onChanged();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
     setAwarding(null);
   };
 

@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { useRouter } from '@tanstack/react-router';
 import type { GuestListItem } from '@/types';
-import { deleteGuestFn } from '@/lib/tournaments.server';
+import { useDeleteGuest } from '@/lib/tournaments';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { toast } from 'sonner';
 
@@ -17,22 +16,21 @@ export function DeleteGuestDialog({
   guest,
 }: DeleteGuestDialogProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [deleteGuest, { isPending }] = useDeleteGuest();
 
   const handleDelete = async () => {
     if (!guest) return;
-    setLoading(true);
-    try {
-      await deleteGuestFn({
-        data: { personId: guest.id },
-      });
-      toast.success('Guest deleted');
-      onOpenChange(false);
-      router.invalidate();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete');
-    }
-    setLoading(false);
+    await deleteGuest({
+      variables: { personId: guest.id },
+      onSuccess: () => {
+        toast.success('Guest deleted');
+        onOpenChange(false);
+        router.invalidate();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (
@@ -47,7 +45,7 @@ export function DeleteGuestDialog({
       }
       confirmText="Delete"
       variant="destructive"
-      loading={loading}
+      loading={isPending}
       onConfirm={handleDelete}
     />
   );

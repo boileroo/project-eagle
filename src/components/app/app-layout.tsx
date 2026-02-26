@@ -2,10 +2,11 @@ import { Link, useRouter, useMatchRoute, Outlet } from '@tanstack/react-router';
 import { useIsMutating } from '@tanstack/react-query';
 import { UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { signOutFn } from '@/lib/auth.server';
+import { useSignOut } from '@/lib/auth';
 import { useOnlineStatus } from '@/hooks';
 import { useOfflineFallback } from '@/hooks/use-offline-fallback';
 import { OfflineFallback } from '@/components/offline-fallback';
+import { toast } from 'sonner';
 
 interface AppUser {
   id: string;
@@ -21,6 +22,7 @@ export function AppLayout({ user }: AppLayoutProps) {
   const router = useRouter();
   const isOnline = useOnlineStatus();
   const matchRoute = useMatchRoute();
+  const [signOut, { isPending: isSigningOut }] = useSignOut();
   const roundMatch = matchRoute({
     to: '/tournaments/$tournamentId/rounds/$roundId',
     fuzzy: true,
@@ -66,12 +68,19 @@ export function AppLayout({ user }: AppLayoutProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={async () => {
-                await signOutFn();
-                await router.invalidate();
-              }}
+              disabled={isSigningOut}
+              onClick={() =>
+                signOut({
+                  onSuccess: async () => {
+                    await router.invalidate();
+                  },
+                  onError: (error) => {
+                    toast.error(error.message);
+                  },
+                })
+              }
             >
-              Sign out
+              {isSigningOut ? 'Signing out…' : 'Sign out'}
             </Button>
           </div>
         </div>

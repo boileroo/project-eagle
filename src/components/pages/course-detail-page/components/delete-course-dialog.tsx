@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { deleteCourseFn } from '@/lib/courses.server';
+import { useDeleteCourse } from '@/lib/courses';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,23 +23,8 @@ export function DeleteCourseDialog({
   courseName,
 }: DeleteCourseDialogProps) {
   const navigate = useNavigate();
-  const [deleting, setDeleting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await deleteCourseFn({ data: { courseId } });
-      toast.success('Course deleted.');
-      navigate({ to: '/courses' });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to delete course',
-      );
-      setDeleting(false);
-      setDialogOpen(false);
-    }
-  };
+  const [deleteCourse, { isPending }] = useDeleteCourse();
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -60,10 +45,22 @@ export function DeleteCourseDialog({
           </Button>
           <Button
             variant="destructive"
-            onClick={handleDelete}
-            disabled={deleting}
+            onClick={() =>
+              deleteCourse({
+                variables: { courseId },
+                onSuccess: () => {
+                  toast.success('Course deleted.');
+                  navigate({ to: '/courses' });
+                },
+                onError: (error) => {
+                  toast.error(error.message);
+                  setDialogOpen(false);
+                },
+              })
+            }
+            disabled={isPending}
           >
-            {deleting ? 'Deleting…' : 'Delete'}
+            {isPending ? 'Deleting…' : 'Delete'}
           </Button>
         </DialogFooter>
       </DialogContent>

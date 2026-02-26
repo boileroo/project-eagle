@@ -8,10 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  getTournamentByInviteCodeFn,
-  joinTournamentByCodeFn,
-} from '@/lib/tournaments.server';
+import { getTournamentByInviteCodeFn } from '@/lib/tournaments.server';
+import { useJoinTournamentByCode } from '@/lib/tournaments';
 
 export function JoinPage() {
   const router = useRouter();
@@ -23,7 +21,7 @@ export function JoinPage() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [joining, setJoining] = useState(false);
+  const [joinTournament, { isPending: joining }] = useJoinTournamentByCode();
 
   // Get tournament info on mount
   useEffect(() => {
@@ -41,22 +39,21 @@ export function JoinPage() {
   }, [code]);
 
   async function handleJoin() {
-    setJoining(true);
     setError(null);
 
-    try {
-      const result = await joinTournamentByCodeFn({ data: { code } });
-      // Successfully joined - redirect to tournament
-      await router.navigate({
-        to: '/tournaments/$tournamentId',
-        params: { tournamentId: result.tournamentId },
-      });
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to join tournament',
-      );
-      setJoining(false);
-    }
+    await joinTournament({
+      variables: { code },
+      onSuccess: async (result) => {
+        // Successfully joined - redirect to tournament
+        await router.navigate({
+          to: '/tournaments/$tournamentId',
+          params: { tournamentId: result.tournamentId },
+        });
+      },
+      onError: (err) => {
+        setError(err.message);
+      },
+    });
   }
 
   if (loading) {

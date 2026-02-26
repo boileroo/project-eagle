@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { createCompetitionFn } from '@/lib/competitions.server';
+import { useCreateCompetition } from '@/lib/competitions';
 import type { CompetitionConfig } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +33,7 @@ export function AddTeamCompDialog({
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [createCompetition, { isPending: saving }] = useCreateCompetition();
   const [formatType, setFormatType] =
     useState<CompetitionConfig['formatType']>('match_play');
 
@@ -177,28 +177,25 @@ export function AddTeamCompDialog({
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      await createCompetitionFn({
-        data: {
-          tournamentId,
-          name: getFormatLabel(),
-          competitionCategory: 'match',
-          groupScope: groupScope(),
-          roundId,
-          competitionConfig: buildConfig(),
-        },
-      });
-      toast.success('Competition created.');
-      setOpen(false);
-      resetForm();
-      onSaved();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to create competition',
-      );
-    }
-    setSaving(false);
+    await createCompetition({
+      variables: {
+        tournamentId,
+        name: getFormatLabel(),
+        competitionCategory: 'match',
+        groupScope: groupScope(),
+        roundId,
+        competitionConfig: buildConfig(),
+      },
+      onSuccess: () => {
+        toast.success('Competition created.');
+        setOpen(false);
+        resetForm();
+        onSaved();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (

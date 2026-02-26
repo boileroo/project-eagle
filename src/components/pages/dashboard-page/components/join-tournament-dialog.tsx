@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { joinTournamentByCodeFn } from '@/lib/tournaments.server';
+import { useJoinTournamentByCode } from '@/lib/tournaments';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -25,36 +25,32 @@ export function JoinTournamentDialog({
 }: JoinTournamentDialogProps) {
   const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState('');
-  const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [joinTournament, { isPending }] = useJoinTournamentByCode();
 
   async function handleJoin() {
     if (!joinCode.trim()) return;
-    setJoining(true);
     setError(null);
 
-    try {
-      const result = await joinTournamentByCodeFn({
-        data: { code: joinCode.trim() },
-      });
-      if (result.alreadyJoined) {
-        setJoinCode('');
-      } else {
-        toast.success(`You've joined ${result.tournamentName}!`);
-        setJoinCode('');
-      }
-      onOpenChange(false);
-      navigate({
-        to: '/tournaments/$tournamentId',
-        params: { tournamentId: result.tournamentId },
-      });
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to join tournament',
-      );
-    } finally {
-      setJoining(false);
-    }
+    await joinTournament({
+      variables: { code: joinCode.trim() },
+      onSuccess: (result) => {
+        if (result.alreadyJoined) {
+          setJoinCode('');
+        } else {
+          toast.success(`You've joined ${result.tournamentName}!`);
+          setJoinCode('');
+        }
+        onOpenChange(false);
+        navigate({
+          to: '/tournaments/$tournamentId',
+          params: { tournamentId: result.tournamentId },
+        });
+      },
+      onError: (err) => {
+        setError(err.message);
+      },
+    });
   }
 
   return (
@@ -89,8 +85,8 @@ export function JoinTournamentDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleJoin} disabled={joining || !joinCode.trim()}>
-            {joining ? 'Joining...' : 'Join'}
+          <Button onClick={handleJoin} disabled={isPending || !joinCode.trim()}>
+            {isPending ? 'Joining...' : 'Join'}
           </Button>
         </DialogFooter>
       </DialogContent>

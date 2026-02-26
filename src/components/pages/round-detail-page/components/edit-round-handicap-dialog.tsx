@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { updateRoundParticipantFn } from '@/lib/rounds.server';
+import { useUpdateRoundParticipant } from '@/lib/rounds';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -28,24 +28,25 @@ export function EditRoundHandicapDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(roundParticipant.handicapOverride ?? '');
-  const [saving, setSaving] = useState(false);
+  const [updateRoundParticipant, { isPending: saving }] =
+    useUpdateRoundParticipant();
 
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      const hc = value ? parseFloat(value) : null;
-      await updateRoundParticipantFn({
-        data: { roundParticipantId: roundParticipant.id, handicapOverride: hc },
-      });
-      toast.success('Handicap override updated.');
-      setOpen(false);
-      onSaved();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to update handicap',
-      );
-    }
-    setSaving(false);
+    const hc = value ? parseFloat(value) : null;
+    await updateRoundParticipant({
+      variables: {
+        roundParticipantId: roundParticipant.id,
+        handicapOverride: hc,
+      },
+      onSuccess: () => {
+        toast.success('Handicap override updated.');
+        setOpen(false);
+        onSaved();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (

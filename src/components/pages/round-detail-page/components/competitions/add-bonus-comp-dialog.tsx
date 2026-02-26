@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { createCompetitionFn } from '@/lib/competitions.server';
+import { useCreateCompetition } from '@/lib/competitions';
 import type { CompetitionConfig } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
@@ -27,7 +27,7 @@ export function AddBonusCompDialog({
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [createCompetition, { isPending }] = useCreateCompetition();
   const [formatType, setFormatType] =
     useState<CompetitionConfig['formatType']>('nearest_pin');
   const [holeNumber, setHoleNumber] = useState(1);
@@ -70,28 +70,25 @@ export function AddBonusCompDialog({
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      await createCompetitionFn({
-        data: {
-          tournamentId,
-          name: getFormatLabel(),
-          competitionCategory: 'bonus',
-          groupScope: 'all',
-          roundId,
-          competitionConfig: buildConfig(),
-        },
-      });
-      toast.success('Bonus competition created.');
-      setOpen(false);
-      resetForm();
-      onSaved();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to create competition',
-      );
-    }
-    setSaving(false);
+    await createCompetition({
+      variables: {
+        tournamentId,
+        name: getFormatLabel(),
+        competitionCategory: 'bonus',
+        groupScope: 'all',
+        roundId,
+        competitionConfig: buildConfig(),
+      },
+      onSuccess: () => {
+        toast.success('Bonus competition created.');
+        setOpen(false);
+        resetForm();
+        onSaved();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (
@@ -148,8 +145,8 @@ export function AddBonusCompDialog({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'Creating…' : 'Create'}
+          <Button onClick={handleSave} disabled={isPending}>
+            {isPending ? 'Creating…' : 'Create'}
           </Button>
         </DialogFooter>
       </DialogContent>

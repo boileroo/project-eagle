@@ -3,12 +3,9 @@
 // Shown in live scoring when a Wolf game exists for the current group
 // ──────────────────────────────────────────────
 
-import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  getGameDecisionsFn,
-  submitGameDecisionFn,
-} from '@/lib/game-decisions.server';
+import { getGameDecisionsFn } from '@/lib/game-decisions.server';
+import { useSubmitGameDecision } from '@/lib/game-decisions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -48,7 +45,8 @@ export function WolfDeclarationControl({
   canDeclare,
 }: WolfDeclarationControlProps) {
   const queryClient = useQueryClient();
-  const [submitting, setSubmitting] = useState(false);
+  const [submitGameDecision, { isPending: submitting }] =
+    useSubmitGameDecision();
 
   // Find Wolf competition for this round (within_group)
   const wolfComp = competitions.find((c) => c.formatType === 'wolf');
@@ -89,31 +87,27 @@ export function WolfDeclarationControl({
   // ── Submit handler ───────────────────────────
   const handleSubmit = async (partnerPlayerId: string | null) => {
     if (!canDeclare || submitting) return;
-    setSubmitting(true);
-    try {
-      await submitGameDecisionFn({
-        data: {
-          competitionId: wolfComp.id,
-          roundId: round.id,
-          holeNumber,
-          wolfPlayerId: wolfParticipant.id,
-          partnerPlayerId,
-        },
-      });
-      toast.success(
-        partnerPlayerId
-          ? `Partner set to ${groupParticipants.find((p) => p.id === partnerPlayerId)?.person.displayName ?? 'unknown'}`
-          : 'Going lone wolf',
-      );
-      void queryClient.invalidateQueries({
-        queryKey: ['game-decisions', wolfComp.id],
-      });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to save wolf decision',
-      );
-    }
-    setSubmitting(false);
+    await submitGameDecision({
+      variables: {
+        competitionId: wolfComp.id,
+        roundId: round.id,
+        holeNumber,
+        wolfPlayerId: wolfParticipant.id,
+        partnerPlayerId,
+      },
+      onSuccess: () => {
+        toast.success(
+          partnerPlayerId
+            ? `Partner set to ${groupParticipants.find((p) => p.id === partnerPlayerId)?.person.displayName ?? 'unknown'}`
+            : 'Going lone wolf',
+        );
+        void queryClient.invalidateQueries({
+          queryKey: ['game-decisions', wolfComp.id],
+        });
+      },
+      onError: (error) =>
+        toast.error(error.message || 'Failed to save wolf decision'),
+    });
   };
 
   // ── Potential partners: everyone except the wolf ─

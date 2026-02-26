@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { deleteCompetitionFn } from '@/lib/competitions.server';
+import { useDeleteCompetition } from '@/lib/competitions';
 import { FORMAT_TYPE_LABELS, isBonusFormat } from '@/lib/competitions';
 import type { CompetitionConfig } from '@/lib/competitions';
 import {
@@ -43,6 +43,7 @@ export function TeamCompetitionsSection({
   onChanged: () => void;
 }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteCompetition] = useDeleteCompetition();
   const isDraft = round.status === 'draft';
 
   const engineInputs = useMemo(() => {
@@ -146,15 +147,16 @@ export function TeamCompetitionsSection({
 
   const handleDelete = async (compId: string) => {
     setDeletingId(compId);
-    try {
-      await deleteCompetitionFn({ data: { competitionId: compId } });
-      toast.success('Competition deleted.');
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to delete competition',
-      );
-    }
+    await deleteCompetition({
+      variables: { competitionId: compId },
+      onSuccess: () => {
+        toast.success('Competition deleted.');
+        onChanged();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
     setDeletingId(null);
   };
 

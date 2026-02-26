@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { reorderRoundsFn } from '@/lib/rounds.server';
+import { useReorderRounds } from '@/lib/rounds';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
@@ -22,6 +22,7 @@ export function RoundList({
   onChanged,
 }: RoundListProps) {
   const navigate = useNavigate();
+  const [reorderRounds] = useReorderRounds();
 
   const getDateTime = (r: {
     date: string | Date | null;
@@ -67,30 +68,32 @@ export function RoundList({
     if (index <= 0) return;
     const ids = rounds.map((r) => r.id);
     [ids[index - 1], ids[index]] = [ids[index], ids[index - 1]];
-    try {
-      await reorderRoundsFn({
-        data: { tournamentId, roundIds: ids },
-      });
-      toast.success('Round order updated.');
-      onChanged();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to reorder');
-    }
+    await reorderRounds({
+      variables: { tournamentId, roundIds: ids },
+      onSuccess: () => {
+        toast.success('Round order updated.');
+        onChanged();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   const handleMoveDown = async (index: number) => {
     if (index >= rounds.length - 1) return;
     const ids = rounds.map((r) => r.id);
     [ids[index], ids[index + 1]] = [ids[index + 1], ids[index]];
-    try {
-      await reorderRoundsFn({
-        data: { tournamentId, roundIds: ids },
-      });
-      toast.success('Round order updated.');
-      onChanged();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to reorder');
-    }
+    await reorderRounds({
+      variables: { tournamentId, roundIds: ids },
+      onSuccess: () => {
+        toast.success('Round order updated.');
+        onChanged();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   const formatDateTime = (r: {

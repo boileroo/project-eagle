@@ -1,8 +1,7 @@
 import { useNavigate } from '@tanstack/react-router';
-import { updateCourseFn } from '@/lib/courses.server';
+import { useUpdateCourse } from '@/lib/courses';
 import { CourseForm } from '@/components/course-form';
 import { type CreateCourseInput } from '@/lib/validators';
-import { useState } from 'react';
 import { toast } from 'sonner';
 import { type CourseData } from '@/types';
 
@@ -14,7 +13,7 @@ export function EditCoursePage({
   isOwner: boolean;
 }) {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
+  const [updateCourse, { isPending }] = useUpdateCourse();
 
   if (!isOwner) {
     return (
@@ -27,17 +26,19 @@ export function EditCoursePage({
   }
 
   const handleSubmit = async (data: CreateCourseInput) => {
-    setSubmitting(true);
-    try {
-      await updateCourseFn({ data: { ...data, id: course.id } });
-      toast.success('Course updated!');
-      navigate({ to: '/courses/$courseId', params: { courseId: course.id } });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to update course',
-      );
-      setSubmitting(false);
-    }
+    await updateCourse({
+      variables: { ...data, id: course.id },
+      onSuccess: () => {
+        toast.success('Course updated!');
+        navigate({
+          to: '/courses/$courseId',
+          params: { courseId: course.id },
+        });
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   const defaultValues: CreateCourseInput = {
@@ -66,7 +67,7 @@ export function EditCoursePage({
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
         submitLabel="Save Changes"
-        submitting={submitting}
+        submitting={isPending}
       />
     </div>
   );

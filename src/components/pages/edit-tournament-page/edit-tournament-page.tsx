@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { updateTournamentFn } from '@/lib/tournaments.server';
+import { useUpdateTournament } from '@/lib/tournaments';
 import {
   createTournamentSchema,
   type CreateTournamentInput,
@@ -19,7 +19,6 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useState } from 'react';
 import { toast } from 'sonner';
 
 export function EditTournamentPage({
@@ -30,7 +29,7 @@ export function EditTournamentPage({
   isOwner: boolean;
 }) {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
+  const [updateTournament, { isPending }] = useUpdateTournament();
   const form = useForm<CreateTournamentInput>({
     resolver: zodResolver(createTournamentSchema),
     defaultValues: {
@@ -50,20 +49,19 @@ export function EditTournamentPage({
   }
 
   const handleSubmit = async (data: CreateTournamentInput) => {
-    setSubmitting(true);
-    try {
-      await updateTournamentFn({ data: { ...data, id: tournament.id } });
-      toast.success('Tournament updated!');
-      navigate({
-        to: '/tournaments/$tournamentId',
-        params: { tournamentId: tournament.id },
-      });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to update tournament',
-      );
-      setSubmitting(false);
-    }
+    await updateTournament({
+      variables: { ...data, id: tournament.id },
+      onSuccess: () => {
+        toast.success('Tournament updated!');
+        navigate({
+          to: '/tournaments/$tournamentId',
+          params: { tournamentId: tournament.id },
+        });
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (
@@ -113,8 +111,8 @@ export function EditTournamentPage({
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Saving…' : 'Save Changes'}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? 'Saving…' : 'Save Changes'}
             </Button>
           </div>
         </form>
