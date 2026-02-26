@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { createRoundFn } from '@/lib/rounds.server';
+import { useCreateRound } from '@/lib/rounds';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -34,35 +34,32 @@ export function AddRoundDialog({
   const [courseId, setCourseId] = useState('');
   const [date, setDate] = useState('');
   const [teeTime, setTeeTime] = useState('');
-  const [adding, setAdding] = useState(false);
+  const [createRound, { isPending: adding }] = useCreateRound();
 
   const handleAdd = async () => {
     if (!courseId) {
       toast.error('Please select a course');
       return;
     }
-    setAdding(true);
-    try {
-      await createRoundFn({
-        data: {
-          tournamentId,
-          courseId,
-          date: date || undefined,
-          teeTime: teeTime || undefined,
-        },
-      });
-      toast.success('Round created! All tournament players have been added.');
-      setOpen(false);
-      setCourseId('');
-      setDate('');
-      setTeeTime('');
-      onAdded();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to create round',
-      );
-    }
-    setAdding(false);
+    await createRound({
+      variables: {
+        tournamentId,
+        courseId,
+        date: date || undefined,
+        teeTime: teeTime || undefined,
+      },
+      onSuccess: () => {
+        toast.success('Round created! All tournament players have been added.');
+        setOpen(false);
+        setCourseId('');
+        setDate('');
+        setTeeTime('');
+        onAdded();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { autoAssignGroupsFn } from '@/lib/groups.server';
+import { useAutoAssignGroups } from '@/lib/groups';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,22 +29,18 @@ export function AutoAssignDialog({
   onAssigned,
 }: AutoAssignDialogProps) {
   const [autoAssignSize, setAutoAssignSize] = useState(4);
-  const [autoAssigning, setAutoAssigning] = useState(false);
+  const [autoAssignGroups, { isPending: autoAssigning }] =
+    useAutoAssignGroups();
 
   const handleAutoAssign = async () => {
-    setAutoAssigning(true);
-    try {
-      await autoAssignGroupsFn({
-        data: { roundId, groupSize: autoAssignSize },
-      });
-      toast.success('Players assigned to groups.');
-      onAssigned();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to auto-assign',
-      );
-    }
-    setAutoAssigning(false);
+    await autoAssignGroups({
+      variables: { roundId, groupSize: autoAssignSize },
+      onSuccess: () => {
+        toast.success('Players assigned to groups.');
+        onAssigned();
+      },
+      onError: (error) => toast.error(error.message || 'Failed to auto-assign'),
+    });
   };
 
   return (

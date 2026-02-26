@@ -1,9 +1,9 @@
 import {
-  addParticipantFn,
-  removeParticipantFn,
-  ensureMyPersonFn,
-} from '@/lib/tournaments.server';
-import { removeRoundParticipantFn } from '@/lib/rounds.server';
+  useAddParticipant,
+  useRemoveParticipant,
+  useEnsureMyPerson,
+} from '@/lib/tournaments';
+import { useRemoveRoundParticipant } from '@/lib/rounds';
 import { X } from 'lucide-react';
 import { AddPlayerDialog } from '@/components/add-player-dialog';
 import { EditHandicapDialog } from '@/components/pages/tournament-detail-page/components/edit-handicap-dialog';
@@ -35,6 +35,11 @@ export function PlayersTab({
   const isDraft = roundStatus === 'draft';
   const isTournamentMode = !!tournament;
 
+  const [addParticipant] = useAddParticipant();
+  const [removeParticipant] = useRemoveParticipant();
+  const [ensureMyPerson] = useEnsureMyPerson();
+  const [removeRoundParticipant] = useRemoveRoundParticipant();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const participants: any[] = isTournamentMode
     ? (tournament?.participants ?? [])
@@ -47,16 +52,36 @@ export function PlayersTab({
   const handleAddMyself = async () => {
     if (!tournament) return;
     try {
-      const person = myPerson ?? (await ensureMyPersonFn());
-      await addParticipantFn({
-        data: {
+      let personId = myPerson?.id;
+      if (!personId) {
+        // Need to ensure person record exists first
+        let resolved = false;
+        await ensureMyPerson({
+          variables: undefined as void,
+          onSuccess: (result) => {
+            personId = result.id;
+            resolved = true;
+          },
+          onError: (error) => {
+            toast.error(error.message);
+          },
+        });
+        if (!resolved) return;
+      }
+      await addParticipant({
+        variables: {
           tournamentId: tournament.id,
-          personId: person.id,
+          personId: personId!,
           role: 'player',
         },
+        onSuccess: () => {
+          toast.success('You joined!');
+          onChanged();
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        },
       });
-      toast.success('You joined!');
-      onChanged();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to join');
     }
@@ -66,18 +91,28 @@ export function PlayersTab({
     participantId: string,
     name: string,
   ) => {
-    try {
-      if (tournament) {
-        await removeParticipantFn({ data: { participantId } });
-      } else if (round) {
-        await removeRoundParticipantFn({
-          data: { roundParticipantId: participantId },
-        });
-      }
-      toast.success(`${name} removed.`);
-      onChanged();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to remove');
+    if (tournament) {
+      await removeParticipant({
+        variables: { participantId },
+        onSuccess: () => {
+          toast.success(`${name} removed.`);
+          onChanged();
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        },
+      });
+    } else if (round) {
+      await removeRoundParticipant({
+        variables: { roundParticipantId: participantId },
+        onSuccess: () => {
+          toast.success(`${name} removed.`);
+          onChanged();
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        },
+      });
     }
   };
 
@@ -197,26 +232,36 @@ export function PlayersTab({
         <AddPlayerDialog
           tournamentId={tournament.id}
           onAddPerson={async (person) => {
-            await addParticipantFn({
-              data: {
+            await addParticipant({
+              variables: {
                 tournamentId: tournament.id,
                 personId: person.id,
                 role: 'player',
               },
+              onSuccess: () => {
+                toast.success('Player added!');
+                onChanged();
+              },
+              onError: (error) => {
+                toast.error(error.message);
+              },
             });
-            toast.success('Player added!');
-            onChanged();
           }}
           onAddGuest={async (personId, name) => {
-            await addParticipantFn({
-              data: {
+            await addParticipant({
+              variables: {
                 tournamentId: tournament.id,
                 personId,
                 role: 'player',
               },
+              onSuccess: () => {
+                toast.success(`${name} added!`);
+                onChanged();
+              },
+              onError: (error) => {
+                toast.error(error.message);
+              },
             });
-            toast.success(`${name} added!`);
-            onChanged();
           }}
         />
       )}

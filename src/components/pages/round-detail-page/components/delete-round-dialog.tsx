@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
-import { deleteRoundFn } from '@/lib/rounds.server';
-import { deleteTournamentFn } from '@/lib/tournaments.server';
+import { useDeleteRound } from '@/lib/rounds';
+import { useDeleteTournament } from '@/lib/tournaments';
 import { toast } from 'sonner';
 
 interface DeleteRoundDialogProps {
@@ -27,34 +27,45 @@ export function DeleteRoundDialog({
 }: DeleteRoundDialogProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [deleteRound, { isPending: deletingRound }] = useDeleteRound();
+  const [deleteTournament, { isPending: deletingTournament }] =
+    useDeleteTournament();
+  const deleting = deletingRound || deletingTournament;
 
   if (!isCommissioner || roundStatus !== 'draft') {
     return null;
   }
 
   const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      if (isSingleRound) {
-        await deleteTournamentFn({ data: { tournamentId } });
-        toast.success('Round deleted.');
-        navigate({ to: '/' });
-      } else {
-        await deleteRoundFn({ data: { roundId } });
-        toast.success('Round deleted.');
-        navigate({
-          to: '/tournaments/$tournamentId',
-          params: { tournamentId },
-        });
-      }
-      onDeleted?.();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to delete round',
-      );
-      setDeleting(false);
-      setOpen(false);
+    if (isSingleRound) {
+      await deleteTournament({
+        variables: { tournamentId },
+        onSuccess: () => {
+          toast.success('Round deleted.');
+          navigate({ to: '/' });
+          onDeleted?.();
+        },
+        onError: (error) => {
+          toast.error(error.message);
+          setOpen(false);
+        },
+      });
+    } else {
+      await deleteRound({
+        variables: { roundId },
+        onSuccess: () => {
+          toast.success('Round deleted.');
+          navigate({
+            to: '/tournaments/$tournamentId',
+            params: { tournamentId },
+          });
+          onDeleted?.();
+        },
+        onError: (error) => {
+          toast.error(error.message);
+          setOpen(false);
+        },
+      });
     }
   };
 

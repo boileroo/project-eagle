@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { Play, Lock } from 'lucide-react';
-import { transitionRoundFn } from '@/lib/rounds.server';
+import { useTransitionRound } from '@/lib/rounds';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScoreEntryDialog } from '@/components/score-entry-dialog';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,7 @@ export function RoundDetailPage({
   userId: string;
 }) {
   const queryClient = useQueryClient();
+  const [transitionRound] = useTransitionRound();
 
   const invalidateRoundData = () => {
     void queryClient.invalidateQueries({ queryKey: ['round', round.id] });
@@ -150,15 +151,16 @@ export function RoundDetailPage({
   const handleTransition = async (
     newStatus: 'draft' | 'scheduled' | 'open' | 'finalized',
   ) => {
-    try {
-      await transitionRoundFn({ data: { roundId: round.id, newStatus } });
-      toast.success(`Round status changed to ${statusLabels[newStatus]}.`);
-      invalidateRoundData();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to change status',
-      );
-    }
+    await transitionRound({
+      variables: { roundId: round.id, newStatus },
+      onSuccess: () => {
+        toast.success(`Round status changed to ${statusLabels[newStatus]}.`);
+        invalidateRoundData();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   const handleScoreClick = (

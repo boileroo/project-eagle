@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { lockTournamentFn } from '@/lib/tournaments.server';
+import { useLockTournament } from '@/lib/tournaments';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,22 +21,21 @@ export function LockTournamentButton({
   tournamentId,
   onLocked,
 }: LockTournamentButtonProps) {
-  const [locking, setLocking] = useState(false);
   const [open, setOpen] = useState(false);
+  const [lockTournament, { isPending }] = useLockTournament();
 
   const handleLock = async () => {
-    setLocking(true);
-    try {
-      await lockTournamentFn({ data: { tournamentId } });
-      toast.success('Tournament locked. Rounds are now awaiting start.');
-      setOpen(false);
-      onLocked();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to lock tournament',
-      );
-    }
-    setLocking(false);
+    await lockTournament({
+      variables: { tournamentId },
+      onSuccess: () => {
+        toast.success('Tournament locked. Rounds are now awaiting start.');
+        setOpen(false);
+        onLocked();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (
@@ -56,8 +55,8 @@ export function LockTournamentButton({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleLock} disabled={locking}>
-            {locking ? 'Locking…' : 'Lock'}
+          <Button onClick={handleLock} disabled={isPending}>
+            {isPending ? 'Locking…' : 'Lock'}
           </Button>
         </DialogFooter>
       </DialogContent>

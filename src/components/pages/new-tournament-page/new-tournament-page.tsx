@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createTournamentFn } from '@/lib/tournaments.server';
+import { useCreateTournament } from '@/lib/tournaments';
 import {
   createTournamentSchema,
   type CreateTournamentInput,
@@ -18,12 +18,11 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useState } from 'react';
 import { toast } from 'sonner';
 
 export function NewTournamentPage() {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
+  const [createTournament, { isPending }] = useCreateTournament();
 
   const form = useForm<CreateTournamentInput>({
     resolver: zodResolver(createTournamentSchema),
@@ -34,20 +33,19 @@ export function NewTournamentPage() {
   });
 
   const handleSubmit = async (data: CreateTournamentInput) => {
-    setSubmitting(true);
-    try {
-      const result = await createTournamentFn({ data });
-      toast.success('Tournament created!');
-      navigate({
-        to: '/tournaments/$tournamentId',
-        params: { tournamentId: result.tournamentId },
-      });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to create tournament',
-      );
-      setSubmitting(false);
-    }
+    await createTournament({
+      variables: data,
+      onSuccess: (result) => {
+        toast.success('Tournament created!');
+        navigate({
+          to: '/tournaments/$tournamentId',
+          params: { tournamentId: result.tournamentId },
+        });
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (
@@ -101,8 +99,8 @@ export function NewTournamentPage() {
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Creating…' : 'Create Tournament'}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? 'Creating…' : 'Create Tournament'}
             </Button>
           </div>
         </form>

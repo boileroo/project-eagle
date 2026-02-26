@@ -69,7 +69,7 @@ export const createQueryClient = () =>
       },
       mutations: {
         networkMode: 'online',
-        retry: 3,
+        retry: 0,
       },
     },
   });

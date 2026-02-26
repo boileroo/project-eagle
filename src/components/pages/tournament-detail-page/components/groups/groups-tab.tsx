@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
 import {
-  createRoundGroupFn,
-  deleteRoundGroupFn,
-  assignParticipantToGroupFn,
-} from '@/lib/groups.server';
+  useCreateRoundGroup,
+  useDeleteRoundGroup,
+  useAssignParticipantToGroup,
+} from '@/lib/groups';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -26,8 +26,11 @@ export function GroupsTab({
 }: GroupsTabProps) {
   const [assigning, setAssigning] = useState<string | null>(null);
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
-  const [addingGroup, setAddingGroup] = useState(false);
   const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
+
+  const [createRoundGroup, { isPending: addingGroup }] = useCreateRoundGroup();
+  const [deleteRoundGroup] = useDeleteRoundGroup();
+  const [assignParticipantToGroup] = useAssignParticipantToGroup();
 
   const isDraft = round.status === 'draft';
   const canEditGroups = canEdit && isDraft;
@@ -57,54 +60,43 @@ export function GroupsTab({
     roundGroupId: string | null,
   ) => {
     setAssigning(roundParticipantId);
-    try {
-      await assignParticipantToGroupFn({
-        data: { roundParticipantId, roundGroupId },
-      });
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to assign player',
-      );
-    }
+    await assignParticipantToGroup({
+      variables: { roundParticipantId, roundGroupId },
+      onSuccess: () => onChanged(),
+      onError: (error) =>
+        toast.error(error.message || 'Failed to assign player'),
+    });
     setAssigning(null);
   };
 
   const handleAddGroup = async () => {
-    setAddingGroup(true);
-    try {
-      const nextNumber =
-        groups.length > 0
-          ? Math.max(...groups.map((g) => g.groupNumber)) + 1
-          : 1;
-      await createRoundGroupFn({
-        data: {
-          roundId: round.id,
-          groupNumber: nextNumber,
-          name: `Group ${nextNumber}`,
-        },
-      });
-      toast.success('Group added.');
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to add group',
-      );
-    }
-    setAddingGroup(false);
+    const nextNumber =
+      groups.length > 0 ? Math.max(...groups.map((g) => g.groupNumber)) + 1 : 1;
+    await createRoundGroup({
+      variables: {
+        roundId: round.id,
+        groupNumber: nextNumber,
+        name: `Group ${nextNumber}`,
+      },
+      onSuccess: () => {
+        toast.success('Group added.');
+        onChanged();
+      },
+      onError: (error) => toast.error(error.message || 'Failed to add group'),
+    });
   };
 
   const handleDeleteGroup = async (groupId: string) => {
     setDeletingGroupId(groupId);
-    try {
-      await deleteRoundGroupFn({ data: { roundGroupId: groupId } });
-      toast.success('Group deleted.');
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to delete group',
-      );
-    }
+    await deleteRoundGroup({
+      variables: { roundGroupId: groupId },
+      onSuccess: () => {
+        toast.success('Group deleted.');
+        onChanged();
+      },
+      onError: (error) =>
+        toast.error(error.message || 'Failed to delete group'),
+    });
     setDeletingGroupId(null);
   };
 

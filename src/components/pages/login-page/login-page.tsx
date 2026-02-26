@@ -21,12 +21,12 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { loginSchema, type LoginInput } from '@/lib/validators';
-import { signInFn } from '@/lib/auth.server';
+import { useSignIn } from '@/lib/auth';
 
 export function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [signIn, { isPending }] = useSignIn();
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -38,17 +38,15 @@ export function LoginPage() {
 
   async function onSubmit(values: LoginInput) {
     setError(null);
-    setLoading(true);
-
-    const result = await signInFn({ data: values });
-
-    if (result.error) {
-      setError(result.error);
-      setLoading(false);
-      return;
-    }
-
-    await router.navigate({ to: '/', reloadDocument: true });
+    await signIn({
+      variables: values,
+      onSuccess: async () => {
+        await router.navigate({ to: '/', reloadDocument: true });
+      },
+      onError: (err) => {
+        setError(err.message);
+      },
+    });
   }
 
   return (
@@ -101,8 +99,8 @@ export function LoginPage() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in…' : 'Sign in'}
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
         </Form>

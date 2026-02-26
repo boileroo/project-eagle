@@ -21,12 +21,12 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { signUpSchema, type SignUpInput } from '@/lib/validators';
-import { signUpFn } from '@/lib/auth.server';
+import { useSignUp } from '@/lib/auth';
 
 export function SignupPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [signUp, { isPending }] = useSignUp();
 
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
@@ -40,23 +40,19 @@ export function SignupPage() {
 
   async function onSubmit(values: SignUpInput) {
     setError(null);
-    setLoading(true);
-
-    const result = await signUpFn({
-      data: {
+    await signUp({
+      variables: {
         email: values.email,
         password: values.password,
         displayName: values.displayName,
       },
+      onSuccess: async () => {
+        await router.navigate({ to: '/', reloadDocument: true });
+      },
+      onError: (err) => {
+        setError(err.message);
+      },
     });
-
-    if (result.error) {
-      setError(result.error);
-      setLoading(false);
-      return;
-    }
-
-    await router.navigate({ to: '/', reloadDocument: true });
   }
 
   return (
@@ -144,8 +140,8 @@ export function SignupPage() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating account…' : 'Sign up'}
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending ? 'Creating account…' : 'Sign up'}
             </Button>
           </form>
         </Form>

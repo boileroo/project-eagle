@@ -134,20 +134,22 @@ export const updateCourseFn = createServerFn({ method: 'POST' })
 
 export const deleteCourseFn = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ courseId: z.string().uuid() }))
-  .handler(async ({ data }) => {
-    const user = await requireAuth();
+  .handler(
+    safeHandler(async ({ data }) => {
+      const user = await requireAuth();
 
-    const existing = await db.query.courses.findFirst({
-      where: eq(courses.id, data.courseId),
-    });
-    if (!existing) throw new Error('Course not found');
-    if (existing.createdByUserId !== user.id) {
-      throw new Error('You can only delete courses you created');
-    }
+      const existing = await db.query.courses.findFirst({
+        where: eq(courses.id, data.courseId),
+      });
+      if (!existing) throw new Error('Course not found');
+      if (existing.createdByUserId !== user.id) {
+        throw new Error('You can only delete courses you created');
+      }
 
-    // courseHoles cascade on delete, but rounds.courseId is RESTRICT
-    // so this will fail if the course is used in any round — which is correct
-    await db.delete(courses).where(eq(courses.id, data.courseId));
+      // courseHoles cascade on delete, but rounds.courseId is RESTRICT
+      // so this will fail if the course is used in any round — which is correct
+      await db.delete(courses).where(eq(courses.id, data.courseId));
 
-    return { success: true };
-  });
+      return { success: true };
+    }),
+  );

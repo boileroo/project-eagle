@@ -1,9 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import {
-  searchPersonsFn,
-  createGuestPersonFn,
-  getMyGuestsFn,
-} from '@/lib/tournaments.server';
+import { searchPersonsFn, getMyGuestsFn } from '@/lib/tournaments.server';
+import { useCreateGuestPerson } from '@/lib/tournaments';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -70,6 +67,8 @@ export function AddPlayerDialog({
   // New guest form
   const [guestName, setGuestName] = useState('');
   const [guestHandicap, setGuestHandicap] = useState('');
+
+  const [createGuestPerson] = useCreateGuestPerson();
 
   const resetState = () => {
     setQuery('');
@@ -148,20 +147,26 @@ export function AddPlayerDialog({
       return;
     }
     setAdding(true);
-    try {
-      const hc = guestHandicap ? parseFloat(guestHandicap) : null;
-      const { personId } = await createGuestPersonFn({
-        data: { displayName: guestName, currentHandicap: hc },
-      });
-      await onAddGuest(personId, guestName, guestHandicap);
-      setOpen(false);
-      resetState();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to add guest',
-      );
-    }
-    setAdding(false);
+    const hc = guestHandicap ? parseFloat(guestHandicap) : null;
+    await createGuestPerson({
+      variables: { displayName: guestName, currentHandicap: hc },
+      onSuccess: async (result) => {
+        try {
+          await onAddGuest(result.personId, guestName, guestHandicap);
+          setOpen(false);
+          resetState();
+        } catch (error) {
+          toast.error(
+            error instanceof Error ? error.message : 'Failed to add guest',
+          );
+        }
+        setAdding(false);
+      },
+      onError: (error) => {
+        toast.error(error.message);
+        setAdding(false);
+      },
+    });
   };
 
   return (

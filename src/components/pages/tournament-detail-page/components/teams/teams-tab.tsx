@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import {
-  createTeamFn,
-  addTeamMemberFn,
-  removeTeamMemberFn,
-} from '@/lib/teams.server';
+  useCreateTeam,
+  useAddTeamMember,
+  useRemoveTeamMember,
+} from '@/lib/teams';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +28,9 @@ export function TeamsTab({
   onChanged,
 }: TeamsTabProps) {
   const [creatingTeam, setCreatingTeam] = useState(false);
+  const [createTeam] = useCreateTeam();
+  const [addTeamMember] = useAddTeamMember();
+  const [removeTeamMember] = useRemoveTeamMember();
   const [newTeamName, setNewTeamName] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<{
     teamId: string;
@@ -71,43 +74,44 @@ export function TeamsTab({
   const handleCreateTeam = async () => {
     if (!newTeamName.trim()) return;
     setCreatingTeam(true);
-    try {
-      await createTeamFn({
-        data: { tournamentId: tournament.id, name: newTeamName.trim() },
-      });
-      toast.success('Team created!');
-      setNewTeamName('');
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to create team',
-      );
-    }
+    await createTeam({
+      variables: { tournamentId: tournament.id, name: newTeamName.trim() },
+      onSuccess: () => {
+        toast.success('Team created!');
+        setNewTeamName('');
+        onChanged();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
     setCreatingTeam(false);
   };
 
   const handleAddTeamMember = async (teamId: string, participantId: string) => {
-    try {
-      await addTeamMemberFn({ data: { teamId, participantId } });
-      toast.success('Player added to team.');
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to add to team',
-      );
-    }
+    await addTeamMember({
+      variables: { teamId, participantId },
+      onSuccess: () => {
+        toast.success('Player added to team.');
+        onChanged();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   const handleRemoveTeamMember = async (memberId: string) => {
-    try {
-      await removeTeamMemberFn({ data: { memberId } });
-      toast.success('Player removed from team.');
-      onChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to remove from team',
-      );
-    }
+    await removeTeamMember({
+      variables: { memberId },
+      onSuccess: () => {
+        toast.success('Player removed from team.');
+        onChanged();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (

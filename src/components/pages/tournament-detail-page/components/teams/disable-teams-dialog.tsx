@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { deleteAllTeamsFn } from '@/lib/teams.server';
-import { deleteCompetitionFn } from '@/lib/competitions.server';
-import { isGameFormat } from '@/lib/competitions';
+import { useDeleteAllTeams } from '@/lib/teams';
+import { isGameFormat, useDeleteCompetition } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -32,6 +31,8 @@ export function DisableTeamsDialog({
   onDisabled,
 }: DisableTeamsDialogProps) {
   const [disabling, setDisabling] = useState(false);
+  const [deleteCompetition] = useDeleteCompetition();
+  const [deleteAllTeams] = useDeleteAllTeams();
 
   const handleDisable = async () => {
     setDisabling(true);
@@ -50,14 +51,15 @@ export function DisableTeamsDialog({
       );
 
       for (const comp of gamesToDelete) {
-        try {
-          await deleteCompetitionFn({ data: { competitionId: comp.id } });
-        } catch (error) {
-          console.error('Failed to delete game:', error);
-        }
+        await deleteCompetition({
+          variables: { competitionId: comp.id },
+          onError: (error) => {
+            console.error('Failed to delete game:', error);
+          },
+        });
       }
 
-      await deleteAllTeamsFn({ data: { tournamentId } });
+      await deleteAllTeams({ variables: { tournamentId } });
 
       toast.success('Teams disabled and all games removed.');
       onDisabled();

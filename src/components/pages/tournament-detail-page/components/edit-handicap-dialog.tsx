@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { updateParticipantFn } from '@/lib/tournaments.server';
+import { useUpdateParticipant } from '@/lib/tournaments';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -24,24 +24,21 @@ export function EditHandicapDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(participant.handicapOverride ?? '');
-  const [saving, setSaving] = useState(false);
+  const [updateParticipant, { isPending }] = useUpdateParticipant();
 
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      const hc = value ? parseFloat(value) : null;
-      await updateParticipantFn({
-        data: { participantId: participant.id, handicapOverride: hc },
-      });
-      toast.success('Handicap override updated.');
-      setOpen(false);
-      onSaved();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to update handicap',
-      );
-    }
-    setSaving(false);
+    const hc = value ? parseFloat(value) : null;
+    await updateParticipant({
+      variables: { participantId: participant.id, handicapOverride: hc },
+      onSuccess: () => {
+        toast.success('Handicap override updated.');
+        setOpen(false);
+        onSaved();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (
@@ -67,8 +64,8 @@ export function EditHandicapDialog({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
+          <Button onClick={handleSave} disabled={isPending}>
+            {isPending ? 'Saving…' : 'Save'}
           </Button>
         </DialogFooter>
       </DialogContent>

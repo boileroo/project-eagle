@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from '@tanstack/react-router';
 import type { GuestListItem } from '@/types';
-import { updateGuestFn } from '@/lib/tournaments.server';
+import { useUpdateGuest } from '@/lib/tournaments';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,7 +31,7 @@ export function EditGuestDialog({
   const [editHandicap, setEditHandicap] = useState(
     guest?.currentHandicap ?? '',
   );
-  const [saving, setSaving] = useState(false);
+  const [updateGuest, { isPending }] = useUpdateGuest();
 
   const handleOpenChange = (v: boolean) => {
     if (!v) {
@@ -43,22 +43,21 @@ export function EditGuestDialog({
 
   async function handleSaveEdit() {
     if (!guest || !editName.trim()) return;
-    setSaving(true);
-    try {
-      await updateGuestFn({
-        data: {
-          personId: guest.id,
-          displayName: editName.trim(),
-          currentHandicap: editHandicap ? parseFloat(editHandicap) : null,
-        },
-      });
-      toast.success('Guest updated');
-      handleOpenChange(false);
-      router.invalidate();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update');
-    }
-    setSaving(false);
+    await updateGuest({
+      variables: {
+        personId: guest.id,
+        displayName: editName.trim(),
+        currentHandicap: editHandicap ? parseFloat(editHandicap) : null,
+      },
+      onSuccess: () => {
+        toast.success('Guest updated');
+        handleOpenChange(false);
+        router.invalidate();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   }
 
   return (
@@ -96,9 +95,9 @@ export function EditGuestDialog({
           </Button>
           <Button
             onClick={handleSaveEdit}
-            disabled={saving || !editName.trim()}
+            disabled={isPending || !editName.trim()}
           >
-            {saving ? 'Saving…' : 'Save'}
+            {isPending ? 'Saving…' : 'Save'}
           </Button>
         </DialogFooter>
       </DialogContent>

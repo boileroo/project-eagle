@@ -1,6 +1,5 @@
-import { deleteTeamFn } from '@/lib/teams.server';
-import { deleteCompetitionFn } from '@/lib/competitions.server';
-import { isTeamFormat } from '@/lib/competitions';
+import { useDeleteTeam } from '@/lib/teams';
+import { isTeamFormat, useDeleteCompetition } from '@/lib/competitions';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { toast } from 'sonner';
@@ -24,6 +23,8 @@ export function DeleteTeamDialog({
   onDeleted,
 }: DeleteTeamDialogProps) {
   const { loading, handleConfirm } = useConfirmDialog();
+  const [deleteCompetition] = useDeleteCompetition();
+  const [deleteTeam] = useDeleteTeam();
 
   const handleDelete = () =>
     handleConfirm(async () => {
@@ -32,14 +33,15 @@ export function DeleteTeamDialog({
       );
 
       for (const comp of teamGames) {
-        try {
-          await deleteCompetitionFn({ data: { competitionId: comp.id } });
-        } catch (error) {
-          console.error('Failed to delete game:', error);
-        }
+        await deleteCompetition({
+          variables: { competitionId: comp.id },
+          onError: (error) => {
+            console.error('Failed to delete game:', error);
+          },
+        });
       }
 
-      await deleteTeamFn({ data: { teamId } });
+      await deleteTeam({ variables: { teamId } });
 
       if (teamGames.length > 0) {
         toast.success(

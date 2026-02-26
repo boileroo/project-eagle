@@ -1,4 +1,4 @@
-import { deleteTournamentFn } from '@/lib/tournaments.server';
+import { useDeleteTournament } from '@/lib/tournaments';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,12 +24,20 @@ export function DeleteTournamentButton({
   onDeleted,
 }: DeleteTournamentButtonProps) {
   const { open, setOpen, loading, handleConfirm } = useConfirmDialog();
+  const [deleteTournament] = useDeleteTournament();
 
   const handleDelete = () =>
     handleConfirm(async () => {
-      await deleteTournamentFn({ data: { tournamentId } });
-      toast.success('Tournament deleted.');
-      onDeleted();
+      await deleteTournament({
+        variables: { tournamentId },
+        onSuccess: () => {
+          toast.success('Tournament deleted.');
+          onDeleted();
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        },
+      });
     });
 
   return (

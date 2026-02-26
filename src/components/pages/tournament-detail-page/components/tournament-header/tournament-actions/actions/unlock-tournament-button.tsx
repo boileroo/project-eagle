@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { unlockTournamentFn } from '@/lib/tournaments.server';
+import { useUnlockTournament } from '@/lib/tournaments';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -12,25 +11,24 @@ export function UnlockTournamentButton({
   tournamentId,
   onUnlocked,
 }: UnlockTournamentButtonProps) {
-  const [unlocking, setUnlocking] = useState(false);
+  const [unlockTournament, { isPending }] = useUnlockTournament();
 
   const handleUnlock = async () => {
-    setUnlocking(true);
-    try {
-      await unlockTournamentFn({ data: { tournamentId } });
-      toast.success('Tournament unlocked. Back to draft.');
-      onUnlocked();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to unlock tournament',
-      );
-    }
-    setUnlocking(false);
+    await unlockTournament({
+      variables: { tournamentId },
+      onSuccess: () => {
+        toast.success('Tournament unlocked. Back to draft.');
+        onUnlocked();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (
-    <Button variant="outline" onClick={handleUnlock} disabled={unlocking}>
-      {unlocking ? 'Unlocking…' : 'Unlock Tournament'}
+    <Button variant="outline" onClick={handleUnlock} disabled={isPending}>
+      {isPending ? 'Unlocking…' : 'Unlock Tournament'}
     </Button>
   );
 }

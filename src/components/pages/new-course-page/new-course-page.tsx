@@ -1,29 +1,27 @@
 import { useNavigate } from '@tanstack/react-router';
-import { createCourseFn } from '@/lib/courses.server';
+import { useCreateCourse } from '@/lib/courses';
 import { CourseForm } from '@/components/course-form';
 import { type CreateCourseInput } from '@/lib/validators';
-import { useState } from 'react';
 import { toast } from 'sonner';
 
 export function NewCoursePage() {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
+  const [createCourse, { isPending }] = useCreateCourse();
 
   const handleSubmit = async (data: CreateCourseInput) => {
-    setSubmitting(true);
-    try {
-      const result = await createCourseFn({ data });
-      toast.success('Course created!');
-      navigate({
-        to: '/courses/$courseId',
-        params: { courseId: result.courseId },
-      });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to create course',
-      );
-      setSubmitting(false);
-    }
+    await createCourse({
+      variables: data,
+      onSuccess: (result) => {
+        toast.success('Course created!');
+        navigate({
+          to: '/courses/$courseId',
+          params: { courseId: result.courseId },
+        });
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (
@@ -37,7 +35,7 @@ export function NewCoursePage() {
       <CourseForm
         onSubmit={handleSubmit}
         submitLabel="Create Course"
-        submitting={submitting}
+        submitting={isPending}
       />
     </div>
   );

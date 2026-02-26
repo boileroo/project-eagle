@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { updateRoundFn } from '@/lib/rounds.server';
+import { useUpdateRound } from '@/lib/rounds';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -35,7 +35,7 @@ export function EditRoundDialog({
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [updateRound, { isPending: saving }] = useUpdateRound();
   const [courseId, setCourseId] = useState(round.courseId ?? '');
   const [date, setDate] = useState(() => {
     if (!round.date) return '';
@@ -47,25 +47,22 @@ export function EditRoundDialog({
   );
 
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      await updateRoundFn({
-        data: {
-          id: round.id,
-          courseId: courseId || undefined,
-          date: date || undefined,
-          teeTime: teeTime || undefined,
-        },
-      });
-      toast.success('Round updated.');
-      setOpen(false);
-      onSaved();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to update round',
-      );
-    }
-    setSaving(false);
+    await updateRound({
+      variables: {
+        id: round.id,
+        courseId: courseId || undefined,
+        date: date || undefined,
+        teeTime: teeTime || undefined,
+      },
+      onSuccess: () => {
+        toast.success('Round updated.');
+        setOpen(false);
+        onSaved();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   const handleOpenChange = (next: boolean) => {

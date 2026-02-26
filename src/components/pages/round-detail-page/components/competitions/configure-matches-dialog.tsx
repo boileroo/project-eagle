@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { updateCompetitionFn } from '@/lib/competitions.server';
+import { useUpdateCompetition } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -29,7 +29,7 @@ export function ConfigureMatchesDialog({
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [updateCompetition, { isPending: saving }] = useUpdateCompetition();
 
   const existingConfig = comp.configJson as Record<string, unknown> | null;
   const existingPairings: { playerA: string; playerB: string }[] =
@@ -125,31 +125,28 @@ export function ConfigureMatchesDialog({
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      const config: CompetitionConfig = {
-        formatType: comp.formatType as CompetitionConfig['formatType'],
-        config: {
-          ...existingConfig,
-          pairings,
-        },
-      } as CompetitionConfig;
+    const config: CompetitionConfig = {
+      formatType: comp.formatType as CompetitionConfig['formatType'],
+      config: {
+        ...existingConfig,
+        pairings,
+      },
+    } as CompetitionConfig;
 
-      await updateCompetitionFn({
-        data: {
-          id: comp.id,
-          competitionConfig: config,
-        },
-      });
-      toast.success('Matches configured.');
-      setOpen(false);
-      onSaved();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to save matches',
-      );
-    }
-    setSaving(false);
+    await updateCompetition({
+      variables: {
+        id: comp.id,
+        competitionConfig: config,
+      },
+      onSuccess: () => {
+        toast.success('Matches configured.');
+        setOpen(false);
+        onSaved();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   const handleOpenChange = (next: boolean) => {

@@ -1,6 +1,5 @@
-import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { createSingleRoundFn } from '@/lib/rounds.server';
+import { useCreateSingleRound } from '@/lib/rounds';
 import type { CreateSingleRoundInput } from '@/lib/validators';
 import type { CourseListSummary } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -10,26 +9,25 @@ import { NewRoundForm } from './components/new-round-form';
 
 export function NewRoundPage({ courses }: { courses: CourseListSummary[] }) {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
+  const [createSingleRound, { isPending: submitting }] = useCreateSingleRound();
 
   const handleSubmit = async (data: CreateSingleRoundInput) => {
-    setSubmitting(true);
-    try {
-      const result = await createSingleRoundFn({ data });
-      toast.success('Round created!');
-      navigate({
-        to: '/tournaments/$tournamentId/rounds/$roundId',
-        params: {
-          tournamentId: result.tournamentId,
-          roundId: result.roundId,
-        },
-      });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to create round',
-      );
-      setSubmitting(false);
-    }
+    await createSingleRound({
+      variables: data,
+      onSuccess: (result) => {
+        toast.success('Round created!');
+        navigate({
+          to: '/tournaments/$tournamentId/rounds/$roundId',
+          params: {
+            tournamentId: result.tournamentId,
+            roundId: result.roundId,
+          },
+        });
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   return (
