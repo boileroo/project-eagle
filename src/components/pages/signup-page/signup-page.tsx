@@ -20,13 +20,15 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { ContinueWithGoogleButton } from '@/components/shared/oauth-button/continue-with-google-button';
 import { signUpSchema, type SignUpInput } from '@/lib/validators';
-import { useSignUp } from '@/lib/auth';
+import { useSignUp, useSignInWithOAuth } from '@/lib/auth';
 
 export function SignupPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [signUp, { isPending }] = useSignUp();
+  const [signInWithOAuth, { isPending: oauthPending }] = useSignInWithOAuth();
 
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
@@ -49,6 +51,16 @@ export function SignupPage() {
       onSuccess: async () => {
         await router.navigate({ to: '/', reloadDocument: true });
       },
+      onError: (err) => {
+        setError(err.message);
+      },
+    });
+  }
+
+  async function handleGoogleSignUp() {
+    setError(null);
+    await signInWithOAuth({
+      variables: { provider: 'google' },
       onError: (err) => {
         setError(err.message);
       },
@@ -145,6 +157,23 @@ export function SignupPage() {
             </Button>
           </form>
         </Form>
+
+        <div className="relative mt-6">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-card text-muted-foreground px-2">
+              Or continue with
+            </span>
+          </div>
+        </div>
+
+        <ContinueWithGoogleButton
+          onClick={handleGoogleSignUp}
+          isLoading={oauthPending}
+          className="mt-6 w-full"
+        />
       </CardContent>
       <CardFooter className="justify-center">
         <p className="text-muted-foreground text-sm">

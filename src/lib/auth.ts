@@ -1,5 +1,10 @@
 import { useMutation } from '@tanstack/react-query';
-import { signInFn, signUpFn, signOutFn } from '@/lib/auth.server';
+import {
+  signInFn,
+  signUpFn,
+  signOutFn,
+  signInWithOAuthFn,
+} from '@/lib/auth.server';
 import type { MutationCallOptions, MutationHookReturn } from '@/lib/mutation';
 
 // ──────────────────────────────────────────────
@@ -109,6 +114,50 @@ export function useSignOut() {
       options?.onError?.(
         error instanceof Error ? error : new Error(String(error)),
       );
+    }
+  };
+
+  return [
+    mutate,
+    {
+      isPending: mutation.isPending,
+      isError: mutation.isError,
+      error: mutation.error,
+    },
+  ] as const;
+}
+
+// ──────────────────────────────────────────────
+// useSignInWithOAuth
+// ──────────────────────────────────────────────
+
+type OAuthProvider = 'google';
+type OAuthResult = { error: string | null; url: string | null };
+
+export function useSignInWithOAuth(): MutationHookReturn<
+  { provider: OAuthProvider },
+  OAuthResult
+> {
+  const mutation = useMutation({
+    mutationFn: async (variables: { provider: OAuthProvider }) => {
+      const result = await signInWithOAuthFn({ data: variables });
+      return result;
+    },
+  });
+
+  const mutate = async ({
+    variables,
+    onSuccess,
+    onError,
+  }: MutationCallOptions<{ provider: OAuthProvider }, OAuthResult>) => {
+    try {
+      const result = await mutation.mutateAsync(variables);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      await onSuccess?.(result);
+    } catch (error) {
+      onError?.(error instanceof Error ? error : new Error(String(error)));
     }
   };
 

@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as JoinCodeRouteImport } from './routes/join.$code'
+import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AppGuestsRouteImport } from './routes/_app/guests'
@@ -53,6 +54,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const JoinCodeRoute = JoinCodeRouteImport.update({
   id: '/join/$code',
   path: '/join/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/guests': typeof AppGuestsRoute
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/join/$code': typeof JoinCodeRoute
   '/courses/new': typeof AppCoursesNewRoute
   '/rounds/$roundId': typeof AppRoundsRoundIdRoute
@@ -174,6 +181,7 @@ export interface FileRoutesByTo {
   '/guests': typeof AppGuestsRoute
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/join/$code': typeof JoinCodeRoute
   '/courses/new': typeof AppCoursesNewRoute
   '/rounds/$roundId': typeof AppRoundsRoundIdRoute
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/_app/guests': typeof AppGuestsRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/signup': typeof AuthSignupRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/join/$code': typeof JoinCodeRoute
   '/_app/': typeof AppIndexRoute
   '/_app/courses/new': typeof AppCoursesNewRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/guests'
     | '/login'
     | '/signup'
+    | '/auth/callback'
     | '/join/$code'
     | '/courses/new'
     | '/rounds/$roundId'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/guests'
     | '/login'
     | '/signup'
+    | '/auth/callback'
     | '/join/$code'
     | '/courses/new'
     | '/rounds/$roundId'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/_app/guests'
     | '/_auth/login'
     | '/_auth/signup'
+    | '/auth/callback'
     | '/join/$code'
     | '/_app/'
     | '/_app/courses/new'
@@ -289,6 +301,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   OfflineRoute: typeof OfflineRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   JoinCodeRoute: typeof JoinCodeRoute
 }
 
@@ -327,6 +340,13 @@ declare module '@tanstack/react-router' {
       path: '/join/$code'
       fullPath: '/join/$code'
       preLoaderRoute: typeof JoinCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth/signup': {
@@ -509,6 +529,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   OfflineRoute: OfflineRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   JoinCodeRoute: JoinCodeRoute,
 }
 export const routeTree = rootRouteImport
