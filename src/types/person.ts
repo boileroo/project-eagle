@@ -1,3 +1,5 @@
+import type { getMyGuestsFn } from '@/lib/tournaments.server';
+
 export type Guest = {
   id: string;
   name: string;
@@ -5,6 +7,8 @@ export type Guest = {
   email: string | null;
   phone: string | null;
 };
+
+export type GuestListItem = Awaited<ReturnType<typeof getMyGuestsFn>>[number];
 
 export type PersonSearchResult = Guest & {
   type: 'guest';

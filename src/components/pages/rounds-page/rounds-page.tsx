@@ -1,16 +1,8 @@
 import { Link } from '@tanstack/react-router';
+import type { RoundSummary } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-
-type RoundSummary = {
-  id: string;
-  status: string;
-  date: Date | null;
-  teeTime: string | null;
-  course: { name: string };
-  participants: { id: string }[];
-};
 
 export function RoundsPage({ rounds }: { rounds: RoundSummary[] }) {
   return (

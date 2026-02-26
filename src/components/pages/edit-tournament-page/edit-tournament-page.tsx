@@ -6,6 +6,7 @@ import {
   createTournamentSchema,
   type CreateTournamentInput,
 } from '@/lib/validators';
+import type { TournamentFormData } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -21,18 +22,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-type TournamentData = {
-  id: string;
-  name: string;
-  description: string | null;
-  createdByUserId: string | null;
-};
-
 export function EditTournamentPage({
   tournament,
   isOwner,
 }: {
-  tournament: TournamentData;
+  tournament: TournamentFormData;
   isOwner: boolean;
 }) {
   const navigate = useNavigate();

@@ -1,19 +1,8 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import type { ActiveRound } from '@/types';
 import { ActiveRoundSection } from './components/active-round-section';
 import { JoinTournamentDialog } from './components/join-tournament-dialog';
-
-type ActiveRound = {
-  roundId: string;
-  roundNumber: number | null;
-  tournamentId: string;
-  tournamentName: string;
-  isSingleRound: boolean;
-  courseName: string;
-  participantCount: number;
-  date: Date | null;
-  teeTime: string | null;
-};
 
 export function DashboardPage({
   userEmail,

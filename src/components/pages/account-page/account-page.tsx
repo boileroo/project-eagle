@@ -1,15 +1,6 @@
 import { AccountHeader } from './components/account-header';
 import { AccountForm } from './components/account-form';
-
-type AccountData = {
-  profile: {
-    email: string;
-    displayName: string | null;
-  };
-  person: {
-    currentHandicap: string | null;
-  } | null;
-};
+import { type AccountData } from '@/types';
 
 export function AccountPage({ account }: { account: AccountData }) {
   return (

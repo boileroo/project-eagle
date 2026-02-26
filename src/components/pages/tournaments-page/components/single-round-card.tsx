@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { type TournamentSummary } from '@/types';
 
 const roundStatusLabels: Record<string, string> = {
   draft: 'Draft',
@@ -14,25 +15,6 @@ const roundStatusColors: Record<string, 'default' | 'secondary' | 'outline'> = {
   scheduled: 'secondary',
   open: 'secondary',
   finalized: 'default',
-};
-
-type RoundData = {
-  id: string;
-  status: string;
-  roundNumber: number | null;
-  date: Date | null;
-  teeTime: string | null;
-  course: { id: string; name: string };
-};
-
-type TournamentSummary = {
-  id: string;
-  name: string;
-  description: string | null;
-  status: 'setup' | 'scheduled' | 'underway' | 'complete';
-  isSingleRound: boolean;
-  participants: { id: string }[];
-  rounds: RoundData[];
 };
 
 interface SingleRoundCardProps {

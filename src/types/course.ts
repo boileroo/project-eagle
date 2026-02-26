@@ -1,16 +1,7 @@
-export type HoleData = {
-  number: number;
-  par: number;
-  strokeIndex: number;
-};
+import type { courses, courseHoles } from '@/db/schema';
 
-export type CourseData = {
-  id: string;
-  name: string;
-  location: string | null;
-  holes: HoleData[];
-  totalPar: number;
-  numberOfHoles: number;
+export type CourseData = typeof courses.$inferSelect & {
+  holes: (typeof courseHoles.$inferSelect)[];
 };
 
 export type CourseListItem = {
@@ -19,3 +10,5 @@ export type CourseListItem = {
   numberOfHoles: number;
   totalPar: number;
 };
+
+export type CourseListSummary = typeof courses.$inferSelect;

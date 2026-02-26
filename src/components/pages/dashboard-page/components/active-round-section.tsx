@@ -1,18 +1,7 @@
 import { Link } from '@tanstack/react-router';
+import type { ActiveRound } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-
-type ActiveRound = {
-  roundId: string;
-  roundNumber: number | null;
-  tournamentId: string;
-  tournamentName: string;
-  isSingleRound: boolean;
-  courseName: string;
-  participantCount: number;
-  date: Date | null;
-  teeTime: string | null;
-};
 
 interface ActiveRoundSectionProps {
   activeRounds: ActiveRound[];

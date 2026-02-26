@@ -1,20 +1,14 @@
 import { useState } from 'react';
 import { useRouter } from '@tanstack/react-router';
+import type { GuestListItem } from '@/types';
 import { deleteGuestFn } from '@/lib/tournaments.server';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { toast } from 'sonner';
 
-interface Guest {
-  id: string;
-  displayName: string;
-  currentHandicap: string | null;
-  createdAt: Date;
-}
-
 interface DeleteGuestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  guest: Guest | null;
+  guest: GuestListItem | null;
 }
 
 export function DeleteGuestDialog({

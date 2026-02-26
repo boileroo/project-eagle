@@ -4,20 +4,7 @@ import { CourseForm } from '@/components/course-form';
 import { type CreateCourseInput } from '@/lib/validators';
 import { useState } from 'react';
 import { toast } from 'sonner';
-
-type CourseData = {
-  id: string;
-  name: string;
-  location: string | null;
-  numberOfHoles: number;
-  createdByUserId: string | null;
-  holes: {
-    holeNumber: number;
-    par: number;
-    strokeIndex: number;
-    yardage: number | null;
-  }[];
-};
+import { type CourseData } from '@/types';
 
 export function EditCoursePage({
   course,

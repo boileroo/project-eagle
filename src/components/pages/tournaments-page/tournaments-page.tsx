@@ -4,25 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TournamentCard } from './components/tournament-card';
 import { SingleRoundCard } from './components/single-round-card';
-
-type RoundData = {
-  id: string;
-  status: string;
-  roundNumber: number | null;
-  date: Date | null;
-  teeTime: string | null;
-  course: { id: string; name: string };
-};
-
-export type TournamentSummary = {
-  id: string;
-  name: string;
-  description: string | null;
-  status: 'setup' | 'scheduled' | 'underway' | 'complete';
-  isSingleRound: boolean;
-  participants: { id: string }[];
-  rounds: RoundData[];
-};
+import { type TournamentSummary } from '@/types';
 
 type Tab = 'active' | 'past';
 

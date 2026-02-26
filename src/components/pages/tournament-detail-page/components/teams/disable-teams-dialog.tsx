@@ -12,12 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-
-type CompetitionData = {
-  id: string;
-  formatType: string;
-  name: string;
-};
+import { type CompetitionData } from '@/types';
 
 type DisableTeamsDialogProps = {
   open: boolean;

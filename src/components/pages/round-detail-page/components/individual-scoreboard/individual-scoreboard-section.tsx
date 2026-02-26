@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
+import type { ScoreboardData } from '@/types';
 import { getIndividualScoreboardFn } from '@/lib/scoreboards.server';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,8 +11,6 @@ import { Badge } from '@/components/ui/badge';
 // for a round: gross, net, stableford, bonus, total.
 // Always shown when the round is open or finalized.
 // ──────────────────────────────────────────────
-
-type ScoreboardData = Awaited<ReturnType<typeof getIndividualScoreboardFn>>;
 
 const BASIS_LABELS: Record<string, string> = {
   gross_strokes: 'Gross',

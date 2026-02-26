@@ -4,12 +4,7 @@ import { isTeamFormat } from '@/lib/competitions';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { toast } from 'sonner';
-
-type CompetitionData = {
-  id: string;
-  formatType: string;
-  name: string;
-};
+import { type CompetitionData } from '@/types';
 
 type DeleteTeamDialogProps = {
   open: boolean;

@@ -20,16 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ThemeSelector } from './theme-selector';
-
-type AccountData = {
-  profile: {
-    email: string;
-    displayName: string | null;
-  };
-  person: {
-    currentHandicap: string | null;
-  } | null;
-};
+import { type AccountData } from '@/types';
 
 export function AccountForm({ account }: { account: AccountData }) {
   const navigate = useNavigate();

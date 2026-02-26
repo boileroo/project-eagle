@@ -1,16 +1,10 @@
 import { Link } from '@tanstack/react-router';
+import type { CourseListSummary } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-type Course = {
-  id: string;
-  name: string;
-  location: string | null;
-  numberOfHoles: number;
-};
-
-export function CoursesPage({ courses }: { courses: Course[] }) {
+export function CoursesPage({ courses }: { courses: CourseListSummary[] }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

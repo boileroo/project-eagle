@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from '@tanstack/react-router';
+import type { GuestListItem } from '@/types';
 import { updateGuestFn } from '@/lib/tournaments.server';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,17 +15,10 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
-interface Guest {
-  id: string;
-  displayName: string;
-  currentHandicap: string | null;
-  createdAt: Date;
-}
-
 interface EditGuestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  guest: Guest | null;
+  guest: GuestListItem | null;
 }
 
 export function EditGuestDialog({

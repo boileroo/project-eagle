@@ -1,19 +1,13 @@
 import { useState } from 'react';
+import type { GuestListItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { EditGuestDialog } from './components/edit-guest-dialog';
 import { DeleteGuestDialog } from './components/delete-guest-dialog';
 
-type Guest = {
-  id: string;
-  displayName: string;
-  currentHandicap: string | null;
-  createdAt: Date;
-};
-
-export function GuestsPage({ guests }: { guests: Guest[] }) {
-  const [editGuest, setEditGuest] = useState<Guest | null>(null);
-  const [deleteGuest, setDeleteGuest] = useState<Guest | null>(null);
+export function GuestsPage({ guests }: { guests: GuestListItem[] }) {
+  const [editGuest, setEditGuest] = useState<GuestListItem | null>(null);
+  const [deleteGuest, setDeleteGuest] = useState<GuestListItem | null>(null);
 
   return (
     <div className="space-y-6">
