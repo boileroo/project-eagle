@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { getRequest } from '@tanstack/react-start/server';
+import { getRequest, redirect } from '@tanstack/react-start/server';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
@@ -135,3 +135,35 @@ export const signOutFn = createServerFn({ method: 'POST' }).handler(
     return { success: true };
   },
 );
+
+// ──────────────────────────────────────────────
+// Sign in with OAuth (Google)
+// ──────────────────────────────────────────────
+
+export const signInWithOAuthFn = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ provider: z.literal('google') }))
+  .handler(async ({ data }) => {
+    const request = getRequest();
+    const { supabase } = createSupabaseServerClient(request);
+
+    const origin = request.headers.get('origin') || 'http://localhost:5173';
+    const redirectUrl = `${origin}/auth/callback`;
+
+    const { data: authData, error } = await supabase.auth.signInWithOAuth({
+      provider: data.provider,
+      options: {
+        redirectTo: redirectUrl,
+        scopes: 'email profile openid',
+      },
+    });
+
+    if (error) {
+      return { error: error.message, url: null };
+    }
+
+    if (!authData.url) {
+      return { error: 'Failed to create OAuth URL', url: null };
+    }
+
+    throw redirect({ to: authData.url });
+  });
