@@ -155,7 +155,7 @@ Each round stores:
 
 - Course reference
 - Round number / date
-- Status: `draft` | `open` | `locked` | `finalized`
+- Status: `draft` | `scheduled` | `open` | `finalized`
 - `primaryScoringBasis` — the column the commissioner designates as the trophy metric (`gross_strokes` | `net_strokes` | `stableford` | `total` | null)
 
 ### Course Library
@@ -502,7 +502,7 @@ calculateCompetitionResults({
 | **Best Ball**  | `best-ball.ts`  | 2v2 team. Best stableford from each pair compared per hole. Same match logic as match play. `within_group` scope                  |
 | **Hi-Lo**      | `hi-lo.ts`      | 2v2 team. Two parallel matches per hole: high ball (best stableford each side) + low ball (worst each side). `within_group` scope |
 | **Rumble**     | `rumble.ts`     | 4v4 group-vs-group. Escalating scores count per hole range (see below). Aggregate team total, highest wins. `all` scope           |
-| **Wolf**       | `wolf.ts`       | Within-group individual game. Per-hole wolf declarations. Standard 2/4/2 points. `within_group` scope (pending implementation)    |
+| **Wolf**       | `wolf.ts`       | Within-group individual game. Per-hole wolf declarations. Standard 2/4/2 points. `within_group` scope                             |
 | **Six Point**  | `six-point.ts`  | Within-group individual game. 3-player, fixed 4/2/0 distribution, stableford or gross basis. Tie-splitting. `within_group` scope  |
 | **Chair**      | `chair.ts`      | Within-group individual game. State machine — win outright to take chair, 1pt/hole held, tie retains. `within_group` scope        |
 | **NTP / LD**   | `bonus.ts`      | Award-based, not score-derived. Helpers for UI dropdowns                                                                          |
@@ -598,26 +598,26 @@ This section records how the original scenario-based design (raw notes) maps to 
 
 9. **`roundTeams` / `roundTeamMembers`** ✅ — Dropped. These tables were never written to in practice. Teams are tournament-level only.
 
-### Remaining Gaps / Cross-References to TODO
+### Resolved Gaps (All Complete)
 
-The following were identified as new work during reconciliation. Current status:
+All items identified during reconciliation have been implemented:
 
-1. **`gameDecisions` table** — required for Wolf declarations. Schema migration needed. See `TODO.md` → Wolf UI.
+1. **`gameDecisions` table** ✅ — Schema in `src/db/schema.ts`. Server functions `submitGameDecisionFn` / `getGameDecisionsFn` in `src/lib/game-decisions.server.ts`.
 
-2. **`primaryScoringBasis` field** — new column on `rounds` and `tournaments`. Schema migration needed.
+2. **`primaryScoringBasis` field** ✅ — `primary_scoring_basis` enum column on both `rounds` and `tournaments`. `setRoundPrimaryScoringBasisFn` / `setTournamentPrimaryScoringBasisFn` in `src/lib/scoreboards.server.ts`.
 
-3. **`competitionCategory` enum** — `competitions` table needs the `match | game | bonus` discriminant.
+3. **`competitionCategory` enum** ✅ — `competitions.competitionCategory` stores `'match' | 'game' | 'bonus'`.
 
-4. **Wolf declaration UI** — live scoring view needs a per-hole Wolf partner selection panel. See `TODO.md` → Wolf UI.
+4. **Wolf declaration UI** ✅ — `WolfDeclarationControl` component in `src/components/pages/live-scoring-page/components/wolf-declaration-control.tsx`.
 
-5. **Hi-Lo engine** ✅ — Implemented as `hi-lo.ts`.
+5. **Hi-Lo engine** ✅ — `src/lib/domain/hi-lo.ts`.
 
-6. **Wolf engine** — Pending. See `TODO.md` → Wolf UI.
+6. **Wolf engine** ✅ — `src/lib/domain/wolf.ts`.
 
-7. **Six Point engine** ✅ — Implemented as `six-point.ts` (revised design: 3-player, fixed 4/2/0, stableford/gross basis).
+7. **Six Point engine** ✅ — `src/lib/domain/six-point.ts` (3-player, fixed 4/2/0, stableford/gross basis).
 
-8. **Chair engine** ✅ — Implemented as `chair.ts`.
+8. **Chair engine** ✅ — `src/lib/domain/chair.ts`.
 
-9. **Auto-computed leaderboards** ✅ — `tournamentStandings` table deprecated. Auto-computed Individual Leaderboard and Team Leaderboard replace it.
+9. **Auto-computed leaderboards** ✅ — `tournamentStandings` table deprecated (no new writes). `getIndividualScoreboardFn` / `getTournamentLeaderboardFn` in `src/lib/scoreboards.server.ts` replace it.
 
 10. **Foursomes** — Still deferred. See `TODO.md` → Foursomes.

@@ -4,7 +4,7 @@
 
 ## A. Future Additions
 
-Features and ideas that are out of scope for MVP but may be added later.
+Features and ideas that are out of scope for the current build but may be added later.
 
 ---
 
@@ -38,101 +38,13 @@ Foursomes fundamentally changes the scoring input model. Currently every player 
 
 ---
 
-### Wolf UI
-
-Wolf is designed and specified but the UI is not yet built. The engine spec and data model are captured in `DOMAIN.md`. The scoring engine is pending implementation.
-
-#### Rules
-
-- Wolf order: fixed rotation from group participant order (Player 1 on holes 1, 5, 9, 13, 17; Player 2 on holes 2, 6, 10, 14, 18; etc.)
-- On each hole, the wolf may pick a partner after seeing tee shots, or go lone wolf
-- **Standard 2/4/2 points:**
-  - Wolf + partner win: 2 pts each; others 0
-  - Wolf + partner lose: others 2 pts each; wolf + partner 0
-  - Lone wolf wins: wolf 4 pts; others 0
-  - Lone wolf loses: each of the other 3 gets 2 pts; wolf 0
-  - Ties: no points
-
-#### Declaration UI
-
-Appears in the live scoring view on the wolf's hole. The wolf selects a partner (or "Lone Wolf") before scores for the hole are submitted.
-
-#### Data model
-
-```
-GameDecision {
-  id, competitionId, roundId, holeNumber,
-  data: { wolfPlayerId, partnerPlayerId | null },
-  recordedByUserId, createdAt
-}
-```
-
-Latest record per `(competitionId, holeNumber)` wins (append-only, same pattern as ScoreEvents).
-
-#### Files to create
-
-- `src/lib/domain/wolf.ts` — scoring engine
-- `src/components/live-scoring/wolf-declaration.tsx` — per-hole declaration UI
-- Schema: `gameDecisions` table
-
----
-
-### Private Tournaments & Invite Codes
-
-Every tournament is private by default. The dashboard only shows tournaments the user participates in (or created). Joining requires an invite code.
-
-#### Current state
-
-`getTournamentsFn` returns ALL tournaments for ANY authenticated user — no isolation exists. There is no `isPrivate` flag, no invite code, no join mechanism.
-
-#### Planned approach
-
-**Schema:**
-
-- Add `inviteCode text NOT NULL UNIQUE` to `tournaments`
-- Generate via `crypto.randomBytes(4).toString('hex').toUpperCase()` (8-char uppercase hex, e.g. `A3F7D12E`) at creation time
-
-**Query changes:**
-
-- `getTournamentsFn` — filter to tournaments where user is creator OR participant
-- `getTournamentFn` — restrict to participant, creator, or valid invite code
-
-**Join flow:**
-
-- New route: `src/routes/join.$code.tsx` — outside `_app` layout, works for both auth states
-  - Unauthenticated: shows tournament name + login/signup buttons with `?redirect=/join/[code]`
-  - Authenticated: shows join confirmation or redirects if already a member
-- New `src/lib/join.server.ts`:
-  - `getTournamentByInviteCodeFn` — no auth required, returns minimal data (name only)
-  - `joinTournamentByCodeFn` — auth required; adds `tournamentParticipant` + `roundParticipants` for all draft/scheduled/open rounds
-- New `regenerateInviteCodeFn` in `tournaments.server.ts` (commissioner only)
-- New validators: `joinByCodeSchema`, `regenerateInviteCodeSchema`
-
-**UI:**
-
-- Invite link panel (commissioner-only) on tournament detail page — shows full URL, copy button, regenerate with confirmation dialog
-- Dashboard: only shows "my tournaments"
-
-**RLS:**
-
-- New `supabase/migrate-invite-code.sql` — tighten `tournaments` SELECT to creator OR participant
-- Drizzle migration required; existing tournament data can be wiped
-
-#### Key decisions (resolved)
-
-1. **Code format**: 8-char uppercase hex (e.g. `A3F7D12E`) — simple, no word-list collisions
-2. **Code expiry**: permanent until regenerated (v1)
-3. **Deep link**: `/join/[code]` auto-fills and processes the code from the URL
-
----
-
 ### Friends System
 
 A social layer that lets users connect with other golfers. Friends can be quickly added to tournaments by commissioners without needing a join code, making it easy to organise regular groups.
 
 #### Why deferred
 
-The current system has no user-to-user relationships — participants are added by searching all persons or creating guests. A friends system introduces a new schema domain (friendships, requests), new UI surfaces (friend list, requests, search), and a friend-code sharing mechanism. It benefits from the private tournaments work being done first.
+The current system has no user-to-user relationships — participants are added by searching all persons or creating guests. A friends system introduces a new schema domain (friendships, requests), new UI surfaces (friend list, requests, search), and a friend-code sharing mechanism.
 
 #### Sub-features
 
@@ -169,17 +81,6 @@ The current system has no user-to-user relationships — participants are added 
 | ------------ | ---------------------- | ------------------------------------------------------------------------- |
 | `friendCode` | text, unique, not null | Auto-generated on signup (e.g., `EAGLE-TOM1`). Displayed on profile page. |
 
-#### Query patterns
-
-- **Get friends list**: `SELECT * FROM friendships WHERE (userId = $me OR friendUserId = $me) AND status = 'accepted'` — join to `profiles` and `persons` for display info.
-- **Get pending requests (incoming)**: `WHERE friendUserId = $me AND status = 'pending'`
-- **Get pending requests (outgoing)**: `WHERE userId = $me AND status = 'pending'`
-- **Send request**: `INSERT INTO friendships (userId, friendUserId, status) VALUES ($me, $them, 'pending')` — reject if row already exists.
-- **Accept request**: `UPDATE friendships SET status = 'accepted', respondedAt = now() WHERE id = $id AND friendUserId = $me`
-- **Decline request**: `UPDATE friendships SET status = 'declined', respondedAt = now() WHERE id = $id AND friendUserId = $me`
-- **Remove friend**: `DELETE FROM friendships WHERE id = $id AND (userId = $me OR friendUserId = $me)`
-- **Lookup by friend code**: `SELECT * FROM profiles WHERE friendCode = $code` — used when entering a code to send a request.
-
 #### Server functions
 
 | Function                   | Purpose                                                                                     |
@@ -200,21 +101,6 @@ The current system has no user-to-user relationships — participants are added 
 | `/friends/add`       | Enter a friend code to send a request                                       |
 | `/friends/add/:code` | Deep link — auto-fills the code, shows target user preview, confirm to send |
 
-#### Integration with tournaments
-
-The `addParticipantFn` in `tournaments.server.ts` currently lets commissioners search all persons by name. With the friends system:
-
-- The "Add Participant" UI gains a **"Friends" tab** showing the commissioner's friends list (filtered to those not already in the tournament).
-- Selecting a friend calls the existing `addParticipantFn` with their `personId` — no schema change needed, just a UI shortcut.
-- The person search tab remains available for adding non-friends or guests.
-
-#### RLS considerations
-
-- `friendships` rows visible only to the two users involved: `WHERE userId = auth.uid() OR friendUserId = auth.uid()`.
-- Insert: any authenticated user can insert with `userId = auth.uid()` (cannot impersonate).
-- Update: only `friendUserId = auth.uid()` can accept/decline.
-- Delete: either party (`userId = auth.uid() OR friendUserId = auth.uid()`).
-
 #### Impact
 
 - Schema: moderate (1 new table, 1 new column on `profiles`, new RLS policies)
@@ -223,25 +109,17 @@ The `addParticipantFn` in `tournaments.server.ts` currently lets commissioners s
 - UI: significant (friends list, requests page, add-friend flow, friend-code on profile, "Friends" tab in add-participant modal)
 - Existing code changes: minor (add "Friends" tab to tournament participant add flow)
 
-#### Key decisions
-
-1. **Friend code format** — same style as tournament join codes (`EAGLE-XXXX`) vs name-derived (`EAGLE-TOM1`). Name-derived codes are more memorable but require uniqueness handling.
-2. **Re-requesting after decline** — allow immediately, after a cooldown period, or never. Recommended: allow re-request after the existing row is deleted (manual cleanup or auto-expire declined requests after 30 days).
-3. **Friend code regeneration** — should users be able to change their friend code? If yes, old codes become invalid immediately.
-4. **Notifications** — friend requests need visibility. Options: badge count in nav (polling or realtime), push notifications (requires native wrapper or web push), or email. Simplest v1: badge count via polling on the app layout loader.
-5. **Mutual friends visibility** — nice-to-have but adds query complexity. Defer to v2.
-
 ---
 
 ### Native Wrapper (Capacitor etc.)
 
-PWA and offline-first are not deferred — they are Phase 6 (IndexedDB persistence, offline mutation queue, Supabase Realtime). The open question is whether a native wrapper (Capacitor, etc.) is needed on top of the PWA if iOS imposes limitations on push notifications, background sync, or storage quotas. Test iOS PWA behaviour after Phase 6 and decide then.
+PWA and offline-first are fully implemented — IndexedDB persistence, offline mutation queue, Supabase Realtime. The open question is whether a native wrapper (Capacitor, etc.) is needed on top of the PWA if iOS imposes limitations on push notifications, background sync, or storage quotas. Test iOS PWA behaviour and decide then.
 
 ---
 
 ### Magic Link Auth
 
-Currently email + password only. Could add magic link as an alternative sign-in method via Supabase Auth.
+Currently email + password and Google OAuth are implemented. Could add magic link as an alternative sign-in method via Supabase Auth.
 
 ---
 
@@ -291,43 +169,81 @@ First-time users currently land on the dashboard with no guidance. Add a lightwe
 ## B. Pending Decisions & Open Questions
 
 - **Plus-handicap policy**: `getPlayingHandicap()` currently clamps at 0 — plus handicaps don't give strokes. Keep as-is or support negative strokes?
-- **Tournament privacy model**: Current read APIs are open to any authenticated user. Private tournaments / invite code work (see above) will resolve this — confirm if any read lockdown is needed before that work starts.
 - **RLS vs app-layer auth**: Drizzle connects directly to Postgres, bypassing RLS entirely. Confirm if this is an intentional security model or if sensitive mutations should move through the Supabase client/RPC for defense-in-depth.
 - **CSP `unsafe-inline`**: The Content-Security-Policy header uses `'unsafe-inline'` for scripts because TanStack Start injects inline scripts for SSR hydration. Revisit when TanStack Start exposes a nonce injection API. No immediate action required.
-- **RLS tightening**: Most tables use `USING (true) WITH CHECK (true)` for authenticated users. Only worth tightening if a Supabase JS client data path is introduced (e.g. realtime subscriptions).
-- **PWA iOS verification**: Phase 6.4 conflict verification still pending. Decide if a dedicated iOS PWA/offline sync test pass is needed before new game modes.
+- **RLS tightening**: Most tables use `USING (true) WITH CHECK (true)` for authenticated users. Only worth tightening if a Supabase JS client data path is introduced (e.g. realtime subscriptions). Private tournament implementation will require this.
+- **PWA iOS verification**: Conflict verification (offline/online multi-device test) still pending. Decide if a dedicated iOS PWA/offline sync test pass is needed.
 - **Locale for dates**: `en-AU`/`en-GB` is hardcoded in a few places. Decide if locale should be configurable or based on user profile.
 - **Testing strategy**: Parked, but still a high-leverage safety net for the scoring engine.
+- **6.4 Conflict Verification**: Simulate offline/online transitions with multiple devices to verify append-only + latest-timestamp-wins in practice.
 
 ---
 
 ## C. Recently Completed
 
+### Wolf Engine & Declaration UI
+
+Full Wolf implementation: scoring engine, per-hole declaration UI, and `gameDecisions` table.
+
+- **Engine**: `src/lib/domain/wolf.ts` — within-group individual game, fixed rotation wolf order, standard 2/4/2 points (wolf+partner win: 2pts each; lone wolf wins: 4pts; lone wolf loses: 2pts to each of the other 3)
+- **Declaration UI**: `src/components/pages/live-scoring-page/components/wolf-declaration-control.tsx` — per-hole wolf partner selection in the live scoring view
+- **Server functions**: `submitGameDecisionFn`, `getGameDecisionsFn` in `src/lib/game-decisions.server.ts`
+- **Schema**: `gameDecisions` table (`id`, `competitionId`, `roundId`, `holeNumber`, `data` jsonb, `recordedByUserId`, `createdAt`) — append-only, latest per `(competitionId, holeNumber)` wins
+
+### Private Tournaments & Invite Codes
+
+Every tournament is private by default. The dashboard only shows tournaments the user participates in (or created). Joining requires an invite code.
+
+- **Schema**: `inviteCode text NOT NULL UNIQUE` on `tournaments` table. Golf-themed codes (e.g. `BIRDIE-X7K2`) generated by `generateInviteCode()` in `src/lib/server/invite-codes.server.ts`.
+- **Query isolation**: `getTournamentsFn` filters to tournaments where user is creator or participant.
+- **Join route**: `src/routes/join.$code.tsx` — outside `_app` layout. Unauthenticated users see tournament name + login/signup buttons with `?redirect=/join/[code]`. Authenticated users see join confirmation or redirect if already a member.
+- **Server functions** in `src/lib/tournaments.server.ts`: `getTournamentByInviteCodeFn`, `joinTournamentByCodeFn`, `getTournamentInviteCodeFn`, `regenerateInviteCodeFn` (commissioner only)
+- **Invite link panel** (commissioner-only) on tournament detail page — shows full URL, copy button, regenerate with confirmation dialog
+
+### Scoring Rework (Phase 7)
+
+Complete overhaul of the competition and scoring model.
+
+- **Individual Scoreboard always present** — auto-computed from raw score events (no competition setup required). Columns: Gross / Net / Stableford / Bonus / Total.
+- **`stableford` and `stroke_play` competition types retired** from UI (schema values kept for legacy data display).
+- **`roundTeams` / `roundTeamMembers` dropped** — tables never written to in practice.
+- **`tournamentStandings` deprecated** — no new writes. Auto-computed `getTournamentLeaderboardFn` replaces it.
+- **`competitionCategory` enum** (`match | game | bonus`) on `competitions` table replaces old `participantType`.
+- **`primaryScoringBasis`** added to `rounds` and `tournaments` — commissioner marks the trophy column (`gross_strokes | net_strokes | stableford | total`).
+- **`gameDecisions` table** — append-only per-hole game declarations (required for Wolf).
+- **New engines**: `rumble.ts`, `hi-lo.ts`, `wolf.ts`, `six-point.ts`, `chair.ts`, `individual-scoreboard.ts`, `tournament-leaderboard.ts`
+- **New server functions**: `getIndividualScoreboardFn`, `getTournamentLeaderboardFn`, `setRoundPrimaryScoringBasisFn`, `setTournamentPrimaryScoringBasisFn` in `src/lib/scoreboards.server.ts`
+- **Tournament detail**: `leaderboard-section.tsx` replaces `standings-section.tsx`. Two sections: Individual Leaderboard + Team Leaderboard (teams only).
+
 ### Rumble
 
 A team format where entire groups play against each other. Holes 1–6: best 1 stableford; 7–12: sum of best 2; 13–17: sum of best 3; hole 18: sum of all 4. All groups from the same team are summed; higher total wins. Implemented as `rumble` competition format type.
 
-Key files: `src/lib/domain/rumble.ts`, `src/components/round-detail/add-team-comp-dialog.tsx`, `src/components/round-detail/edit-competition-dialog.tsx`
+Key files: `src/lib/domain/rumble.ts`, competition add/edit dialogs.
 
 ### Hi-Lo
 
 A 2v2 within-group match format with parallel high-ball and low-ball matches per hole. 2 points available per hole. Implemented as `hi_lo` format type.
 
-Key files: `src/lib/domain/hi-lo.ts`, add/edit competition dialogs.
+Key files: `src/lib/domain/hi-lo.ts`, competition add/edit dialogs.
 
 ### Six Point (Format Revision)
 
 Original 4-player configurable-distribution design replaced. Now: 3 players per group, fixed `4/2/0` distribution, commissioner chooses `stableford` or `gross` scoring basis, revised tie-splitting rules (`3/3/0`, `4/1/1`, `2/2/2`). Full engine rewrite.
 
+Key files: `src/lib/domain/six-point.ts`.
+
 ### Chair
 
 Within-group individual game. Win a hole outright (best net stableford, no tie) to take the chair; chair holder earns 1 point per hole held. Fully score-derivable. Implemented as `chair` format type.
+
+Key files: `src/lib/domain/chair.ts`.
 
 ### Standalone Rounds (Quick Round)
 
 `createSingleRoundFn` auto-creates a tournament with `isSingleRound: true` behind the scenes. UI hides the tournament abstraction when `isSingleRound` is detected. Schema unchanged: `rounds.tournamentId` remains NOT NULL.
 
-Key files: `src/lib/rounds.server.ts`, `src/db/schema.ts`, `src/components/pages/round-detail-page.tsx`.
+Key files: `src/lib/rounds.server.ts` (`createSingleRoundFn`), `src/db/schema.ts` (`isSingleRound` column on `tournaments`).
 
 ### UI Polish & Copy Fixes
 
@@ -338,10 +254,6 @@ Key files: `src/lib/rounds.server.ts`, `src/db/schema.ts`, `src/components/pages
 - Course view: back button, delete button hover styles
 - Players panel: Teams toggle redesigned with descriptive label and explanation
 
-### Six Point Format Revision
-
-See Six Point above — separate entry because it replaced the earlier design.
-
 ### Competition Configuration Validation
 
 - Scope selector hidden for within-group-only formats (Chair, Wolf, Six Point)
@@ -351,14 +263,14 @@ See Six Point above — separate entry because it replaced the earlier design.
 
 ### Round State: Awaiting Start Lock
 
-Once a round transitions to `awaiting_start`, all configuration is locked (players, competitions, round settings). UI hides all Add/Edit controls and shows a banner. Round step navigation: Previous left / Next right, step indicator strip with icons (Draft → pencil, Awaiting Start → clock, In Play → play circle, Completed → checkmark).
+Once a round transitions to `scheduled`, all configuration is locked (players, competitions, round settings). UI hides all Add/Edit controls and shows a banner. Round step navigation: Previous left / Next right, step indicator strip with icons (Draft → pencil, Awaiting Start → clock, In Play → play circle, Completed → checkmark).
 
 ### Team Scorecard Enhancements
 
 - Matched pair grouping: bordered card per pairing in scorecard and live scoring view
 - Running match score inline on scorecard (e.g. "A 3 – B 2" or "A/S")
 - Live scoring button moved to top, renamed to "Quick Score" / "Score Holes"
-- Consistent team colours across players panel, scorecard, and match result summaries via shared utility
+- Consistent team colours across players panel, scorecard, and match result summaries via `src/lib/team-colours.ts`
 
 ### Bug Fix: Player Add Toast/State Mismatch
 
@@ -368,24 +280,30 @@ When adding a player, the UI occasionally showed a "player already added" toast 
 
 **First pass:**
 
-- `requireAuth()` added to all 15 unprotected GET server functions
+- `requireAuth()` added to all unprotected GET server functions
 - Security headers: CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy (`__root.tsx`)
 - Rate limiting on `signInFn` (10/15 min) and `signUpFn` (5/15 min)
 - `signInFn` password validator corrected from `min(1)` to `min(8)`
-- `.max()` limits added to all string fields in `validators.ts`
+- `.max()` limits added to all string fields in validators
 - ILIKE wildcard injection sanitised in `searchPersonsFn`
 - `.env.example` corrected to `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `DATABASE_URL` example updated with `?sslmode=require`
 - `.gitignore` expanded: `.env.production`, `.env.staging`, `*.pem`, `*.key`, `*.cert`
-- Runtime env var validation added (`src/lib/env.ts`), wired into `src/db/index.ts`
+- Runtime env var validation added (`src/lib/server/env.server.ts`), wired into `src/db/index.ts`
 - npm audit — all critical/high findings are dev-only transitive deps, no production runtime exposure
 
 **Second pass:**
 
-- IDOR authorization checks added to all sensitive GET endpoints: `getTournamentFn`, `getCompetitionsFn`, `getTournamentStandingsFn`, `getScorecardFn`, `getScoreHistoryFn`, `getRoundFn`, `getRoundCompetitionsFn`, `getCompetitionFn`, `computeStandingsFn` — via `requireTournamentParticipant` and `verifyTournamentMembership` helpers in `auth.helpers.ts`
-- `safeHandler` / `safeHandlerNoArg` HOFs added (`src/lib/server-utils.ts`) to catch and sanitise unexpected DB/Postgres errors on high-risk mutation handlers
+- IDOR authorization checks added to all sensitive GET endpoints via `requireTournamentParticipant` and `verifyTournamentMembership` helpers in `src/lib/server/auth.helpers.server.ts`
+- `safeHandler` / `safeHandlerNoArg` HOFs added (`src/lib/server/server-utils.server.ts`) to catch and sanitise unexpected DB/Postgres errors on high-risk mutation handlers
 - Rate limiting added to `computeStandingsFn` (30 req/user/min)
-- `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` added to `env.ts` validation; `supabase.server.ts` updated to use `env.*`
+- `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` added to env validation; `supabase.server.ts` updated to use `env.*`
 - Dual lockfile resolved: `yarn.lock` deleted; npm (`package-lock.json`) is the single package manager
+
+### Google OAuth
+
+`signInWithOAuthFn` added to `src/lib/auth.server.ts`. Google OAuth provider supported via Supabase Auth. Login/signup pages show Google sign-in button alongside email + password.
+
+---
 
 ## D. User Thoughts and Findings

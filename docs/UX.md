@@ -50,9 +50,12 @@ All color values use **OKLCH** format for perceptual uniformity and better color
 | Muted             | `#3b4261` | `oklch(0.3216 0.0392 264.05)` | `--tn-storm-muted`       |
 | Muted Foreground  | `#787c99` | `oklch(0.5882 0.0653 264.46)` | `--tn-storm-muted-fg`    |
 | Accent            | `#545c7e` | `oklch(0.3843 0.0457 264.05)` | `--tn-storm-accent`      |
-| Border/Input      | `#545c7e` | `oklch(0.3843 0.0457 264.05)` | `--tn-storm-border`      |
+| Border            | `#545c7e` | `oklch(0.3843 0.0457 264.05)` | `--tn-storm-border`      |
+| Input             | `#545c7e` | `oklch(0.3843 0.0457 264.05)` | `--tn-storm-input`       |
 | Ring              | `#7aa2f7` | `oklch(0.6941 0.0981 264.46)` | `--tn-storm-ring`        |
 | Comment (utility) | `#565f89` | `oklch(0.5098 0.0522 264.46)` | `--tn-storm-comment`     |
+| Coral             | —         | `oklch(0.72 0.17 26)`         | `--tn-storm-coral`       |
+| Purple            | —         | `oklch(0.73 0.18 301)`        | `--tn-storm-purple`      |
 
 ### Characteristics
 
@@ -80,8 +83,11 @@ All color values use **OKLCH** format for perceptual uniformity and better color
 | Muted             | `#DCD7F2` | `oklch(0.9216 0.0163 264.46)` | `--tn-linen-muted`       |
 | Muted Foreground  | `#6C7FA6` | `oklch(0.5882 0.0653 264.46)` | `--tn-linen-muted-fg`    |
 | Accent            | `#E0DBF7` | `oklch(0.9412 0.0196 264.46)` | `--tn-linen-accent`      |
-| Border/Input      | `#C3B8EA` | `oklch(0.8627 0.0327 264.46)` | `--tn-linen-border`      |
+| Border            | `#C3B8EA` | `oklch(0.8627 0.0327 264.46)` | `--tn-linen-border`      |
+| Input             | `#C3B8EA` | `oklch(0.8627 0.0327 264.46)` | `--tn-linen-input`       |
 | Ring              | `#2E7DE9` | `oklch(0.5686 0.1571 264.46)` | `--tn-linen-ring`        |
+| Coral             | —         | `oklch(0.63 0.19 26)`         | `--tn-linen-coral`       |
+| Purple            | —         | `oklch(0.57 0.2 301)`         | `--tn-linen-purple`      |
 
 ### Characteristics
 
@@ -123,6 +129,18 @@ Semantic tokens automatically map to the correct primitive based on the current 
 | `--border`                 | Dividers            | `--tn-storm-border`      | `--tn-linen-border`      |
 | `--input`                  | Form inputs         | `--tn-storm-input`       | `--tn-linen-input`       |
 | `--ring`                   | Focus ring          | `--tn-storm-ring`        | `--tn-linen-ring`        |
+| `--coral`                  | Team A accent       | `--tn-storm-coral`       | `--tn-linen-coral`       |
+| `--coral-foreground`       | Text on coral       | Storm bg                 | White                    |
+| `--purple`                 | Team B accent       | `--tn-storm-purple`      | `--tn-linen-purple`      |
+| `--purple-foreground`      | Text on purple      | Storm bg                 | White                    |
+
+### Additional Token Families
+
+The following token families are defined in `globals.css` and exported to Tailwind, primarily for shadcn/ui compatibility:
+
+**`chart-1` – `chart-5`**: Map to `primary`, `info`, `success`, `warning`, `destructive` primitives per theme. Used by recharts/chart components.
+
+**`sidebar-*` (8 tokens)**: `sidebar`, `sidebar-foreground`, `sidebar-primary`, `sidebar-primary-foreground`, `sidebar-accent`, `sidebar-accent-foreground`, `sidebar-border`, `sidebar-ring`. Map to the corresponding linen/storm primitives. Included for shadcn/ui sidebar component compatibility.
 
 ---
 
@@ -152,6 +170,18 @@ Semantic tokens automatically map to the correct primitive based on the current 
 
 // Borders and inputs
 <input className="border-input ring-ring" />
+```
+
+### Team Colour Coding
+
+Coral and purple are used as persistent team accent colours across the players panel, scorecard, and match result summaries. These tokens are used by `src/lib/team-colours.ts` rather than hardcoded.
+
+```tsx
+// Team A
+<Badge className="bg-coral text-coral-foreground">Team A</Badge>
+
+// Team B
+<Badge className="bg-purple text-purple-foreground">Team B</Badge>
 ```
 
 ### Scorecard Color Coding
@@ -301,15 +331,6 @@ Key accessible pairings:
 ---
 
 ## Migration Notes
-
-### From Princeton Orange Palette
-
-The previous Princeton Orange palette has been fully replaced with Tokyo Night. Key changes:
-
-1. **Primitives removed**: `--princeton-orange`, `--linen`, `--alice-blue`, `--gunmetal`, `--emerald`, `--light-coral`, `--tuscan-sun`, `--blue-grey`, `--silver`
-2. **Primitives added**: All Tokyo Night Storm and Linen primitives (29 total)
-3. **Semantic tokens preserved**: All semantic token names remain the same (backward compatible)
-4. **Component updates**: Only 2 files had hardcoded colors (`scorecard.tsx`, `standings-section.tsx`)
 
 ### Theme Switching
 

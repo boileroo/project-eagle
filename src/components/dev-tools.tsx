@@ -175,7 +175,7 @@ export function DevTools() {
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="z-9999 fixed bottom-4 left-4 flex h-10 w-10 items-center justify-center rounded-full bg-orange-500 text-white shadow-lg transition-transform hover:scale-110 active:scale-95"
+        className="fixed bottom-4 left-4 z-9999 flex h-10 w-10 items-center justify-center rounded-full bg-orange-500 text-white shadow-lg transition-transform hover:scale-110 active:scale-95"
         title="Dev Tools"
       >
         🛠️
@@ -183,7 +183,7 @@ export function DevTools() {
 
       {/* Panel */}
       {open && (
-        <div className="z-9999 fixed bottom-16 left-4 w-72 rounded-lg border bg-white shadow-xl dark:bg-zinc-900">
+        <div className="fixed bottom-16 left-4 z-9999 w-72 rounded-lg border bg-white shadow-xl dark:bg-zinc-900">
           <div className="flex items-center justify-between border-b px-3 py-2">
             <span className="text-sm font-semibold">🛠️ Dev Tools</span>
             <Badge variant="outline" className="text-[10px]">
