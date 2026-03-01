@@ -36,6 +36,7 @@ export function NewCoursePage() {
         onSubmit={handleSubmit}
         submitLabel="Create Course"
         submitting={isPending}
+        onCancel={() => navigate({ to: '/courses' })}
       />
     </div>
   );

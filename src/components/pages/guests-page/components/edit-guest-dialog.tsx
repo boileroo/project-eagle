@@ -89,7 +89,7 @@ export function EditGuestDialog({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-4 py-4"
+            className="space-y-4"
           >
             <FormField
               control={form.control}

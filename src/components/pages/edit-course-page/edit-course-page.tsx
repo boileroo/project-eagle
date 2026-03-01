@@ -68,6 +68,12 @@ export function EditCoursePage({
         onSubmit={handleSubmit}
         submitLabel="Save Changes"
         submitting={isPending}
+        onCancel={() =>
+          navigate({
+            to: '/courses/$courseId',
+            params: { courseId: course.id },
+          })
+        }
       />
     </div>
   );

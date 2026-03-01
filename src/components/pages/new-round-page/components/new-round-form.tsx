@@ -97,7 +97,7 @@ export function NewRoundForm({
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>

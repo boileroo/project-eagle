@@ -8,223 +8,223 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root';
-import { Route as OfflineRouteImport } from './routes/offline';
-import { Route as AuthRouteImport } from './routes/_auth';
-import { Route as AppRouteImport } from './routes/_app';
-import { Route as AppIndexRouteImport } from './routes/_app/index';
-import { Route as JoinCodeRouteImport } from './routes/join.$code';
-import { Route as AuthCallbackRouteImport } from './routes/auth/callback';
-import { Route as AuthSignupRouteImport } from './routes/_auth/signup';
-import { Route as AuthLoginRouteImport } from './routes/_auth/login';
-import { Route as AppGuestsRouteImport } from './routes/_app/guests';
-import { Route as AppAccountRouteImport } from './routes/_app/account';
-import { Route as AppTournamentsIndexRouteImport } from './routes/_app/tournaments/index';
-import { Route as AppRoundsIndexRouteImport } from './routes/_app/rounds/index';
-import { Route as AppCoursesIndexRouteImport } from './routes/_app/courses/index';
-import { Route as AppTournamentsNewRouteImport } from './routes/_app/tournaments/new';
-import { Route as AppRoundsNewRouteImport } from './routes/_app/rounds/new';
-import { Route as AppRoundsRoundIdRouteImport } from './routes/_app/rounds/$roundId';
-import { Route as AppCoursesNewRouteImport } from './routes/_app/courses/new';
-import { Route as AppTournamentsTournamentIdIndexRouteImport } from './routes/_app/tournaments/$tournamentId/index';
-import { Route as AppCoursesCourseIdIndexRouteImport } from './routes/_app/courses/$courseId/index';
-import { Route as AppTournamentsTournamentIdEditRouteImport } from './routes/_app/tournaments/$tournamentId/edit';
-import { Route as AppCoursesCourseIdEditRouteImport } from './routes/_app/courses/$courseId/edit';
-import { Route as AppTournamentsTournamentIdRoundsRoundIdIndexRouteImport } from './routes/_app/tournaments/$tournamentId/rounds/$roundId/index';
-import { Route as AppTournamentsTournamentIdRoundsRoundIdPlayRouteImport } from './routes/_app/tournaments/$tournamentId/rounds/$roundId/play';
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as OfflineRouteImport } from './routes/offline'
+import { Route as AuthRouteImport } from './routes/_auth'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as JoinCodeRouteImport } from './routes/join.$code'
+import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
+import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
+import { Route as AuthLoginRouteImport } from './routes/_auth/login'
+import { Route as AppGuestsRouteImport } from './routes/_app/guests'
+import { Route as AppAccountRouteImport } from './routes/_app/account'
+import { Route as AppTournamentsIndexRouteImport } from './routes/_app/tournaments/index'
+import { Route as AppRoundsIndexRouteImport } from './routes/_app/rounds/index'
+import { Route as AppCoursesIndexRouteImport } from './routes/_app/courses/index'
+import { Route as AppTournamentsNewRouteImport } from './routes/_app/tournaments/new'
+import { Route as AppRoundsNewRouteImport } from './routes/_app/rounds/new'
+import { Route as AppRoundsRoundIdRouteImport } from './routes/_app/rounds/$roundId'
+import { Route as AppCoursesNewRouteImport } from './routes/_app/courses/new'
+import { Route as AppTournamentsTournamentIdIndexRouteImport } from './routes/_app/tournaments/$tournamentId/index'
+import { Route as AppCoursesCourseIdIndexRouteImport } from './routes/_app/courses/$courseId/index'
+import { Route as AppTournamentsTournamentIdEditRouteImport } from './routes/_app/tournaments/$tournamentId/edit'
+import { Route as AppCoursesCourseIdEditRouteImport } from './routes/_app/courses/$courseId/edit'
+import { Route as AppTournamentsTournamentIdRoundsRoundIdIndexRouteImport } from './routes/_app/tournaments/$tournamentId/rounds/$roundId/index'
+import { Route as AppTournamentsTournamentIdRoundsRoundIdPlayRouteImport } from './routes/_app/tournaments/$tournamentId/rounds/$roundId/play'
 
 const OfflineRoute = OfflineRouteImport.update({
   id: '/offline',
   path: '/offline',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 const JoinCodeRoute = JoinCodeRouteImport.update({
   id: '/join/$code',
   path: '/join/$code',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
   id: '/signup',
   path: '/signup',
   getParentRoute: () => AuthRoute,
-} as any);
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => AuthRoute,
-} as any);
+} as any)
 const AppGuestsRoute = AppGuestsRouteImport.update({
   id: '/guests',
   path: '/guests',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 const AppAccountRoute = AppAccountRouteImport.update({
   id: '/account',
   path: '/account',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 const AppTournamentsIndexRoute = AppTournamentsIndexRouteImport.update({
   id: '/tournaments/',
   path: '/tournaments/',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 const AppRoundsIndexRoute = AppRoundsIndexRouteImport.update({
   id: '/rounds/',
   path: '/rounds/',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 const AppCoursesIndexRoute = AppCoursesIndexRouteImport.update({
   id: '/courses/',
   path: '/courses/',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 const AppTournamentsNewRoute = AppTournamentsNewRouteImport.update({
   id: '/tournaments/new',
   path: '/tournaments/new',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 const AppRoundsNewRoute = AppRoundsNewRouteImport.update({
   id: '/rounds/new',
   path: '/rounds/new',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 const AppRoundsRoundIdRoute = AppRoundsRoundIdRouteImport.update({
   id: '/rounds/$roundId',
   path: '/rounds/$roundId',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 const AppCoursesNewRoute = AppCoursesNewRouteImport.update({
   id: '/courses/new',
   path: '/courses/new',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 const AppTournamentsTournamentIdIndexRoute =
   AppTournamentsTournamentIdIndexRouteImport.update({
     id: '/tournaments/$tournamentId/',
     path: '/tournaments/$tournamentId/',
     getParentRoute: () => AppRoute,
-  } as any);
+  } as any)
 const AppCoursesCourseIdIndexRoute = AppCoursesCourseIdIndexRouteImport.update({
   id: '/courses/$courseId/',
   path: '/courses/$courseId/',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 const AppTournamentsTournamentIdEditRoute =
   AppTournamentsTournamentIdEditRouteImport.update({
     id: '/tournaments/$tournamentId/edit',
     path: '/tournaments/$tournamentId/edit',
     getParentRoute: () => AppRoute,
-  } as any);
+  } as any)
 const AppCoursesCourseIdEditRoute = AppCoursesCourseIdEditRouteImport.update({
   id: '/courses/$courseId/edit',
   path: '/courses/$courseId/edit',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 const AppTournamentsTournamentIdRoundsRoundIdIndexRoute =
   AppTournamentsTournamentIdRoundsRoundIdIndexRouteImport.update({
     id: '/tournaments/$tournamentId/rounds/$roundId/',
     path: '/tournaments/$tournamentId/rounds/$roundId/',
     getParentRoute: () => AppRoute,
-  } as any);
+  } as any)
 const AppTournamentsTournamentIdRoundsRoundIdPlayRoute =
   AppTournamentsTournamentIdRoundsRoundIdPlayRouteImport.update({
     id: '/tournaments/$tournamentId/rounds/$roundId/play',
     path: '/tournaments/$tournamentId/rounds/$roundId/play',
     getParentRoute: () => AppRoute,
-  } as any);
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AppIndexRoute;
-  '/offline': typeof OfflineRoute;
-  '/account': typeof AppAccountRoute;
-  '/guests': typeof AppGuestsRoute;
-  '/login': typeof AuthLoginRoute;
-  '/signup': typeof AuthSignupRoute;
-  '/auth/callback': typeof AuthCallbackRoute;
-  '/join/$code': typeof JoinCodeRoute;
-  '/courses/new': typeof AppCoursesNewRoute;
-  '/rounds/$roundId': typeof AppRoundsRoundIdRoute;
-  '/rounds/new': typeof AppRoundsNewRoute;
-  '/tournaments/new': typeof AppTournamentsNewRoute;
-  '/courses/': typeof AppCoursesIndexRoute;
-  '/rounds/': typeof AppRoundsIndexRoute;
-  '/tournaments/': typeof AppTournamentsIndexRoute;
-  '/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute;
-  '/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute;
-  '/courses/$courseId/': typeof AppCoursesCourseIdIndexRoute;
-  '/tournaments/$tournamentId/': typeof AppTournamentsTournamentIdIndexRoute;
-  '/tournaments/$tournamentId/rounds/$roundId/play': typeof AppTournamentsTournamentIdRoundsRoundIdPlayRoute;
-  '/tournaments/$tournamentId/rounds/$roundId/': typeof AppTournamentsTournamentIdRoundsRoundIdIndexRoute;
+  '/': typeof AppIndexRoute
+  '/offline': typeof OfflineRoute
+  '/account': typeof AppAccountRoute
+  '/guests': typeof AppGuestsRoute
+  '/login': typeof AuthLoginRoute
+  '/signup': typeof AuthSignupRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/join/$code': typeof JoinCodeRoute
+  '/courses/new': typeof AppCoursesNewRoute
+  '/rounds/$roundId': typeof AppRoundsRoundIdRoute
+  '/rounds/new': typeof AppRoundsNewRoute
+  '/tournaments/new': typeof AppTournamentsNewRoute
+  '/courses/': typeof AppCoursesIndexRoute
+  '/rounds/': typeof AppRoundsIndexRoute
+  '/tournaments/': typeof AppTournamentsIndexRoute
+  '/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute
+  '/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
+  '/courses/$courseId/': typeof AppCoursesCourseIdIndexRoute
+  '/tournaments/$tournamentId/': typeof AppTournamentsTournamentIdIndexRoute
+  '/tournaments/$tournamentId/rounds/$roundId/play': typeof AppTournamentsTournamentIdRoundsRoundIdPlayRoute
+  '/tournaments/$tournamentId/rounds/$roundId/': typeof AppTournamentsTournamentIdRoundsRoundIdIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof AppIndexRoute;
-  '/offline': typeof OfflineRoute;
-  '/account': typeof AppAccountRoute;
-  '/guests': typeof AppGuestsRoute;
-  '/login': typeof AuthLoginRoute;
-  '/signup': typeof AuthSignupRoute;
-  '/auth/callback': typeof AuthCallbackRoute;
-  '/join/$code': typeof JoinCodeRoute;
-  '/courses/new': typeof AppCoursesNewRoute;
-  '/rounds/$roundId': typeof AppRoundsRoundIdRoute;
-  '/rounds/new': typeof AppRoundsNewRoute;
-  '/tournaments/new': typeof AppTournamentsNewRoute;
-  '/courses': typeof AppCoursesIndexRoute;
-  '/rounds': typeof AppRoundsIndexRoute;
-  '/tournaments': typeof AppTournamentsIndexRoute;
-  '/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute;
-  '/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute;
-  '/courses/$courseId': typeof AppCoursesCourseIdIndexRoute;
-  '/tournaments/$tournamentId': typeof AppTournamentsTournamentIdIndexRoute;
-  '/tournaments/$tournamentId/rounds/$roundId/play': typeof AppTournamentsTournamentIdRoundsRoundIdPlayRoute;
-  '/tournaments/$tournamentId/rounds/$roundId': typeof AppTournamentsTournamentIdRoundsRoundIdIndexRoute;
+  '/': typeof AppIndexRoute
+  '/offline': typeof OfflineRoute
+  '/account': typeof AppAccountRoute
+  '/guests': typeof AppGuestsRoute
+  '/login': typeof AuthLoginRoute
+  '/signup': typeof AuthSignupRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/join/$code': typeof JoinCodeRoute
+  '/courses/new': typeof AppCoursesNewRoute
+  '/rounds/$roundId': typeof AppRoundsRoundIdRoute
+  '/rounds/new': typeof AppRoundsNewRoute
+  '/tournaments/new': typeof AppTournamentsNewRoute
+  '/courses': typeof AppCoursesIndexRoute
+  '/rounds': typeof AppRoundsIndexRoute
+  '/tournaments': typeof AppTournamentsIndexRoute
+  '/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute
+  '/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
+  '/courses/$courseId': typeof AppCoursesCourseIdIndexRoute
+  '/tournaments/$tournamentId': typeof AppTournamentsTournamentIdIndexRoute
+  '/tournaments/$tournamentId/rounds/$roundId/play': typeof AppTournamentsTournamentIdRoundsRoundIdPlayRoute
+  '/tournaments/$tournamentId/rounds/$roundId': typeof AppTournamentsTournamentIdRoundsRoundIdIndexRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  '/_app': typeof AppRouteWithChildren;
-  '/_auth': typeof AuthRouteWithChildren;
-  '/offline': typeof OfflineRoute;
-  '/_app/account': typeof AppAccountRoute;
-  '/_app/guests': typeof AppGuestsRoute;
-  '/_auth/login': typeof AuthLoginRoute;
-  '/_auth/signup': typeof AuthSignupRoute;
-  '/auth/callback': typeof AuthCallbackRoute;
-  '/join/$code': typeof JoinCodeRoute;
-  '/_app/': typeof AppIndexRoute;
-  '/_app/courses/new': typeof AppCoursesNewRoute;
-  '/_app/rounds/$roundId': typeof AppRoundsRoundIdRoute;
-  '/_app/rounds/new': typeof AppRoundsNewRoute;
-  '/_app/tournaments/new': typeof AppTournamentsNewRoute;
-  '/_app/courses/': typeof AppCoursesIndexRoute;
-  '/_app/rounds/': typeof AppRoundsIndexRoute;
-  '/_app/tournaments/': typeof AppTournamentsIndexRoute;
-  '/_app/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute;
-  '/_app/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute;
-  '/_app/courses/$courseId/': typeof AppCoursesCourseIdIndexRoute;
-  '/_app/tournaments/$tournamentId/': typeof AppTournamentsTournamentIdIndexRoute;
-  '/_app/tournaments/$tournamentId/rounds/$roundId/play': typeof AppTournamentsTournamentIdRoundsRoundIdPlayRoute;
-  '/_app/tournaments/$tournamentId/rounds/$roundId/': typeof AppTournamentsTournamentIdRoundsRoundIdIndexRoute;
+  __root__: typeof rootRouteImport
+  '/_app': typeof AppRouteWithChildren
+  '/_auth': typeof AuthRouteWithChildren
+  '/offline': typeof OfflineRoute
+  '/_app/account': typeof AppAccountRoute
+  '/_app/guests': typeof AppGuestsRoute
+  '/_auth/login': typeof AuthLoginRoute
+  '/_auth/signup': typeof AuthSignupRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/join/$code': typeof JoinCodeRoute
+  '/_app/': typeof AppIndexRoute
+  '/_app/courses/new': typeof AppCoursesNewRoute
+  '/_app/rounds/$roundId': typeof AppRoundsRoundIdRoute
+  '/_app/rounds/new': typeof AppRoundsNewRoute
+  '/_app/tournaments/new': typeof AppTournamentsNewRoute
+  '/_app/courses/': typeof AppCoursesIndexRoute
+  '/_app/rounds/': typeof AppRoundsIndexRoute
+  '/_app/tournaments/': typeof AppTournamentsIndexRoute
+  '/_app/courses/$courseId/edit': typeof AppCoursesCourseIdEditRoute
+  '/_app/tournaments/$tournamentId/edit': typeof AppTournamentsTournamentIdEditRoute
+  '/_app/courses/$courseId/': typeof AppCoursesCourseIdIndexRoute
+  '/_app/tournaments/$tournamentId/': typeof AppTournamentsTournamentIdIndexRoute
+  '/_app/tournaments/$tournamentId/rounds/$roundId/play': typeof AppTournamentsTournamentIdRoundsRoundIdPlayRoute
+  '/_app/tournaments/$tournamentId/rounds/$roundId/': typeof AppTournamentsTournamentIdRoundsRoundIdIndexRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
+  fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/offline'
@@ -246,8 +246,8 @@ export interface FileRouteTypes {
     | '/courses/$courseId/'
     | '/tournaments/$tournamentId/'
     | '/tournaments/$tournamentId/rounds/$roundId/play'
-    | '/tournaments/$tournamentId/rounds/$roundId/';
-  fileRoutesByTo: FileRoutesByTo;
+    | '/tournaments/$tournamentId/rounds/$roundId/'
+  fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/offline'
@@ -269,7 +269,7 @@ export interface FileRouteTypes {
     | '/courses/$courseId'
     | '/tournaments/$tournamentId'
     | '/tournaments/$tournamentId/rounds/$roundId/play'
-    | '/tournaments/$tournamentId/rounds/$roundId';
+    | '/tournaments/$tournamentId/rounds/$roundId'
   id:
     | '__root__'
     | '/_app'
@@ -294,200 +294,200 @@ export interface FileRouteTypes {
     | '/_app/courses/$courseId/'
     | '/_app/tournaments/$tournamentId/'
     | '/_app/tournaments/$tournamentId/rounds/$roundId/play'
-    | '/_app/tournaments/$tournamentId/rounds/$roundId/';
-  fileRoutesById: FileRoutesById;
+    | '/_app/tournaments/$tournamentId/rounds/$roundId/'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AppRoute: typeof AppRouteWithChildren;
-  AuthRoute: typeof AuthRouteWithChildren;
-  OfflineRoute: typeof OfflineRoute;
-  AuthCallbackRoute: typeof AuthCallbackRoute;
-  JoinCodeRoute: typeof JoinCodeRoute;
+  AppRoute: typeof AppRouteWithChildren
+  AuthRoute: typeof AuthRouteWithChildren
+  OfflineRoute: typeof OfflineRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
+  JoinCodeRoute: typeof JoinCodeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/offline': {
-      id: '/offline';
-      path: '/offline';
-      fullPath: '/offline';
-      preLoaderRoute: typeof OfflineRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/offline'
+      path: '/offline'
+      fullPath: '/offline'
+      preLoaderRoute: typeof OfflineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_auth': {
-      id: '/_auth';
-      path: '';
-      fullPath: '/';
-      preLoaderRoute: typeof AuthRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/_auth'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app': {
-      id: '/_app';
-      path: '';
-      fullPath: '/';
-      preLoaderRoute: typeof AppRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/': {
-      id: '/_app/';
-      path: '/';
-      fullPath: '/';
-      preLoaderRoute: typeof AppIndexRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/join/$code': {
-      id: '/join/$code';
-      path: '/join/$code';
-      fullPath: '/join/$code';
-      preLoaderRoute: typeof JoinCodeRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/join/$code'
+      path: '/join/$code'
+      fullPath: '/join/$code'
+      preLoaderRoute: typeof JoinCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/callback': {
-      id: '/auth/callback';
-      path: '/auth/callback';
-      fullPath: '/auth/callback';
-      preLoaderRoute: typeof AuthCallbackRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_auth/signup': {
-      id: '/_auth/signup';
-      path: '/signup';
-      fullPath: '/signup';
-      preLoaderRoute: typeof AuthSignupRouteImport;
-      parentRoute: typeof AuthRoute;
-    };
+      id: '/_auth/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof AuthSignupRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/login': {
-      id: '/_auth/login';
-      path: '/login';
-      fullPath: '/login';
-      preLoaderRoute: typeof AuthLoginRouteImport;
-      parentRoute: typeof AuthRoute;
-    };
+      id: '/_auth/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_app/guests': {
-      id: '/_app/guests';
-      path: '/guests';
-      fullPath: '/guests';
-      preLoaderRoute: typeof AppGuestsRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/guests'
+      path: '/guests'
+      fullPath: '/guests'
+      preLoaderRoute: typeof AppGuestsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/account': {
-      id: '/_app/account';
-      path: '/account';
-      fullPath: '/account';
-      preLoaderRoute: typeof AppAccountRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AppAccountRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/tournaments/': {
-      id: '/_app/tournaments/';
-      path: '/tournaments';
-      fullPath: '/tournaments/';
-      preLoaderRoute: typeof AppTournamentsIndexRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/tournaments/'
+      path: '/tournaments'
+      fullPath: '/tournaments/'
+      preLoaderRoute: typeof AppTournamentsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/rounds/': {
-      id: '/_app/rounds/';
-      path: '/rounds';
-      fullPath: '/rounds/';
-      preLoaderRoute: typeof AppRoundsIndexRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/rounds/'
+      path: '/rounds'
+      fullPath: '/rounds/'
+      preLoaderRoute: typeof AppRoundsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/courses/': {
-      id: '/_app/courses/';
-      path: '/courses';
-      fullPath: '/courses/';
-      preLoaderRoute: typeof AppCoursesIndexRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/courses/'
+      path: '/courses'
+      fullPath: '/courses/'
+      preLoaderRoute: typeof AppCoursesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/tournaments/new': {
-      id: '/_app/tournaments/new';
-      path: '/tournaments/new';
-      fullPath: '/tournaments/new';
-      preLoaderRoute: typeof AppTournamentsNewRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/tournaments/new'
+      path: '/tournaments/new'
+      fullPath: '/tournaments/new'
+      preLoaderRoute: typeof AppTournamentsNewRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/rounds/new': {
-      id: '/_app/rounds/new';
-      path: '/rounds/new';
-      fullPath: '/rounds/new';
-      preLoaderRoute: typeof AppRoundsNewRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/rounds/new'
+      path: '/rounds/new'
+      fullPath: '/rounds/new'
+      preLoaderRoute: typeof AppRoundsNewRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/rounds/$roundId': {
-      id: '/_app/rounds/$roundId';
-      path: '/rounds/$roundId';
-      fullPath: '/rounds/$roundId';
-      preLoaderRoute: typeof AppRoundsRoundIdRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/rounds/$roundId'
+      path: '/rounds/$roundId'
+      fullPath: '/rounds/$roundId'
+      preLoaderRoute: typeof AppRoundsRoundIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/courses/new': {
-      id: '/_app/courses/new';
-      path: '/courses/new';
-      fullPath: '/courses/new';
-      preLoaderRoute: typeof AppCoursesNewRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/courses/new'
+      path: '/courses/new'
+      fullPath: '/courses/new'
+      preLoaderRoute: typeof AppCoursesNewRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/tournaments/$tournamentId/': {
-      id: '/_app/tournaments/$tournamentId/';
-      path: '/tournaments/$tournamentId';
-      fullPath: '/tournaments/$tournamentId/';
-      preLoaderRoute: typeof AppTournamentsTournamentIdIndexRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/tournaments/$tournamentId/'
+      path: '/tournaments/$tournamentId'
+      fullPath: '/tournaments/$tournamentId/'
+      preLoaderRoute: typeof AppTournamentsTournamentIdIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/courses/$courseId/': {
-      id: '/_app/courses/$courseId/';
-      path: '/courses/$courseId';
-      fullPath: '/courses/$courseId/';
-      preLoaderRoute: typeof AppCoursesCourseIdIndexRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/courses/$courseId/'
+      path: '/courses/$courseId'
+      fullPath: '/courses/$courseId/'
+      preLoaderRoute: typeof AppCoursesCourseIdIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/tournaments/$tournamentId/edit': {
-      id: '/_app/tournaments/$tournamentId/edit';
-      path: '/tournaments/$tournamentId/edit';
-      fullPath: '/tournaments/$tournamentId/edit';
-      preLoaderRoute: typeof AppTournamentsTournamentIdEditRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/tournaments/$tournamentId/edit'
+      path: '/tournaments/$tournamentId/edit'
+      fullPath: '/tournaments/$tournamentId/edit'
+      preLoaderRoute: typeof AppTournamentsTournamentIdEditRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/courses/$courseId/edit': {
-      id: '/_app/courses/$courseId/edit';
-      path: '/courses/$courseId/edit';
-      fullPath: '/courses/$courseId/edit';
-      preLoaderRoute: typeof AppCoursesCourseIdEditRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/courses/$courseId/edit'
+      path: '/courses/$courseId/edit'
+      fullPath: '/courses/$courseId/edit'
+      preLoaderRoute: typeof AppCoursesCourseIdEditRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/tournaments/$tournamentId/rounds/$roundId/': {
-      id: '/_app/tournaments/$tournamentId/rounds/$roundId/';
-      path: '/tournaments/$tournamentId/rounds/$roundId';
-      fullPath: '/tournaments/$tournamentId/rounds/$roundId/';
-      preLoaderRoute: typeof AppTournamentsTournamentIdRoundsRoundIdIndexRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/tournaments/$tournamentId/rounds/$roundId/'
+      path: '/tournaments/$tournamentId/rounds/$roundId'
+      fullPath: '/tournaments/$tournamentId/rounds/$roundId/'
+      preLoaderRoute: typeof AppTournamentsTournamentIdRoundsRoundIdIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/tournaments/$tournamentId/rounds/$roundId/play': {
-      id: '/_app/tournaments/$tournamentId/rounds/$roundId/play';
-      path: '/tournaments/$tournamentId/rounds/$roundId/play';
-      fullPath: '/tournaments/$tournamentId/rounds/$roundId/play';
-      preLoaderRoute: typeof AppTournamentsTournamentIdRoundsRoundIdPlayRouteImport;
-      parentRoute: typeof AppRoute;
-    };
+      id: '/_app/tournaments/$tournamentId/rounds/$roundId/play'
+      path: '/tournaments/$tournamentId/rounds/$roundId/play'
+      fullPath: '/tournaments/$tournamentId/rounds/$roundId/play'
+      preLoaderRoute: typeof AppTournamentsTournamentIdRoundsRoundIdPlayRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
-  AppAccountRoute: typeof AppAccountRoute;
-  AppGuestsRoute: typeof AppGuestsRoute;
-  AppIndexRoute: typeof AppIndexRoute;
-  AppCoursesNewRoute: typeof AppCoursesNewRoute;
-  AppRoundsRoundIdRoute: typeof AppRoundsRoundIdRoute;
-  AppRoundsNewRoute: typeof AppRoundsNewRoute;
-  AppTournamentsNewRoute: typeof AppTournamentsNewRoute;
-  AppCoursesIndexRoute: typeof AppCoursesIndexRoute;
-  AppRoundsIndexRoute: typeof AppRoundsIndexRoute;
-  AppTournamentsIndexRoute: typeof AppTournamentsIndexRoute;
-  AppCoursesCourseIdEditRoute: typeof AppCoursesCourseIdEditRoute;
-  AppTournamentsTournamentIdEditRoute: typeof AppTournamentsTournamentIdEditRoute;
-  AppCoursesCourseIdIndexRoute: typeof AppCoursesCourseIdIndexRoute;
-  AppTournamentsTournamentIdIndexRoute: typeof AppTournamentsTournamentIdIndexRoute;
-  AppTournamentsTournamentIdRoundsRoundIdPlayRoute: typeof AppTournamentsTournamentIdRoundsRoundIdPlayRoute;
-  AppTournamentsTournamentIdRoundsRoundIdIndexRoute: typeof AppTournamentsTournamentIdRoundsRoundIdIndexRoute;
+  AppAccountRoute: typeof AppAccountRoute
+  AppGuestsRoute: typeof AppGuestsRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppCoursesNewRoute: typeof AppCoursesNewRoute
+  AppRoundsRoundIdRoute: typeof AppRoundsRoundIdRoute
+  AppRoundsNewRoute: typeof AppRoundsNewRoute
+  AppTournamentsNewRoute: typeof AppTournamentsNewRoute
+  AppCoursesIndexRoute: typeof AppCoursesIndexRoute
+  AppRoundsIndexRoute: typeof AppRoundsIndexRoute
+  AppTournamentsIndexRoute: typeof AppTournamentsIndexRoute
+  AppCoursesCourseIdEditRoute: typeof AppCoursesCourseIdEditRoute
+  AppTournamentsTournamentIdEditRoute: typeof AppTournamentsTournamentIdEditRoute
+  AppCoursesCourseIdIndexRoute: typeof AppCoursesCourseIdIndexRoute
+  AppTournamentsTournamentIdIndexRoute: typeof AppTournamentsTournamentIdIndexRoute
+  AppTournamentsTournamentIdRoundsRoundIdPlayRoute: typeof AppTournamentsTournamentIdRoundsRoundIdPlayRoute
+  AppTournamentsTournamentIdRoundsRoundIdIndexRoute: typeof AppTournamentsTournamentIdRoundsRoundIdIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -509,21 +509,21 @@ const AppRouteChildren: AppRouteChildren = {
     AppTournamentsTournamentIdRoundsRoundIdPlayRoute,
   AppTournamentsTournamentIdRoundsRoundIdIndexRoute:
     AppTournamentsTournamentIdRoundsRoundIdIndexRoute,
-};
+}
 
-const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren);
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 interface AuthRouteChildren {
-  AuthLoginRoute: typeof AuthLoginRoute;
-  AuthSignupRoute: typeof AuthSignupRoute;
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthSignupRoute: typeof AuthSignupRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthLoginRoute: AuthLoginRoute,
   AuthSignupRoute: AuthSignupRoute,
-};
+}
 
-const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren);
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
@@ -531,28 +531,28 @@ const rootRouteChildren: RootRouteChildren = {
   OfflineRoute: OfflineRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   JoinCodeRoute: JoinCodeRoute,
-};
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from './router.tsx';
-import type { createStart } from '@tanstack/react-start';
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
 declare module '@tanstack/react-start' {
   interface Register {
-    ssr: true;
-    router: Awaited<ReturnType<typeof getRouter>>;
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
   }
 }
 
-import type { getRouter } from './router.tsx';
+import type { getRouter } from './router.tsx'
 
-import type { createStart } from '@tanstack/react-start';
+import type { createStart } from '@tanstack/react-start'
 
 declare module '@tanstack/react-start' {
   interface Register {
-    ssr: true;
+    ssr: true
 
-    router: Awaited<ReturnType<typeof getRouter>>;
+    router: Awaited<ReturnType<typeof getRouter>>
   }
 }

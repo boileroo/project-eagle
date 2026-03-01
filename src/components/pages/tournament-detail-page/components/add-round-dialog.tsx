@@ -140,7 +140,7 @@ export function AddRoundDialog({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="date"
@@ -170,6 +170,13 @@ export function AddRoundDialog({
             </div>
 
             <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
               <Button
                 type="submit"
                 disabled={adding || !form.formState.isValid}

@@ -26,6 +26,7 @@ interface CourseFormProps {
   onSubmit: (data: CreateCourseInput) => Promise<void>;
   submitLabel: string;
   submitting: boolean;
+  onCancel?: () => void;
 }
 
 function generateDefaultHoles(count: number) {
@@ -42,6 +43,7 @@ export function CourseForm({
   onSubmit,
   submitLabel,
   submitting,
+  onCancel,
 }: CourseFormProps) {
   const form = useForm<CreateCourseInput>({
     resolver: zodResolver(createCourseSchema),
@@ -83,7 +85,7 @@ export function CourseForm({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Course Name</FormLabel>
+                  <FormLabel required>Course Name</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. Royal Melbourne" {...field} />
                   </FormControl>
@@ -105,7 +107,7 @@ export function CourseForm({
               )}
             />
             <div>
-              <FormLabel>Number of Holes</FormLabel>
+              <FormLabel required>Number of Holes</FormLabel>
               <div className="mt-2 flex gap-2">
                 <Button
                   type="button"
@@ -199,7 +201,12 @@ export function CourseForm({
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
           <Button type="submit" disabled={submitting}>
             {submitting ? 'Saving…' : submitLabel}
           </Button>
