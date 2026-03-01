@@ -166,5 +166,5 @@ export const signInWithOAuthFn = createServerFn({ method: 'POST' })
       return { error: 'Failed to create OAuth URL', url: null };
     }
 
-    throw redirect({ to: authData.url });
+    throw redirect({ href: authData.url });
   });
