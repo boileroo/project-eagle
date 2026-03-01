@@ -171,6 +171,12 @@ export default defineConfig({
     startStorageContextClientStub(),
     serverModulesClientStub(),
     tanstackStart({
+      // query-options.ts intentionally imports createServerFn-based server functions
+      // for use as RPC bridges in queryFn. Suppress false-positive import-protection
+      // warnings for this file (createServerFn exports become RPC stubs in the client bundle).
+      importProtection: {
+        ignoreImporters: ['**/query-options.ts'],
+      },
       pages: [
         {
           path: '/offline',

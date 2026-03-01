@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
-import { getRequest, redirect } from '@tanstack/react-start/server';
+import { getRequest } from '@tanstack/react-start/server';
+import { redirect } from '@tanstack/react-router';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
