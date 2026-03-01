@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Link } from '@tanstack/react-router';
 import type { ActiveRound } from '@/types';
 import { ActiveRoundSection } from './components/active-round-section';
 import { JoinTournamentDialog } from './components/join-tournament-dialog';
+import { DashboardSection } from './components/dashboard-section';
+import { DashboardCard } from './components/dashboard-card';
 
 export function DashboardPage({
   userEmail,
@@ -26,72 +27,50 @@ export function DashboardPage({
 
       <ActiveRoundSection activeRounds={activeRounds} />
 
-      {/* ── Zone 2: Start ── */}
-      <section className="space-y-3">
-        <h2 className="text-muted-foreground text-sm font-medium tracking-wider uppercase">
-          Start
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Link
-            to="/tournaments/new"
-            className="group bg-card hover:bg-background rounded-lg border p-6 transition-colors"
-          >
-            <h3 className="mb-1 font-semibold">New Tournament</h3>
-            <p className="text-muted-foreground text-sm">
-              Multi-round event with teams, competitions, and standings
-            </p>
-          </Link>
-          <Link
-            to="/rounds/new"
-            className="group bg-card hover:bg-background rounded-lg border p-6 transition-colors"
-          >
-            <h3 className="mb-1 font-semibold">Quick Round</h3>
-            <p className="text-muted-foreground text-sm">
-              Jump straight into a round without tournament setup
-            </p>
-          </Link>
-          <JoinTournamentDialog
-            open={joinDialogOpen}
-            onOpenChange={setJoinDialogOpen}
-          />
-        </div>
-      </section>
+      <DashboardSection title="Start" gridCols={3}>
+        <DashboardCard
+          title="New Tournament"
+          description="Multi-round event with teams, competitions, and standings"
+          to="/tournaments/new"
+          size="large"
+        />
+        <DashboardCard
+          title="Quick Round"
+          description="Jump straight into a round without tournament setup"
+          to="/rounds/new"
+          size="large"
+        />
+        <JoinTournamentDialog
+          open={joinDialogOpen}
+          onOpenChange={setJoinDialogOpen}
+        />
+      </DashboardSection>
 
-      {/* ── Zone 3: Manage ── */}
-      <section className="space-y-3">
-        <h2 className="text-muted-foreground text-sm font-medium tracking-wider uppercase">
-          Manage
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Link
-            to="/tournaments"
-            className="group bg-card hover:bg-background rounded-lg border p-5 transition-colors"
-          >
-            <h3 className="mb-1 text-sm font-medium">Events</h3>
-            <p className="text-muted-foreground text-xs">
-              View all tournaments and rounds
-            </p>
-          </Link>
-          <Link
-            to="/courses"
-            className="group bg-card hover:bg-background rounded-lg border p-5 transition-colors"
-          >
-            <h3 className="mb-1 text-sm font-medium">Courses</h3>
-            <p className="text-muted-foreground text-xs">
-              Browse and manage the course library
-            </p>
-          </Link>
-          <Link
-            to="/guests"
-            className="group bg-card hover:bg-background rounded-lg border p-5 transition-colors"
-          >
-            <h3 className="mb-1 text-sm font-medium">Guests</h3>
-            <p className="text-muted-foreground text-xs">
-              Manage your saved guests
-            </p>
-          </Link>
-        </div>
-      </section>
+      <DashboardSection title="Continue">
+        <DashboardCard
+          title="Events"
+          description="View all tournaments and rounds"
+          to="/tournaments"
+        />
+      </DashboardSection>
+
+      <DashboardSection title="Manage">
+        <DashboardCard
+          title="Account"
+          description="Manage your profile and settings"
+          to="/account"
+        />
+        <DashboardCard
+          title="Courses"
+          description="Browse and manage the course library"
+          to="/courses"
+        />
+        <DashboardCard
+          title="Guests"
+          description="Manage your saved guests"
+          to="/guests"
+        />
+      </DashboardSection>
     </div>
   );
 }
