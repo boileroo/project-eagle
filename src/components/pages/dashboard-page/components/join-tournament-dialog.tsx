@@ -1,8 +1,19 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useJoinTournamentByCode } from '@/lib/tournaments';
+import { joinByCodeSchema, type JoinByCodeInput } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import {
   Dialog,
   DialogContent,
@@ -24,22 +35,28 @@ export function JoinTournamentDialog({
   onOpenChange,
 }: JoinTournamentDialogProps) {
   const navigate = useNavigate();
-  const [joinCode, setJoinCode] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [joinTournament, { isPending }] = useJoinTournamentByCode();
 
-  async function handleJoin() {
-    if (!joinCode.trim()) return;
-    setError(null);
+  const form = useForm<JoinByCodeInput>({
+    resolver: zodResolver(joinByCodeSchema),
+    defaultValues: {
+      code: '',
+    },
+  });
 
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      form.reset({ code: '' });
+    }
+  }, [open, form]);
+
+  const handleSubmit = async (data: JoinByCodeInput) => {
     await joinTournament({
-      variables: { code: joinCode.trim() },
+      variables: data,
       onSuccess: (result) => {
-        if (result.alreadyJoined) {
-          setJoinCode('');
-        } else {
+        if (!result.alreadyJoined) {
           toast.success(`You've joined ${result.tournamentName}!`);
-          setJoinCode('');
         }
         onOpenChange(false);
         navigate({
@@ -48,10 +65,10 @@ export function JoinTournamentDialog({
         });
       },
       onError: (err) => {
-        setError(err.message);
+        form.setError('code', { message: err.message });
       },
     });
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -70,25 +87,44 @@ export function JoinTournamentDialog({
             Enter the invite code shared by the tournament commissioner
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Input
-              placeholder="e.g. BIRDIE-12b7"
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4 py-4"
+          >
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Invite Code</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g. BIRDIE-12b7"
+                      {...field}
+                      onChange={(e) =>
+                        field.onChange(e.target.value.toUpperCase())
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            {error && <p className="text-destructive text-sm">{error}</p>}
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleJoin} disabled={isPending || !joinCode.trim()}>
-            {isPending ? 'Joining...' : 'Join'}
-          </Button>
-        </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? 'Joining...' : 'Join'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

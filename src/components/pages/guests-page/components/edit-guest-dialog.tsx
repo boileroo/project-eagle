@@ -1,10 +1,20 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from '@tanstack/react-router';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import type { GuestListItem } from '@/types';
 import { useUpdateGuest } from '@/lib/tournaments';
+import { updateGuestSchema, type UpdateGuestInput } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import {
   Dialog,
   DialogContent,
@@ -27,41 +37,48 @@ export function EditGuestDialog({
   guest,
 }: EditGuestDialogProps) {
   const router = useRouter();
-  const [editName, setEditName] = useState(guest?.displayName ?? '');
-  const [editHandicap, setEditHandicap] = useState(
-    guest?.currentHandicap ?? '',
-  );
   const [updateGuest, { isPending }] = useUpdateGuest();
 
-  const handleOpenChange = (v: boolean) => {
-    if (!v) {
-      setEditName(guest?.displayName ?? '');
-      setEditHandicap(guest?.currentHandicap ?? '');
-    }
-    onOpenChange(v);
-  };
+  const form = useForm<UpdateGuestInput>({
+    resolver: zodResolver(updateGuestSchema),
+    defaultValues: {
+      personId: guest?.id ?? '',
+      displayName: guest?.displayName ?? '',
+      currentHandicap: guest?.currentHandicap
+        ? parseFloat(guest.currentHandicap)
+        : null,
+    },
+  });
 
-  async function handleSaveEdit() {
-    if (!guest || !editName.trim()) return;
-    await updateGuest({
-      variables: {
+  // Reset form when guest changes
+  useEffect(() => {
+    if (guest) {
+      form.reset({
         personId: guest.id,
-        displayName: editName.trim(),
-        currentHandicap: editHandicap ? parseFloat(editHandicap) : null,
-      },
+        displayName: guest.displayName,
+        currentHandicap: guest.currentHandicap
+          ? parseFloat(guest.currentHandicap)
+          : null,
+      });
+    }
+  }, [guest, form]);
+
+  const handleSubmit = async (data: UpdateGuestInput) => {
+    await updateGuest({
+      variables: data,
       onSuccess: () => {
         toast.success('Guest updated');
-        handleOpenChange(false);
+        onOpenChange(false);
         router.invalidate();
       },
       onError: (error) => {
         toast.error(error.message);
       },
     });
-  }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Guest</DialogTitle>
@@ -69,37 +86,60 @@ export function EditGuestDialog({
             Update guest details for future tournaments
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div>
-            <Label htmlFor="editName">Name</Label>
-            <Input
-              id="editName"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="editHandicap">Handicap</Label>
-            <Input
-              id="editHandicap"
-              type="number"
-              step="0.1"
-              value={editHandicap}
-              onChange={(e) => setEditHandicap(e.target.value)}
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSaveEdit}
-            disabled={isPending || !editName.trim()}
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4 py-4"
           >
-            {isPending ? 'Saving…' : 'Save'}
-          </Button>
-        </DialogFooter>
+            <FormField
+              control={form.control}
+              name="displayName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="currentHandicap"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Handicap</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={field.value ?? ''}
+                      onChange={(e) =>
+                        field.onChange(
+                          e.target.value ? parseFloat(e.target.value) : null,
+                        )
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? 'Saving…' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

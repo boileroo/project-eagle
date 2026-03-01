@@ -15,7 +15,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -70,7 +69,7 @@ export function NewTournamentPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tournament Name</FormLabel>
+                    <FormLabel required>Tournament Name</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. Sunday Cup 2026" {...field} />
                     </FormControl>
@@ -90,7 +89,6 @@ export function NewTournamentPage() {
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>Optional.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

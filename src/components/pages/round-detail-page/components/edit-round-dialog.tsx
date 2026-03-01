@@ -1,9 +1,19 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useUpdateRound } from '@/lib/rounds';
+import { updateRoundSchema, type UpdateRoundInput } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import {
   Dialog,
   DialogContent,
@@ -15,11 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
-export function EditRoundDialog({
-  round,
-  courses,
-  onSaved,
-}: {
+interface EditRoundDialogProps {
   round: {
     id: string;
     courseId: string | null;
@@ -33,27 +39,45 @@ export function EditRoundDialog({
     numberOfHoles: number;
   }[];
   onSaved: () => void;
-}) {
+}
+
+export function EditRoundDialog({
+  round,
+  courses,
+  onSaved,
+}: EditRoundDialogProps) {
   const [open, setOpen] = useState(false);
   const [updateRound, { isPending: saving }] = useUpdateRound();
-  const [courseId, setCourseId] = useState(round.courseId ?? '');
-  const [date, setDate] = useState(() => {
-    if (!round.date) return '';
-    const d = new Date(round.date);
-    return d.toISOString().split('T')[0];
-  });
-  const [teeTime, setTeeTime] = useState(
-    (round as { teeTime?: string | null }).teeTime ?? '',
-  );
 
-  const handleSave = async () => {
-    await updateRound({
-      variables: {
+  const form = useForm<UpdateRoundInput>({
+    resolver: zodResolver(updateRoundSchema),
+    defaultValues: {
+      id: round.id,
+      courseId: round.courseId ?? undefined,
+      date: round.date
+        ? new Date(round.date).toISOString().split('T')[0]
+        : undefined,
+      teeTime: round.teeTime ?? undefined,
+    },
+  });
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      form.reset({
         id: round.id,
-        courseId: courseId || undefined,
-        date: date || undefined,
-        teeTime: teeTime || undefined,
-      },
+        courseId: round.courseId ?? undefined,
+        date: round.date
+          ? new Date(round.date).toISOString().split('T')[0]
+          : undefined,
+        teeTime: round.teeTime ?? undefined,
+      });
+    }
+    setOpen(next);
+  };
+
+  const handleSubmit = async (data: UpdateRoundInput) => {
+    await updateRound({
+      variables: data,
       onSuccess: () => {
         toast.success('Round updated.');
         setOpen(false);
@@ -63,19 +87,6 @@ export function EditRoundDialog({
         toast.error(error.message);
       },
     });
-  };
-
-  const handleOpenChange = (next: boolean) => {
-    if (next) {
-      setCourseId(round.courseId ?? '');
-      setDate(() => {
-        if (!round.date) return '';
-        const d = new Date(round.date);
-        return d.toISOString().split('T')[0];
-      });
-      setTeeTime((round as { teeTime?: string | null }).teeTime ?? '');
-    }
-    setOpen(next);
   };
 
   return (
@@ -92,53 +103,86 @@ export function EditRoundDialog({
             Change the course, date, or tee time for this round.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="edit-round-course">Course</Label>
-            <Select
-              id="edit-round-course"
-              value={courseId}
-              onChange={(e) => setCourseId(e.target.value)}
-            >
-              <option value="" disabled>
-                Select a course
-              </option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.numberOfHoles}h)
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-round-date">Date</Label>
-              <Input
-                id="edit-round-date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4"
+          >
+            <FormField
+              control={form.control}
+              name="courseId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Course</FormLabel>
+                  <FormControl>
+                    <Select
+                      {...field}
+                      value={field.value ?? ''}
+                      onChange={(e) =>
+                        field.onChange(
+                          e.target.value ? e.target.value : undefined,
+                        )
+                      }
+                    >
+                      <option value="" disabled>
+                        Select a course
+                      </option>
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.numberOfHoles}h)
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="teeTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tee Time</FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-round-tee-time">Tee Time</Label>
-              <Input
-                id="edit-round-tee-time"
-                type="time"
-                value={teeTime}
-                onChange={(e) => setTeeTime(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={saving || !courseId}>
-            {saving ? 'Saving…' : 'Save'}
-          </Button>
-        </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={saving || !form.formState.isValid}
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

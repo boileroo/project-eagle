@@ -1,9 +1,19 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { searchPersonsFn, getMyGuestsFn } from '@/lib/tournaments.server';
 import { useCreateGuestPerson } from '@/lib/tournaments';
+import { createGuestSchema, type CreateGuestInput } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +40,17 @@ export type Guest = {
   createdAt: Date;
 };
 
+interface AddPlayerDialogProps {
+  tournamentId: string;
+  onAddPerson: (person: PersonSearchResult) => Promise<void>;
+  onAddGuest: (
+    personId: string,
+    name: string,
+    handicap: string,
+  ) => Promise<void>;
+  triggerLabel?: string;
+}
+
 /**
  * Shared dialog for adding players to a tournament.
  *
@@ -43,16 +64,7 @@ export function AddPlayerDialog({
   onAddPerson,
   onAddGuest,
   triggerLabel = 'Add Player',
-}: {
-  tournamentId: string;
-  onAddPerson: (person: PersonSearchResult) => Promise<void>;
-  onAddGuest: (
-    personId: string,
-    name: string,
-    handicap: string,
-  ) => Promise<void>;
-  triggerLabel?: string;
-}) {
+}: AddPlayerDialogProps) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'search' | 'previous' | 'guest'>('search');
   const [query, setQuery] = useState('');
@@ -64,18 +76,22 @@ export function AddPlayerDialog({
   const [previousGuests, setPreviousGuests] = useState<Guest[]>([]);
   const [loadingGuests, setLoadingGuests] = useState(false);
 
-  // New guest form
-  const [guestName, setGuestName] = useState('');
-  const [guestHandicap, setGuestHandicap] = useState('');
-
   const [createGuestPerson] = useCreateGuestPerson();
 
-  const resetState = () => {
+  // Guest form with RHF
+  const guestForm = useForm<CreateGuestInput>({
+    resolver: zodResolver(createGuestSchema),
+    defaultValues: {
+      displayName: '',
+      currentHandicap: null,
+    },
+  });
+
+  const resetDialogState = () => {
     setQuery('');
     setResults([]);
     setTab('search');
-    setGuestName('');
-    setGuestHandicap('');
+    guestForm.reset();
   };
 
   // Load previous guests when switching to that tab
@@ -118,7 +134,7 @@ export function AddPlayerDialog({
         guest.currentHandicap ?? '',
       );
       setOpen(false);
-      resetState();
+      resetDialogState();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to add guest',
@@ -132,7 +148,7 @@ export function AddPlayerDialog({
     try {
       await onAddPerson(person);
       setOpen(false);
-      resetState();
+      resetDialogState();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to add player',
@@ -141,20 +157,19 @@ export function AddPlayerDialog({
     setAdding(false);
   };
 
-  const handleAddGuest = async () => {
-    if (guestName.length < 2) {
-      toast.error('Name must be at least 2 characters');
-      return;
-    }
+  const handleAddGuest = async (data: CreateGuestInput) => {
     setAdding(true);
-    const hc = guestHandicap ? parseFloat(guestHandicap) : null;
     await createGuestPerson({
-      variables: { displayName: guestName, currentHandicap: hc },
+      variables: data,
       onSuccess: async (result) => {
         try {
-          await onAddGuest(result.personId, guestName, guestHandicap);
+          await onAddGuest(
+            result.personId,
+            data.displayName,
+            data.currentHandicap?.toString() ?? '',
+          );
           setOpen(false);
-          resetState();
+          resetDialogState();
         } catch (error) {
           toast.error(
             error instanceof Error ? error.message : 'Failed to add guest',
@@ -174,7 +189,7 @@ export function AddPlayerDialog({
       open={open}
       onOpenChange={(v) => {
         setOpen(v);
-        if (!v) resetState();
+        if (!v) resetDialogState();
       }}
     >
       <div className="mt-2 flex justify-end">
@@ -310,36 +325,58 @@ export function AddPlayerDialog({
         )}
 
         {tab === 'guest' && (
-          <div className="space-y-3">
-            <div>
-              <Label htmlFor="addPlayerGuestName">Name</Label>
-              <Input
-                id="addPlayerGuestName"
-                placeholder="e.g. Dave Smith"
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                autoFocus
+          <Form {...guestForm}>
+            <form
+              onSubmit={guestForm.handleSubmit(handleAddGuest)}
+              className="space-y-3"
+            >
+              <FormField
+                control={guestForm.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required>Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g. Dave Smith"
+                        autoFocus
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <Label htmlFor="addPlayerGuestHandicap">
-                Handicap (optional)
-              </Label>
-              <Input
-                id="addPlayerGuestHandicap"
-                type="number"
-                step="0.1"
-                placeholder="e.g. 18.4"
-                value={guestHandicap}
-                onChange={(e) => setGuestHandicap(e.target.value)}
+              <FormField
+                control={guestForm.control}
+                name="currentHandicap"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Handicap</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="e.g. 18.4"
+                        value={field.value ?? ''}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value ? parseFloat(e.target.value) : null,
+                          )
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <DialogFooter>
-              <Button onClick={handleAddGuest} disabled={adding}>
-                {adding ? 'Adding…' : 'Add Guest'}
-              </Button>
-            </DialogFooter>
-          </div>
+              <DialogFooter>
+                <Button type="submit" disabled={adding}>
+                  {adding ? 'Adding…' : 'Add Guest'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         )}
       </DialogContent>
     </Dialog>

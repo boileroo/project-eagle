@@ -1,10 +1,23 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useCreateRound } from '@/lib/rounds';
+import {
+  createSingleRoundSchema,
+  type CreateSingleRoundInput,
+} from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import {
   Dialog,
   DialogContent,
@@ -16,11 +29,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
-export function AddRoundDialog({
-  tournamentId,
-  courses,
-  onAdded,
-}: {
+interface AddRoundDialogProps {
   tournamentId: string;
   courses: {
     id: string;
@@ -29,31 +38,37 @@ export function AddRoundDialog({
     numberOfHoles: number;
   }[];
   onAdded: () => void;
-}) {
+}
+
+export function AddRoundDialog({
+  tournamentId,
+  courses,
+  onAdded,
+}: AddRoundDialogProps) {
   const [open, setOpen] = useState(false);
-  const [courseId, setCourseId] = useState('');
-  const [date, setDate] = useState('');
-  const [teeTime, setTeeTime] = useState('');
   const [createRound, { isPending: adding }] = useCreateRound();
 
-  const handleAdd = async () => {
-    if (!courseId) {
-      toast.error('Please select a course');
-      return;
-    }
+  const form = useForm<CreateSingleRoundInput>({
+    resolver: zodResolver(createSingleRoundSchema),
+    defaultValues: {
+      courseId: '',
+      date: '',
+      teeTime: '',
+    },
+  });
+
+  const handleSubmit = async (data: CreateSingleRoundInput) => {
     await createRound({
       variables: {
         tournamentId,
-        courseId,
-        date: date || undefined,
-        teeTime: teeTime || undefined,
+        courseId: data.courseId,
+        date: data.date || undefined,
+        teeTime: data.teeTime || undefined,
       },
       onSuccess: () => {
         toast.success('Round created! All tournament players have been added.');
         setOpen(false);
-        setCourseId('');
-        setDate('');
-        setTeeTime('');
+        form.reset();
         onAdded();
       },
       onError: (error) => {
@@ -68,9 +83,7 @@ export function AddRoundDialog({
       onOpenChange={(v) => {
         setOpen(v);
         if (!v) {
-          setCourseId('');
-          setDate('');
-          setTeeTime('');
+          form.reset();
         }
       }}
     >
@@ -88,72 +101,84 @@ export function AddRoundDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="courseSelect">
-              Course{' '}
-              <span className="text-destructive" aria-hidden="true">
-                *
-              </span>
-            </Label>
-            <Select
-              id="courseSelect"
-              className="h-9 py-1"
-              value={courseId}
-              onChange={(e) => setCourseId(e.target.value)}
-            >
-              <option value="">Select a course…</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.numberOfHoles} holes)
-                  {c.location ? ` — ${c.location}` : ''}
-                </option>
-              ))}
-            </Select>
-            {courses.length === 0 && (
-              <p className="text-muted-foreground mt-1 text-xs">
-                No courses yet.{' '}
-                <Link to="/courses/new" className="text-primary underline">
-                  Create one first
-                </Link>
-                .
-              </p>
-            )}
-          </div>
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4"
+          >
+            <FormField
+              control={form.control}
+              name="courseId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Course</FormLabel>
+                  <FormControl>
+                    <Select {...field} className="h-9 py-1">
+                      <option value="">Select a course…</option>
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.numberOfHoles} holes)
+                          {c.location ? ` — ${c.location}` : ''}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  {courses.length === 0 && (
+                    <p className="text-muted-foreground text-xs">
+                      No courses yet.{' '}
+                      <Link
+                        to="/courses/new"
+                        className="text-primary underline"
+                      >
+                        Create one first
+                      </Link>
+                      .
+                    </p>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="roundDate">Date (optional)</Label>
-              <Input
-                id="roundDate"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="teeTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tee Time</FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-            <div>
-              <Label htmlFor="roundTeeTime">Tee Time (optional)</Label>
-              <Input
-                id="roundTeeTime"
-                type="time"
-                value={teeTime}
-                onChange={(e) => setTeeTime(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
 
-        <DialogFooter>
-          <p className="text-muted-foreground mr-auto text-sm">
-            <span className="text-destructive" aria-hidden="true">
-              *
-            </span>{' '}
-            Required
-          </p>
-          <Button onClick={handleAdd} disabled={adding || !courseId}>
-            {adding ? 'Creating…' : 'Create Round'}
-          </Button>
-        </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="submit"
+                disabled={adding || !form.formState.isValid}
+              >
+                {adding ? 'Creating…' : 'Create Round'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

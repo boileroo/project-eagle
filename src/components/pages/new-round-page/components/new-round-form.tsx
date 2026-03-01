@@ -15,7 +15,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -54,12 +53,7 @@ export function NewRoundForm({
               name="courseId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    Course{' '}
-                    <span className="text-destructive" aria-hidden="true">
-                      *
-                    </span>
-                  </FormLabel>
+                  <FormLabel required>Course</FormLabel>
                   <FormControl>
                     <Select {...field}>
                       <option value="">Select a course…</option>
@@ -83,9 +77,6 @@ export function NewRoundForm({
                   <FormControl>
                     <Input type="date" {...field} value={field.value ?? ''} />
                   </FormControl>
-                  <FormDescription>
-                    Defaults to today if left blank.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -99,20 +90,12 @@ export function NewRoundForm({
                   <FormControl>
                     <Input type="time" {...field} value={field.value ?? ''} />
                   </FormControl>
-                  <FormDescription>Optional.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </CardContent>
         </Card>
-
-        <p className="text-muted-foreground text-sm">
-          <span className="text-destructive" aria-hidden="true">
-            *
-          </span>{' '}
-          Required
-        </p>
 
         <div className="flex gap-3">
           <Button type="submit" disabled={submitting}>

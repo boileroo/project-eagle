@@ -560,6 +560,120 @@ interface DeleteDialogProps {
 }
 ```
 
+# Form Patterns
+
+## All Forms Must Use React Hook Form
+
+Every form in the application must use React Hook Form (RHF) with Zod validation. No manual `useState` for form inputs.
+
+### Standard Form Structure
+
+```typescript
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { someSchema, type SomeInput } from '@/lib/validators';
+
+function MyForm() {
+  const form = useForm<SomeInput>({
+    resolver: zodResolver(someSchema),
+    defaultValues: {
+      field: '',
+    },
+  });
+
+  const handleSubmit = async (data: SomeInput) => {
+    // Submit logic
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)}>
+        <FormField
+          control={form.control}
+          name="field"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel required>Field Label</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit">Submit</Button>
+      </form>
+    </Form>
+  );
+}
+```
+
+### Required vs Optional Fields
+
+**Required fields** use the `required` prop on `FormLabel`:
+
+```typescript
+<FormLabel required>Tournament Name</FormLabel>
+```
+
+**Optional fields** have no indicator — omit the `required` prop:
+
+```typescript
+// Good - clean label
+<FormLabel>Description</FormLabel>
+
+// Bad - don't use these patterns
+<FormLabel>Description (optional)</FormLabel>
+<FormDescription>Optional.</FormDescription>
+```
+
+### Form Components Reference
+
+| Component     | Purpose                      | Required Props              |
+| ------------- | ---------------------------- | --------------------------- |
+| `Form`        | RHF provider wrapper         | `{...form}`                 |
+| `FormField`   | Connects input to RHF        | `control`, `name`, `render` |
+| `FormItem`    | Layout wrapper for field     | -                           |
+| `FormLabel`   | Label with optional asterisk | `required?`                 |
+| `FormControl` | Wraps the actual input       | -                           |
+| `FormMessage` | Error message display        | -                           |
+
+### Zod Schema Requirements
+
+Always define a Zod schema in `src/lib/validators/`:
+
+```typescript
+// src/lib/validators/my-feature.ts
+export const myFormSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email'),
+});
+export type MyFormInput = z.infer<typeof myFormSchema>;
+```
+
+### Form Validation Patterns
+
+1. **Inline validation**: RHF validates on submit automatically
+2. **Display errors**: Use `<FormMessage />` to show field errors
+3. **Disable submit**: Disable submit button when `isPending` or `!form.formState.isValid`
+
+```typescript
+<Button
+  type="submit"
+  disabled={isPending || !form.formState.isValid}
+>
+  {isPending ? 'Saving…' : 'Save'}
+</Button>
+```
+
 ---
 
 # Import Conventions
