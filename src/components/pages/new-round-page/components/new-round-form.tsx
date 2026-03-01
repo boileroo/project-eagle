@@ -97,12 +97,12 @@ export function NewRoundForm({
           </CardContent>
         </Card>
 
-        <div className="flex gap-3">
-          <Button type="submit" disabled={submitting}>
-            {submitting ? 'Creating…' : 'Create Round'}
-          </Button>
+        <div className="flex justify-end gap-3">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
+          </Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? 'Creating…' : 'Create Round'}
           </Button>
         </div>
       </form>
