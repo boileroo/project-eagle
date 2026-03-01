@@ -164,6 +164,18 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  optimizeDeps: {
+    // Pre-bundle these packages so Vite doesn't discover them lazily mid-session
+    // (which triggers a "optimized dependencies changed. reloading" cycle that
+    // breaks login flows in embedded browsers like vibe-kanban).
+    include: [
+      '@tanstack/router-core',
+      '@tanstack/router-core > @tanstack/history',
+      '@tanstack/router-core > tiny-invariant',
+      'seroval',
+      'h3-v2',
+    ],
+  },
   plugins: [
     tsConfigPaths(),
     injectHeadScriptsStub(),
