@@ -110,7 +110,19 @@ export function EditTournamentPage({
             </CardContent>
           </Card>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                navigate({
+                  to: '/tournaments/$tournamentId',
+                  params: { tournamentId: tournament.id },
+                })
+              }
+            >
+              Cancel
+            </Button>
             <Button type="submit" disabled={isPending}>
               {isPending ? 'Saving…' : 'Save Changes'}
             </Button>
