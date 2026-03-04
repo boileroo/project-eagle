@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { searchPersonsFn, getMyGuestsFn } from '@/lib/tournaments.server';
+import { getMyGuestsFn } from '@/lib/tournaments.server';
 import { useCreateGuestPerson } from '@/lib/tournaments';
 import { createGuestSchema, type CreateGuestInput } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
@@ -25,14 +25,6 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
-export type PersonSearchResult = {
-  id: string;
-  displayName: string;
-  currentHandicap: string | null;
-  isGuest: boolean;
-  email: string | null;
-};
-
 export type Guest = {
   id: string;
   displayName: string;
@@ -41,8 +33,6 @@ export type Guest = {
 };
 
 interface AddPlayerDialogProps {
-  tournamentId: string;
-  onAddPerson: (person: PersonSearchResult) => Promise<void>;
   onAddGuest: (
     personId: string,
     name: string,
@@ -54,22 +44,18 @@ interface AddPlayerDialogProps {
 /**
  * Shared dialog for adding players to a tournament.
  *
- * Three tabs:
- * - Search: Search for registered users (non-guests)
+ * Two tabs:
  * - Previous Guests: Add guests you've used before
- * - Add Guest: Create a new guest
+ * - New Guest: Create a new guest
+ *
+ * Note: User search functionality has been removed to prevent exposing email addresses.
  */
 export function AddPlayerDialog({
-  tournamentId,
-  onAddPerson,
   onAddGuest,
   triggerLabel = 'Add Player',
 }: AddPlayerDialogProps) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<'search' | 'previous' | 'guest'>('search');
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<PersonSearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [tab, setTab] = useState<'previous' | 'guest'>('previous');
   const [adding, setAdding] = useState(false);
 
   // Previous guests
@@ -88,9 +74,7 @@ export function AddPlayerDialog({
   });
 
   const resetDialogState = () => {
-    setQuery('');
-    setResults([]);
-    setTab('search');
+    setTab('previous');
     guestForm.reset();
   };
 
@@ -103,27 +87,6 @@ export function AddPlayerDialog({
         .finally(() => setLoadingGuests(false));
     }
   }, [tab, previousGuests.length]);
-
-  const handleSearch = useCallback(
-    async (q: string) => {
-      setQuery(q);
-      if (q.length < 2) {
-        setResults([]);
-        return;
-      }
-      setSearching(true);
-      try {
-        const data = await searchPersonsFn({
-          data: { query: q, tournamentId },
-        });
-        setResults(data);
-      } catch {
-        // ignore search errors
-      }
-      setSearching(false);
-    },
-    [tournamentId],
-  );
 
   const handleAddPreviousGuest = async (guest: Guest) => {
     setAdding(true);
@@ -138,20 +101,6 @@ export function AddPlayerDialog({
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to add guest',
-      );
-    }
-    setAdding(false);
-  };
-
-  const handleAddPerson = async (person: PersonSearchResult) => {
-    setAdding(true);
-    try {
-      await onAddPerson(person);
-      setOpen(false);
-      resetDialogState();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to add player',
       );
     }
     setAdding(false);
@@ -201,87 +150,35 @@ export function AddPlayerDialog({
         <DialogHeader>
           <DialogTitle>Add Player</DialogTitle>
           <DialogDescription>
-            Search for a player, add a previous guest, or create a new guest.
+            Add a previous guest or create a new guest.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant={tab === 'search' ? 'default' : 'outline'}
-            onClick={() => setTab('search')}
-          >
-            Search
-          </Button>
-          <Button
-            size="sm"
-            variant={tab === 'previous' ? 'default' : 'outline'}
+        {/* Tab buttons with better styling */}
+        <div className="flex gap-1 border-b">
+          <button
+            type="button"
             onClick={() => setTab('previous')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              tab === 'previous'
+                ? 'border-primary text-primary border-b-2'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
             Previous Guests
-          </Button>
-          <Button
-            size="sm"
-            variant={tab === 'guest' ? 'default' : 'outline'}
+          </button>
+          <button
+            type="button"
             onClick={() => setTab('guest')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              tab === 'guest'
+                ? 'border-primary text-primary border-b-2'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
             New Guest
-          </Button>
+          </button>
         </div>
-
-        {tab === 'search' && (
-          <div className="space-y-3">
-            <Input
-              placeholder="Search by name…"
-              value={query}
-              onChange={(e) => handleSearch(e.target.value)}
-              autoFocus
-            />
-            {searching && (
-              <p className="text-muted-foreground text-sm">Searching…</p>
-            )}
-            {results.length > 0 && (
-              <div className="max-h-60 space-y-1 overflow-y-auto">
-                {results.map((person) => (
-                  <div
-                    key={person.id}
-                    className="flex items-center justify-between rounded-md border px-3 py-2"
-                  >
-                    <div>
-                      <span className="text-sm font-medium">
-                        {person.displayName}
-                      </span>
-                      {person.email && (
-                        <span className="text-muted-foreground ml-2 text-xs">
-                          {person.email}
-                        </span>
-                      )}
-                      {person.currentHandicap && (
-                        <span className="text-muted-foreground ml-2 text-xs">
-                          HC {person.currentHandicap}
-                        </span>
-                      )}
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAddPerson(person)}
-                      disabled={adding}
-                    >
-                      Add
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-            {query.length >= 2 && results.length === 0 && !searching && (
-              <p className="text-muted-foreground text-sm">
-                No registered users found. Try a different search or add a
-                guest.
-              </p>
-            )}
-          </div>
-        )}
 
         {tab === 'previous' && (
           <div className="space-y-3">

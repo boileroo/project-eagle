@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { and, eq, ilike, isNotNull, isNull, or } from 'drizzle-orm';
+import { and, eq, ilike, isNull, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
 import {
@@ -205,54 +205,6 @@ export const deleteTournamentFn = createServerFn({ method: 'POST' })
     await db.delete(tournaments).where(eq(tournaments.id, data.tournamentId));
 
     return { success: true };
-  });
-
-// ──────────────────────────────────────────────
-// Search persons (for adding to a tournament)
-// ──────────────────────────────────────────────
-
-export const searchPersonsFn = createServerFn({ method: 'GET' })
-  .inputValidator(
-    z.object({
-      query: z.string().max(100),
-      tournamentId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ data }) => {
-    await requireAuth();
-
-    // Get existing participant personIds so we can exclude them
-    const existing = await db.query.tournamentParticipants.findMany({
-      where: eq(tournamentParticipants.tournamentId, data.tournamentId),
-      columns: { personId: true },
-    });
-    const existingPersonIds = new Set(existing.map((p) => p.personId));
-
-    // Escape ILIKE metacharacters to prevent wildcard injection
-    const escapedQuery = data.query.replace(/[%_\\]/g, (c) => `\\${c}`);
-
-    // Search registered users (userId IS NOT NULL) by display name
-    const results = await db.query.persons.findMany({
-      where: and(
-        ilike(persons.displayName, `%${escapedQuery}%`),
-        isNotNull(persons.userId), // Only registered users, not guests
-      ),
-      with: {
-        user: true,
-      },
-      limit: 20,
-    });
-
-    // Filter out persons already in the tournament
-    return results
-      .filter((p) => !existingPersonIds.has(p.id))
-      .map((p) => ({
-        id: p.id,
-        displayName: p.displayName,
-        currentHandicap: p.currentHandicap,
-        isGuest: false,
-        email: p.user?.email ?? null,
-      }));
   });
 
 // ──────────────────────────────────────────────

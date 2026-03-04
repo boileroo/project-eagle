@@ -252,23 +252,6 @@ export function PlayersTab({
 
       {tournament && canEdit && isDraft && (
         <AddPlayerDialog
-          tournamentId={tournament.id}
-          onAddPerson={async (person) => {
-            await addParticipant({
-              variables: {
-                tournamentId: tournament.id,
-                personId: person.id,
-                role: 'player',
-              },
-              onSuccess: () => {
-                toast.success('Player added!');
-                onChanged();
-              },
-              onError: (error) => {
-                toast.error(error.message);
-              },
-            });
-          }}
           onAddGuest={async (personId, name) => {
             await addParticipant({
               variables: {
