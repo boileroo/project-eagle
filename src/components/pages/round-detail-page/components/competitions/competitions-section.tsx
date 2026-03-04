@@ -218,8 +218,14 @@ export function TeamCompetitionsSection({
         <CardContent>
           {competitions.length === 0 ? (
             <p className="text-muted-foreground text-sm">
-              No competitions set up for this round.
-              {isCommissioner && isDraft && ' Click + to add one.'}
+              Individual scores (strokes + stableford) are automatically tracked
+              and will be visible once the round is underway.
+              {isCommissioner && isDraft && (
+                <>
+                  <br />
+                  Use the above button to add additional games or matches.
+                </>
+              )}
             </p>
           ) : (
             <div className="space-y-6">
