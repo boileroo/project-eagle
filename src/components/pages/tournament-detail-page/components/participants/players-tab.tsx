@@ -142,23 +142,39 @@ export function PlayersTab({
         const handicapValue =
           p.handicapOverride ?? p.handicapSnapshot ?? p.person.currentHandicap;
         const isMe = personUserId === userId;
-        const canRemove = canEdit && !isMe;
+
+        // Determine participant role
+        const participantRole =
+          personUserId == null
+            ? 'guest'
+            : isTournamentMode
+              ? p.role
+              : (p.tournamentParticipant?.role ?? 'player');
+
+        const isCommissionerParticipant = participantRole === 'commissioner';
+
+        // Get role badge styling
+        const getRoleBadgeStyle = (role: string) => {
+          switch (role) {
+            case 'commissioner':
+              return 'bg-amber-100 text-amber-900';
+            case 'guest':
+              return 'bg-slate-100 text-slate-700';
+            case 'player':
+            default:
+              return 'bg-blue-100 text-blue-900';
+          }
+        };
 
         return (
           <div
             key={p.id}
             className={`flex items-center justify-between rounded-md border px-3 py-2 ${
               isMe ? 'bg-primary/5' : ''
-            } ${personUserId == null ? 'border-dashed' : ''}`}
+            }`}
           >
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{displayName}</span>
-              {isMe && <Badge className="text-xs">You</Badge>}
-              {personUserId == null && (
-                <Badge variant="outline" className="text-xs">
-                  Guest
-                </Badge>
-              )}
               {p.tournamentParticipant?.teamMemberships?.[0]?.team && (
                 <Badge variant="secondary" className="text-xs">
                   {p.tournamentParticipant.teamMemberships[0].team.name}
@@ -166,6 +182,15 @@ export function PlayersTab({
               )}
             </div>
             <div className="flex items-center gap-1.5">
+              {isMe && <Badge className="text-xs">You</Badge>}
+
+              <Badge
+                className={`text-xs ${getRoleBadgeStyle(participantRole)}`}
+              >
+                {participantRole.charAt(0).toUpperCase() +
+                  participantRole.slice(1)}
+              </Badge>
+
               {canEdit || isMe ? (
                 isTournamentMode ? (
                   <EditHandicapDialog
@@ -177,7 +202,7 @@ export function PlayersTab({
                     trigger={
                       <button type="button" className="cursor-pointer">
                         <Badge variant="outline" className="hover:bg-accent">
-                          HC {handicapValue ?? '--'}
+                          HC {handicapValue ?? '-'}
                         </Badge>
                       </button>
                     }
@@ -189,29 +214,26 @@ export function PlayersTab({
                     trigger={
                       <button type="button" className="cursor-pointer">
                         <Badge variant="outline" className="hover:bg-accent">
-                          HC {handicapValue ?? '--'}
+                          HC {handicapValue ?? '-'}
                         </Badge>
                       </button>
                     }
                   />
                 )
               ) : (
-                handicapValue != null && (
-                  <Badge variant="outline">HC {handicapValue}</Badge>
-                )
+                <Badge variant="outline">HC {handicapValue ?? '-'}</Badge>
               )}
 
-              {canRemove && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-destructive h-6 w-6"
-                  aria-label={`Remove ${displayName}`}
-                  onClick={() => handleRemoveParticipant(p.id, displayName)}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={!canEdit || isCommissionerParticipant || isMe}
+                className="text-muted-foreground hover:text-destructive h-6 w-6 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={`Remove ${displayName}`}
+                onClick={() => handleRemoveParticipant(p.id, displayName)}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
         );
