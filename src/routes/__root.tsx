@@ -35,7 +35,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async () => {
     if (typeof window === 'undefined') {
       setResponseHeaders({
-        'X-Frame-Options': 'DENY',
         'X-Content-Type-Options': 'nosniff',
         'Referrer-Policy': 'strict-origin-when-cross-origin',
         'Permissions-Policy':
@@ -50,7 +49,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
           "font-src 'self' data:",
           "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
           'worker-src blob:',
-          "frame-ancestors 'none'",
+          'frame-ancestors *',
           "base-uri 'self'",
           "form-action 'self'",
         ].join('; '),
