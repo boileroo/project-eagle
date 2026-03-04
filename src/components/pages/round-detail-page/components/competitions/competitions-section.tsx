@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { CircleHelp } from 'lucide-react';
 import { useDeleteCompetition } from '@/lib/competitions';
 import { FORMAT_TYPE_LABELS, isBonusFormat } from '@/lib/competitions';
 import type { CompetitionConfig } from '@/lib/competitions';
@@ -25,6 +26,7 @@ import { AddIndividualCompDialog } from './add-individual-comp-dialog';
 import { AddTeamCompDialog } from './add-team-comp-dialog';
 import { AddBonusCompDialog } from './add-bonus-comp-dialog';
 import { BonusCompRow } from './bonus-comp-row';
+import { CompetitionsExplainerDialog } from './components/competitions-explainer-dialog';
 import type { RoundData, ScorecardData, RoundCompetitionsData } from '../types';
 
 export function TeamCompetitionsSection({
@@ -43,6 +45,7 @@ export function TeamCompetitionsSection({
   onChanged: () => void;
 }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [explainerOpen, setExplainerOpen] = useState(false);
   const [deleteCompetition] = useDeleteCompetition();
   const isDraft = round.status === 'draft';
 
@@ -174,33 +177,41 @@ export function TeamCompetitionsSection({
           <CardTitle className="flex items-center justify-between text-lg">
             <span>Competitions</span>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary">{competitions.length}</Badge>
-              {isCommissioner && isDraft && (
-                <>
-                  {!hasTeams && (
-                    <AddIndividualCompDialog
-                      tournamentId={round.tournamentId}
-                      roundId={round.id}
-                      hasTeams={hasTeams}
-                      onSaved={onChanged}
-                    />
-                  )}
-                  {hasTeams && (
-                    <AddTeamCompDialog
-                      tournamentId={round.tournamentId}
-                      roundId={round.id}
-                      round={round}
-                      competitions={competitions}
-                      onSaved={onChanged}
-                    />
-                  )}
-                  <AddBonusCompDialog
-                    tournamentId={round.tournamentId}
-                    roundId={round.id}
-                    onSaved={onChanged}
-                  />
-                </>
-              )}
+              {/* Show all add buttons at all times; disable when not permitted */}
+              <AddIndividualCompDialog
+                tournamentId={round.tournamentId}
+                roundId={round.id}
+                hasTeams={hasTeams}
+                onSaved={onChanged}
+                disabled={!(isCommissioner && isDraft) || hasTeams}
+              />
+
+              <AddTeamCompDialog
+                tournamentId={round.tournamentId}
+                roundId={round.id}
+                round={round}
+                competitions={competitions}
+                onSaved={onChanged}
+                disabled={!(isCommissioner && isDraft) || !hasTeams}
+              />
+
+              <AddBonusCompDialog
+                tournamentId={round.tournamentId}
+                roundId={round.id}
+                onSaved={onChanged}
+                disabled={!(isCommissioner && isDraft)}
+              />
+
+              {/* Help button always visible */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setExplainerOpen(true)}
+                title="Learn about competition types"
+              >
+                <CircleHelp className="h-4 w-4" />
+              </Button>
             </div>
           </CardTitle>
         </CardHeader>
@@ -334,6 +345,10 @@ export function TeamCompetitionsSection({
           )}
         </CardContent>
       </Card>
+      <CompetitionsExplainerDialog
+        open={explainerOpen}
+        onOpenChange={setExplainerOpen}
+      />
     </div>
   );
 }

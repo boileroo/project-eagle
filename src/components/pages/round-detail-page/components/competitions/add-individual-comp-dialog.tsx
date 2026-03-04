@@ -26,8 +26,14 @@ export function AddIndividualCompDialog({
   roundId: string;
   /** Kept for API compatibility but no longer used */
   hasTeams?: boolean;
+  disabled?: boolean;
   onSaved: () => void;
 }) {
+  // allow parent to render the trigger disabled when appropriate
+  // (e.g. non-commissioner or wrong round status)
+  // keep this prop optional for backward compatibility
+
+  const disabledProp = (arguments[0] as any).disabled as boolean | undefined;
   const [open, setOpen] = useState(false);
   const [createCompetition, { isPending }] = useCreateCompetition();
   const [formatType, setFormatType] =
@@ -97,7 +103,7 @@ export function AddIndividualCompDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" disabled={disabledProp}>
           + Game
         </Button>
       </DialogTrigger>

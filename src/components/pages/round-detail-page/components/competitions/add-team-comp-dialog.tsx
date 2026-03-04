@@ -31,7 +31,12 @@ export function AddTeamCompDialog({
   round: RoundData;
   competitions: RoundCompetitionsData;
   onSaved: () => void;
+  disabled?: boolean;
 }) {
+  // parent can render the trigger disabled via `disabled` prop; preserve
+  // backward compatibility by reading it from the arguments if provided
+
+  const disabledProp = (arguments[0] as any).disabled as boolean | undefined;
   const [open, setOpen] = useState(false);
   const [createCompetition, { isPending: saving }] = useCreateCompetition();
   const [formatType, setFormatType] =
@@ -207,7 +212,7 @@ export function AddTeamCompDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" disabled={disabledProp}>
           + Team Match
         </Button>
       </DialogTrigger>

@@ -25,7 +25,11 @@ export function AddBonusCompDialog({
   tournamentId: string;
   roundId: string;
   onSaved: () => void;
+  disabled?: boolean;
 }) {
+  // optional prop passed via `arguments[0].disabled` to control trigger state
+
+  const disabledProp = (arguments[0] as any).disabled as boolean | undefined;
   const [open, setOpen] = useState(false);
   const [createCompetition, { isPending }] = useCreateCompetition();
   const [formatType, setFormatType] =
@@ -100,7 +104,7 @@ export function AddBonusCompDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" disabled={disabledProp}>
           + Bonus
         </Button>
       </DialogTrigger>
