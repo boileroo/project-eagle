@@ -154,10 +154,18 @@ export function AddPlayerDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Tab buttons with better styling */}
-        <div className="flex gap-1 border-b">
+        {/* Tabs */}
+        <div
+          role="tablist"
+          aria-label="Add player tabs"
+          className="flex gap-1 border-b"
+        >
           <button
+            id="tab-previous"
+            role="tab"
             type="button"
+            aria-selected={tab === 'previous'}
+            aria-controls="panel-previous"
             onClick={() => setTab('previous')}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               tab === 'previous'
@@ -168,7 +176,11 @@ export function AddPlayerDialog({
             Previous Guests
           </button>
           <button
+            id="tab-guest"
+            role="tab"
             type="button"
+            aria-selected={tab === 'guest'}
+            aria-controls="panel-guest"
             onClick={() => setTab('guest')}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               tab === 'guest'
@@ -180,48 +192,58 @@ export function AddPlayerDialog({
           </button>
         </div>
 
-        {tab === 'previous' && (
-          <div className="space-y-3">
-            {loadingGuests ? (
-              <p className="text-muted-foreground text-sm">Loading…</p>
-            ) : previousGuests.length > 0 ? (
-              <div className="max-h-60 space-y-1 overflow-y-auto">
-                {previousGuests.map((guest) => (
-                  <div
-                    key={guest.id}
-                    className="flex items-center justify-between rounded-md border px-3 py-2"
-                  >
-                    <div>
-                      <span className="text-sm font-medium">
-                        {guest.displayName}
+        <div
+          id="panel-previous"
+          role="tabpanel"
+          aria-labelledby="tab-previous"
+          hidden={tab !== 'previous'}
+          className={tab === 'previous' ? 'space-y-3' : 'hidden'}
+        >
+          {loadingGuests ? (
+            <p className="text-muted-foreground text-sm">Loading…</p>
+          ) : previousGuests.length > 0 ? (
+            <div className="max-h-60 space-y-1 overflow-y-auto">
+              {previousGuests.map((guest) => (
+                <div
+                  key={guest.id}
+                  className="flex items-center justify-between rounded-md border px-3 py-2"
+                >
+                  <div>
+                    <span className="text-sm font-medium">
+                      {guest.displayName}
+                    </span>
+                    {guest.currentHandicap && (
+                      <span className="text-muted-foreground ml-2 text-xs">
+                        HC {guest.currentHandicap}
                       </span>
-                      {guest.currentHandicap && (
-                        <span className="text-muted-foreground ml-2 text-xs">
-                          HC {guest.currentHandicap}
-                        </span>
-                      )}
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAddPreviousGuest(guest)}
-                      disabled={adding}
-                    >
-                      Add
-                    </Button>
+                    )}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">
-                No previous guests. Create a new guest to add them to this
-                tournament.
-              </p>
-            )}
-          </div>
-        )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleAddPreviousGuest(guest)}
+                    disabled={adding}
+                  >
+                    Add
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              No previous guests. Create a new guest to add them to this
+              tournament.
+            </p>
+          )}
+        </div>
 
-        {tab === 'guest' && (
+        <div
+          id="panel-guest"
+          role="tabpanel"
+          aria-labelledby="tab-guest"
+          hidden={tab !== 'guest'}
+          className={tab === 'guest' ? '' : 'hidden'}
+        >
           <Form {...guestForm}>
             <form
               onSubmit={guestForm.handleSubmit(handleAddGuest)}
@@ -231,7 +253,7 @@ export function AddPlayerDialog({
                 control={guestForm.control}
                 name="displayName"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="gap-3">
                     <FormLabel required>Name</FormLabel>
                     <FormControl>
                       <Input
@@ -248,7 +270,7 @@ export function AddPlayerDialog({
                 control={guestForm.control}
                 name="currentHandicap"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="gap-3">
                     <FormLabel>Handicap</FormLabel>
                     <FormControl>
                       <Input
@@ -274,7 +296,7 @@ export function AddPlayerDialog({
               </DialogFooter>
             </form>
           </Form>
-        )}
+        </div>
       </DialogContent>
     </Dialog>
   );
