@@ -1,7 +1,6 @@
 export { EditRoundDialog } from './edit-round-dialog';
 export { EditRoundHandicapDialog } from './edit-round-handicap-dialog';
 export { DeleteRoundDialog } from './delete-round-dialog';
-export { RoundStepIndicator } from './round-step-indicator';
 export { TeamCompetitionsSection } from './competitions/competitions-section';
 export { AddIndividualCompDialog } from './competitions/add-individual-comp-dialog';
 export { AddTeamCompDialog } from './competitions/add-team-comp-dialog';

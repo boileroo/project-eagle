@@ -12,7 +12,6 @@ import {
   IndividualScoreboardSection,
   ParticipantsSection,
 } from '@/components/pages/round-detail-page/components';
-import { RoundStepIndicator } from './components/round-step-indicator';
 import { RoundHeader } from './components/round-header';
 import { ScorecardSections } from './components/scorecard-sections';
 import { buildMatchPairings } from './components/build-match-pairings';
@@ -194,9 +193,6 @@ export function RoundDetailPage({
       />
 
       <Separator />
-
-      {/* Round step indicator */}
-      <RoundStepIndicator status={round.status} />
 
       {/* Locked banner — shown when round is awaiting start */}
       {round.status === 'scheduled' && (
