@@ -53,7 +53,12 @@ export function NewRoundForm({
               name="courseId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>Course</FormLabel>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <FormLabel required>Course</FormLabel>
+                    <Button variant="link" size="sm" asChild className="px-0">
+                      <a href="/courses/new">Add Course</a>
+                    </Button>
+                  </div>
                   <FormControl>
                     <Select {...field}>
                       <option value="">Select a course…</option>
