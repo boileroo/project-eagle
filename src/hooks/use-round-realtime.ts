@@ -12,7 +12,16 @@ export function useRoundRealtime(roundId: string, accessToken: string | null) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!accessToken) return;
+    if (!accessToken) {
+      console.log(
+        `[useRoundRealtime] Skipping subscription for round ${roundId}: no access token`,
+      );
+      return;
+    }
+
+    console.log(
+      `[useRoundRealtime] Setting up subscription for round ${roundId}`,
+    );
 
     // Authenticate the Realtime connection explicitly so the WS connects as
     // the authenticated user (required for RLS-gated postgres_changes).
@@ -23,6 +32,7 @@ export function useRoundRealtime(roundId: string, accessToken: string | null) {
         clearTimeout(debounceRef.current);
       }
       debounceRef.current = setTimeout(() => {
+        console.log(`[useRoundRealtime] Invalidating round ${roundId}`);
         void queryClient.invalidateQueries({
           queryKey: ['round', roundId],
         });
@@ -83,6 +93,10 @@ export function useRoundRealtime(roundId: string, accessToken: string | null) {
         },
       )
       .subscribe((status, err) => {
+        console.log(
+          `[useRoundRealtime] Channel status for round ${roundId}: ${status}`,
+          err ?? '',
+        );
         if (status === 'SUBSCRIBED') {
           invalidateRoundQueries();
         } else if (

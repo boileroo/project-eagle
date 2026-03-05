@@ -15,7 +15,16 @@ export function useTournamentRealtime(
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!accessToken) return;
+    if (!accessToken) {
+      console.log(
+        `[useTournamentRealtime] Skipping subscription for tournament ${tournamentId}: no access token`,
+      );
+      return;
+    }
+
+    console.log(
+      `[useTournamentRealtime] Setting up subscription for tournament ${tournamentId}`,
+    );
 
     // Authenticate the Realtime connection explicitly so the WS connects as
     // the authenticated user (required for RLS-gated postgres_changes).
@@ -26,6 +35,9 @@ export function useTournamentRealtime(
         clearTimeout(debounceRef.current);
       }
       debounceRef.current = setTimeout(() => {
+        console.log(
+          `[useTournamentRealtime] Invalidating tournament ${tournamentId}`,
+        );
         void queryClient.invalidateQueries({
           queryKey: ['tournament', tournamentId],
         });
@@ -46,6 +58,9 @@ export function useTournamentRealtime(
           filter: `tournament_id=eq.${tournamentId}`,
         },
         () => {
+          console.log(
+            `[useTournamentRealtime] Received tournament_participants INSERT for tournament ${tournamentId}`,
+          );
           invalidateTournamentQueries();
         },
       )
@@ -110,6 +125,10 @@ export function useTournamentRealtime(
         },
       )
       .subscribe((status, err) => {
+        console.log(
+          `[useTournamentRealtime] Channel status for tournament ${tournamentId}: ${status}`,
+          err ?? '',
+        );
         if (status === 'SUBSCRIBED') {
           invalidateTournamentQueries();
         } else if (

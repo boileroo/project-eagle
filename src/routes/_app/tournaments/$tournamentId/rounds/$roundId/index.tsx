@@ -2,7 +2,6 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { useScoreRealtime } from '@/hooks/use-score-realtime';
-import { useRoundRealtime } from '@/hooks/use-round-realtime';
 import { useActiveRound } from '@/hooks/use-active-round';
 import {
   roundQueryOptions,
@@ -59,7 +58,6 @@ function RouteComponent() {
   const { user, accessToken } = useAuth();
 
   useScoreRealtime(roundId, user!.id, accessToken);
-  useRoundRealtime(roundId, accessToken);
   useActiveRound(tournamentId, roundId);
 
   return (
