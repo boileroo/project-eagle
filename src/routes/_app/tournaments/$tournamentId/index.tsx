@@ -7,6 +7,7 @@ import {
   coursesQueryOptions,
 } from '@/lib/query-options';
 import { useAuth } from '@/hooks/use-auth';
+import { useTournamentRealtime } from '@/hooks/use-tournament-realtime';
 import { TournamentDetailPage } from '@/components/pages';
 
 export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
@@ -51,7 +52,9 @@ function RouteComponent() {
   );
   const { data: myPerson } = useSuspenseQuery(myPersonQueryOptions());
   const { data: courses } = useSuspenseQuery(coursesQueryOptions());
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
+
+  useTournamentRealtime(tournamentId, accessToken);
 
   return (
     <TournamentDetailPage

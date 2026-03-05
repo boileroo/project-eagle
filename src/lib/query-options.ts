@@ -18,10 +18,6 @@ export function roundQueryOptions(roundId: string) {
   return queryOptions({
     queryKey: ['round', roundId] as const,
     queryFn: () => getRoundFn({ data: { roundId } }),
-    refetchInterval: 2000, // Refetch every 2 seconds to detect participant/status changes
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
   });
 }
 
@@ -57,10 +53,6 @@ export function tournamentQueryOptions(tournamentId: string) {
   return queryOptions({
     queryKey: ['tournament', tournamentId] as const,
     queryFn: () => getTournamentFn({ data: { tournamentId } }),
-    refetchInterval: 2000, // Refetch every 2 seconds to detect participant changes
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
   });
 }
 
