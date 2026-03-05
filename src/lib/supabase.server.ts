@@ -4,8 +4,6 @@ import { setCookie } from '@tanstack/react-start/server';
 import { env } from './server/env.server';
 
 export function createSupabaseServerClient(request: Request) {
-  const isProduction = process.env.NODE_ENV === 'production';
-
   const supabase = createServerClient(
     env.VITE_SUPABASE_URL,
     env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -25,8 +23,8 @@ export function createSupabaseServerClient(request: Request) {
             setCookie(name, value, {
               path: options?.path ?? '/',
               httpOnly: options?.httpOnly ?? false,
-              sameSite: isProduction ? 'none' : 'lax',
-              secure: isProduction,
+              sameSite: options?.sameSite ?? 'lax',
+              secure: options?.secure ?? process.env.NODE_ENV === 'production',
               maxAge: options?.maxAge,
             });
           });
