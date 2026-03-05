@@ -1,17 +1,27 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { getTournamentFn, getMyPersonFn } from '@/lib/tournaments.server';
-import { getCoursesFn } from '@/lib/courses.server';
-import { tournamentLeaderboardQueryOptions } from '@/lib/query-options';
+import { useSuspenseQuery } from '@tanstack/react-query';
+import {
+  tournamentLeaderboardQueryOptions,
+  tournamentQueryOptions,
+  myPersonQueryOptions,
+  coursesQueryOptions,
+} from '@/lib/query-options';
 import { useAuth } from '@/hooks/use-auth';
+import { useTournamentRealtime } from '@/hooks/use-tournament-realtime';
 import { TournamentDetailPage } from '@/components/pages';
 
 export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
   loader: async ({ params, context }) => {
     const queryClient = context.queryClient;
-    const [tournament, myPerson, courses] = await Promise.all([
-      getTournamentFn({ data: { tournamentId: params.tournamentId } }),
-      getMyPersonFn(),
-      getCoursesFn(),
+
+    // Prefetch all data into query cache
+    const tournament = await queryClient.ensureQueryData(
+      tournamentQueryOptions(params.tournamentId),
+    );
+
+    await Promise.all([
+      queryClient.ensureQueryData(myPersonQueryOptions()),
+      queryClient.ensureQueryData(coursesQueryOptions()),
     ]);
 
     // Single rounds should redirect straight to the round detail
@@ -30,14 +40,22 @@ export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
       tournamentLeaderboardQueryOptions(params.tournamentId),
     );
 
-    return { tournament, myPerson, courses };
+    return { tournamentId: params.tournamentId };
   },
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const { tournament, myPerson, courses } = Route.useLoaderData();
-  const { user } = useAuth();
+  const { tournamentId } = Route.useParams();
+  const { data: tournament } = useSuspenseQuery(
+    tournamentQueryOptions(tournamentId),
+  );
+  const { data: myPerson } = useSuspenseQuery(myPersonQueryOptions());
+  const { data: courses } = useSuspenseQuery(coursesQueryOptions());
+  const { user, accessToken } = useAuth();
+
+  useTournamentRealtime(tournamentId, accessToken);
+
   return (
     <TournamentDetailPage
       tournament={tournament}
