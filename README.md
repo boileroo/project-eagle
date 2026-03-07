@@ -89,6 +89,18 @@ src/
 └── router.tsx           # Router configuration
 ```
 
+## Kanban & AI workflow
+
+This repository includes a small local kanban helper and OpenCode agent commands to streamline single-developer workflows.
+
+- Create a task doc: `yarn kanban new "Short task title"` (creates `kanban/backlog/<slug>.md`).
+- Start working: `yarn kanban work <task-name>` — creates/checks out `feature/<task-name>` and points you to `opencode /implement`.
+- Ship: `yarn kanban ship <task-name>` — squash-merges into `main` and archives the task doc to `kanban/done/`.
+
+OpenCode commands used in this workflow live in `.opencode/commands/` and agent definitions are in `.opencode/agents/`.
+
+See `kanban/TEMPLATE.md` for the task doc template and conventions.
+
 ## Adding shadcn Components
 
 ```bash

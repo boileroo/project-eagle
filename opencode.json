@@ -1,0 +1,34 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "github-copilot/gpt-5-mini",
+  "instructions": ["AGENTS.md"],
+  "agent": {
+    "project-manager": {
+      "model": "github-copilot/gpt-5-mini"
+    },
+    "master-planner": {
+      "model": "github-copilot/claude-opus-4.6"
+    },
+    "planner": {
+      "model": "github-copilot/claude-sonnet-4.6"
+    },
+    "master-builder": {
+      "model": "github-copilot/claude-sonnet-4.6"
+    },
+    "builder": {
+      "model": "github-copilot/claude-haiku-4.5"
+    },
+    "apprentice-builder": {
+      "model": "github-copilot/gpt-5-mini"
+    },
+    "ui-ux-expert": {
+      "model": "github-copilot/gemini-3.1-pro"
+    },
+    "expert-reviewer": {
+      "model": "github-copilot/gpt-5.3-codex"
+    },
+    "light-reviewer": {
+      "model": "github-copilot/claude-haiku-4.5"
+    }
+  }
+}

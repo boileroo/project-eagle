@@ -21,7 +21,8 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "generate-pwa-assets": "pwa-assets-generator",
-    "generate-routes": "tsx scripts/generate-route-tree.ts"
+    "generate-routes": "tsx scripts/generate-route-tree.ts",
+    "kanban": "tsx scripts/kanban.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
