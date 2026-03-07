@@ -1,6 +1,10 @@
 # Project Eagle 🦅
 
-A full-stack application built with:
+A full-stack golf tournament management application. Create and manage tournaments, courses, rounds, and competitions with real-time scoring and leaderboards.
+
+## Tech Stack
+
+Built with:
 
 - **[TanStack Start](https://tanstack.com/start)** — Full-stack React framework with SSR
 - **[TanStack Router](https://tanstack.com/router)** — Type-safe file-based routing
@@ -15,13 +19,21 @@ A full-stack application built with:
 
 ## Getting Started
 
-### 1. Install dependencies
+### Prerequisites
+
+- **Node.js 22.x** (see `.nvmrc` or `.node-version`)
+- **Yarn** package manager
+- **Supabase** project (free tier available at [supabase.com](https://supabase.com))
+
+### 1. Clone & Install
 
 ```bash
+git clone <repo>
+cd project-eagle
 yarn install
 ```
 
-### 2. Set up environment variables
+### 2. Set Up Environment Variables
 
 Copy `.env.example` to `.env` and fill in your Supabase credentials:
 
@@ -29,83 +41,143 @@ Copy `.env.example` to `.env` and fill in your Supabase credentials:
 cp .env.example .env
 ```
 
-### 3. Push database schema
+Required environment variables:
+
+| Variable                        | Description                                 | Required |
+| ------------------------------- | ------------------------------------------- | -------- |
+| `VITE_SUPABASE_URL`             | Your Supabase project URL                   | ✓        |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon key for client-side auth      | ✓        |
+| `SUPABASE_SERVICE_ROLE_KEY`     | Service role key for server-side operations | ✓        |
+| `DATABASE_URL`                  | PostgreSQL connection string from Supabase  | ✓        |
+
+Find these in your Supabase project settings under **Settings → API**.
+
+### 3. Set Up Database
 
 ```bash
 yarn db:push
 ```
 
-### 4. Start development server
+This syncs the Drizzle schema to your Supabase PostgreSQL database. For production, use migrations instead:
+
+```bash
+yarn db:generate  # Generate migration files
+yarn db:migrate   # Run migrations
+```
+
+Optionally seed sample data:
+
+```bash
+yarn db:seed
+```
+
+### 4. Start Development Server
 
 ```bash
 yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Scripts
 
-| Command             | Description                   |
-| ------------------- | ----------------------------- |
-| `yarn dev`          | Start dev server on port 3000 |
-| `yarn build`        | Production build              |
-| `yarn preview`      | Preview production build      |
-| `yarn db:generate`  | Generate Drizzle migrations   |
-| `yarn db:migrate`   | Run migrations                |
-| `yarn db:push`      | Push schema directly (dev)    |
-| `yarn db:studio`    | Open Drizzle Studio           |
-| `yarn db:seed`      | Seed the database             |
-| `yarn lint`         | Run ESLint                    |
-| `yarn lint:fix`     | Fix ESLint errors             |
-| `yarn format`       | Format with Prettier          |
-| `yarn format:check` | Check formatting              |
-| `yarn typecheck`    | Run TypeScript type checking  |
+### Development
+
+| Command        | Description                      |
+| -------------- | -------------------------------- |
+| `yarn dev`     | Start dev server (port 3000)     |
+| `yarn build`   | Build for production             |
+| `yarn preview` | Preview production build locally |
+
+### Database
+
+| Command            | Description                     |
+| ------------------ | ------------------------------- |
+| `yarn db:push`     | Sync schema directly (dev only) |
+| `yarn db:generate` | Generate migration files        |
+| `yarn db:migrate`  | Run pending migrations          |
+| `yarn db:studio`   | Open Drizzle Studio GUI         |
+| `yarn db:seed`     | Seed database with sample data  |
+
+### Code Quality
+
+| Command             | Description                     |
+| ------------------- | ------------------------------- |
+| `yarn lint`         | Run ESLint                      |
+| `yarn lint:fix`     | Fix ESLint errors automatically |
+| `yarn format`       | Format code with Prettier       |
+| `yarn format:check` | Check if code is formatted      |
+| `yarn typecheck`    | Run TypeScript type checking    |
+
+### Utilities
+
+| Command                    | Description                   |
+| -------------------------- | ----------------------------- |
+| `yarn kanban`              | Local kanban workflow helper  |
+| `yarn generate-routes`     | Generate TanStack Router tree |
+| `yarn generate-pwa-assets` | Generate PWA assets           |
 
 ## Project Structure
 
 ```
 src/
 ├── components/
-│   └── ui/              # shadcn/ui components
+│   ├── ui/              # shadcn/ui components
+│   ├── app/             # App-wide layout components
+│   ├── shared/          # Reusable feature components
+│   └── pages/           # Page-specific components
 ├── db/
 │   ├── index.ts         # Drizzle client
-│   ├── schema.ts        # Drizzle schema + drizzle-zod
+│   ├── schema.ts        # PostgreSQL schema & types
 │   ├── seed.ts          # Database seeding
 │   └── migrations/      # Generated migrations
 ├── hooks/               # Custom React hooks
 ├── lib/
-│   ├── collections.ts   # TanStack DB collections
+│   ├── *.server.ts      # Server functions (createServerFn)
+│   ├── server/          # Server utilities & helpers
+│   ├── domain/          # Pure scoring & calculation logic
+│   ├── validators/      # Zod schemas for validation
 │   ├── supabase.ts      # Supabase client (browser)
-│   ├── supabase.server.ts # Supabase client (SSR)
-│   ├── utils.ts         # cn() utility
-│   └── validators.ts    # Zod schemas
+│   └── query-options.ts # TanStack Query configurations
 ├── routes/
 │   ├── __root.tsx       # Root layout
-│   └── index.tsx        # Home page
+│   ├── _app/            # Protected app routes
+│   ├── _auth/           # Auth routes
+│   └── ...              # Feature routes
+├── types/               # Shared TypeScript types
 ├── styles/
 │   └── globals.css      # Tailwind + CSS variables
+├── config/              # App configuration
 ├── entry-client.tsx     # Client entry
 ├── entry-server.tsx     # Server entry
 └── router.tsx           # Router configuration
 ```
 
-## Kanban & AI workflow
+## Development Workflow
 
-This repository includes a small local kanban helper and OpenCode agent commands to streamline single-developer workflows.
+This project includes a local kanban system and OpenCode integration for streamlined development:
 
-- Create a task doc: `yarn kanban new "Short task title"` (creates `kanban/backlog/<slug>.md`).
-- Start working: `yarn kanban work <task-name>` — creates/checks out `feature/<task-name>` and points you to `opencode /implement`.
-- Ship: `yarn kanban ship <task-name>` — squash-merges into `main` and archives the task doc to `kanban/done/`.
+```bash
+# Create a new task
+yarn kanban new "Add user profile page"
 
-OpenCode commands used in this workflow live in `.opencode/commands/` and agent definitions are in `.opencode/agents/`.
+# Start working (creates feature branch and launches agent)
+yarn kanban work add-user-profile-page
 
-See `kanban/TEMPLATE.md` for the task doc template and conventions.
+# Ship completed work (squash-merge + archive task)
+yarn kanban ship add-user-profile-page
+```
 
-## Adding shadcn Components
+Task docs are stored in `kanban/` and follow the template in `kanban/TEMPLATE.md`. OpenCode agent commands and definitions are in `.opencode/`.
+
+## Adding shadcn UI Components
+
+Install components as needed:
 
 ```bash
 yarn dlx shadcn@latest add button
 yarn dlx shadcn@latest add card
 yarn dlx shadcn@latest add input
-# etc.
+yarn dlx shadcn@latest add form
+# See https://ui.shadcn.com for available components
 ```
