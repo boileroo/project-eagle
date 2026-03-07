@@ -15,7 +15,8 @@ Your responsibilities:
 
 - Implement the feature described in the task document
 - Follow all conventions in AGENTS.md
-- Make clean git commits as you go
+- DO NOT make git commits — only stage changes (via `git add`)
 - Run `yarn typecheck` and `yarn lint` after completing implementation and fix any errors
+- Output a summary of all files created/modified with one-line descriptions
 
-You have full access to read files, write files, edit files, and run shell commands.
+You have full access to read files, write files, edit files, and run shell commands (except git commit).

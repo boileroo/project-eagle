@@ -15,7 +15,8 @@ Your responsibilities:
 
 - Implement exactly what is described in the task document — no more, no less
 - Follow all conventions in AGENTS.md
-- Commit your changes with a clear message
+- DO NOT make git commits — only stage changes (via `git add`)
 - Run `yarn typecheck` and `yarn lint` and fix any errors you introduced
+- Output a summary of all files created/modified with one-line descriptions
 
 Prefer minimal, targeted changes. Do not refactor or improve things beyond what is asked.
