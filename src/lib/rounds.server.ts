@@ -626,6 +626,34 @@ export const updateRoundParticipantFn = createServerFn({ method: 'POST' })
     return { success: true };
   });
 
+// ──────────────────────────────────────────────
+// Toggle round-level marker flag
+// ──────────────────────────────────────────────
+
+export const toggleRoundMarkerFn = createServerFn({ method: 'POST' })
+  .inputValidator(
+    z.object({
+      roundParticipantId: z.string().uuid(),
+      isMarker: z.boolean(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const rp = await db.query.roundParticipants.findFirst({
+      where: eq(roundParticipants.id, data.roundParticipantId),
+      with: { round: true },
+    });
+    if (!rp) throw new Error('Participant not found');
+
+    await requireCommissioner(rp.round.tournamentId);
+
+    await db
+      .update(roundParticipants)
+      .set({ isMarker: data.isMarker })
+      .where(eq(roundParticipants.id, data.roundParticipantId));
+
+    return { success: true };
+  });
+
 // ──────────────────────────────────────────────────
 // Create a single round (auto-creates tournament)
 // ──────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import { useRemoveRoundParticipant } from '@/lib/rounds';
 import { X } from 'lucide-react';
 import { AddPlayerDialog } from '@/components/add-player-dialog';
 import { EditHandicapDialog } from '@/components/pages/tournament-detail-page/components/edit-handicap-dialog';
+import { ChangeRoleDialog } from '@/components/pages/tournament-detail-page/components/participants/change-role-dialog';
 import { EditRoundHandicapDialog } from '@/components/pages/round-detail-page/components/edit-round-handicap-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +49,14 @@ export function PlayersTab({
   const iAmParticipant = myPerson
     ? participants.some((p) => p.person.userId === userId)
     : false;
+
+  // Compute commissioner count (tournament mode only)
+  const commissionerCount = isTournamentMode
+    ? participants.filter((p) => p.role === 'commissioner').length
+    : 0;
+
+  // Get tournament creator ID (tournament mode only)
+  const creatorUserId = isTournamentMode ? tournament?.createdByUserId : null;
 
   const handleAddMyself = async () => {
     if (!tournament) return;
@@ -184,12 +193,35 @@ export function PlayersTab({
             <div className="flex items-center gap-1.5">
               {isMe && <Badge className="text-xs">You</Badge>}
 
-              <Badge
-                className={`text-xs ${getRoleBadgeStyle(participantRole)}`}
-              >
-                {participantRole.charAt(0).toUpperCase() +
-                  participantRole.slice(1)}
-              </Badge>
+              {canEdit && isTournamentMode && participantRole !== 'guest' ? (
+                <ChangeRoleDialog
+                  participantId={p.id}
+                  currentRole={participantRole}
+                  playerName={displayName}
+                  onRoleChanged={onChanged}
+                  isLastCommissioner={
+                    isCommissionerParticipant && commissionerCount === 1
+                  }
+                  isCreator={personUserId === creatorUserId}
+                  trigger={
+                    <button type="button" className="cursor-pointer">
+                      <Badge
+                        className={`text-xs ${getRoleBadgeStyle(participantRole)}`}
+                      >
+                        {participantRole.charAt(0).toUpperCase() +
+                          participantRole.slice(1)}
+                      </Badge>
+                    </button>
+                  }
+                />
+              ) : (
+                <Badge
+                  className={`text-xs ${getRoleBadgeStyle(participantRole)}`}
+                >
+                  {participantRole.charAt(0).toUpperCase() +
+                    participantRole.slice(1)}
+                </Badge>
+              )}
 
               {canEdit || isMe ? (
                 isTournamentMode ? (

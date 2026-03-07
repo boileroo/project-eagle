@@ -6,7 +6,7 @@ import { competitions, bonusAwards, rounds } from '@/db/schema';
 import {
   requireAuth,
   requireCommissioner,
-  requireCommissionerOrMarker,
+  requireCommissionerOrRoundMarker,
   requireTournamentParticipant,
   verifyTournamentMembership,
 } from './server/auth.helpers.server';
@@ -201,7 +201,10 @@ export const awardBonusFn = createServerFn({ method: 'POST' })
       throw new Error('Can only award bonuses for NTP/LD competitions');
     }
 
-    const user = await requireCommissionerOrMarker(comp.tournamentId);
+    const user = await requireCommissionerOrRoundMarker(
+      comp.tournamentId,
+      comp.roundId,
+    );
 
     await db
       .delete(bonusAwards)

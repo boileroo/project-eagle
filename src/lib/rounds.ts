@@ -8,6 +8,7 @@ import {
   createSingleRoundFn,
   removeRoundParticipantFn,
   updateRoundParticipantFn,
+  toggleRoundMarkerFn,
 } from '@/lib/rounds.server';
 import type { CreateSingleRoundInput } from '@/lib/validators';
 import type { MutationCallOptions, MutationHookReturn } from '@/lib/mutation';
@@ -335,6 +336,51 @@ export function useUpdateRoundParticipant(): MutationHookReturn<
   }: MutationCallOptions<
     UpdateRoundParticipantVariables,
     UpdateRoundParticipantResult
+  >) => {
+    try {
+      const result = await mutation.mutateAsync(variables);
+      await onSuccess?.(result);
+    } catch (error) {
+      onError?.(error instanceof Error ? error : new Error(String(error)));
+    }
+  };
+
+  return [
+    mutate,
+    {
+      isPending: mutation.isPending,
+      isError: mutation.isError,
+      error: mutation.error,
+    },
+  ] as const;
+}
+
+// ──────────────────────────────────────────────
+// useToggleRoundMarker
+// ──────────────────────────────────────────────
+
+type ToggleRoundMarkerVariables = {
+  roundParticipantId: string;
+  isMarker: boolean;
+};
+type ToggleRoundMarkerResult = { success: boolean };
+
+export function useToggleRoundMarker(): MutationHookReturn<
+  ToggleRoundMarkerVariables,
+  ToggleRoundMarkerResult
+> {
+  const mutation = useMutation({
+    mutationFn: (variables: ToggleRoundMarkerVariables) =>
+      toggleRoundMarkerFn({ data: variables }),
+  });
+
+  const mutate = async ({
+    variables,
+    onSuccess,
+    onError,
+  }: MutationCallOptions<
+    ToggleRoundMarkerVariables,
+    ToggleRoundMarkerResult
   >) => {
     try {
       const result = await mutation.mutateAsync(variables);

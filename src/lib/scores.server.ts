@@ -8,6 +8,7 @@ import {
   roundParticipants,
   persons,
   tournamentParticipants,
+  tournaments,
 } from '@/db/schema';
 import {
   requireAuth,
@@ -79,40 +80,70 @@ export const submitScoreFn = createServerFn({ method: 'POST' })
           throw new Error('You can only record your own scores as a player');
         }
       } else {
-        // 'marker' or 'commissioner' → user must actually hold that role
-        // (or a higher role) in the tournament
+        // 'marker' or 'commissioner' → resolve the user's person record
         const userPerson = await db.query.persons.findFirst({
           where: eq(persons.userId, user.id),
+          columns: { id: true },
         });
         if (!userPerson) {
           throw new Error('You are not a participant in this tournament');
         }
+
+        // Check tournament creator shortcut
+        const tournament = await db.query.tournaments.findFirst({
+          where: eq(tournaments.id, round.tournamentId),
+          columns: { createdByUserId: true },
+        });
+        const isCreator = tournament?.createdByUserId === user.id;
 
         const tp = await db.query.tournamentParticipants.findFirst({
           where: and(
             eq(tournamentParticipants.tournamentId, round.tournamentId),
             eq(tournamentParticipants.personId, userPerson.id),
           ),
+          columns: { role: true },
         });
-        if (!tp) {
-          throw new Error('You are not a participant in this tournament');
-        }
+
+        const isCommissioner = isCreator || tp?.role === 'commissioner';
 
         if (data.recordedByRole === 'commissioner') {
-          if (tp.role !== 'commissioner') {
+          if (!isCommissioner) {
             throw new Error(
               'Only commissioners can record scores as commissioner',
             );
           }
         } else {
-          // marker claim — must be marker or commissioner
-          if (tp.role !== 'marker' && tp.role !== 'commissioner') {
-            throw new Error(
-              'Only markers and commissioners can record scores for other players',
-            );
+          // marker claim — must be commissioner OR have round-level isMarker=true
+          if (isCommissioner) {
+            // Commissioners can always record as marker
+            verifiedRole = 'commissioner';
+          } else {
+            // Check round-level marker flag
+            const myRp = await db.query.roundParticipants.findFirst({
+              where: and(
+                eq(roundParticipants.roundId, data.roundId),
+                eq(roundParticipants.personId, userPerson.id),
+              ),
+              columns: { isMarker: true, roundGroupId: true },
+            });
+
+            if (!myRp?.isMarker) {
+              throw new Error(
+                'Only markers and commissioners can record scores for other players',
+              );
+            }
+
+            // Group-scoping: marker can only record for players in their own group
+            if (myRp.roundGroupId !== null) {
+              if (rp.roundGroupId !== myRp.roundGroupId) {
+                throw new Error(
+                  'Markers can only record scores for players in their own group',
+                );
+              }
+            }
+
+            verifiedRole = 'marker';
           }
-          // Use their actual tournament role
-          verifiedRole = tp.role === 'commissioner' ? 'commissioner' : 'marker';
         }
       }
 

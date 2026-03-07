@@ -17,6 +17,7 @@ import { ScorecardSections } from './components/scorecard-sections';
 import { buildMatchPairings } from './components/build-match-pairings';
 import { statusLabels } from './components/constants';
 import { buildTeamColourMap } from '@/lib/team-colours';
+import { useRoundPermissions } from '@/hooks/use-round-permissions';
 import type {
   RoundData,
   ScorecardData,
@@ -76,42 +77,9 @@ export function RoundDetailPage({
     par: number;
   } | null>(null);
 
-  // Determine if current user is commissioner of this tournament
-  const isCommissioner = round.participants.some(
-    (rp) =>
-      rp.person.userId === userId &&
-      rp.tournamentParticipant?.role === 'commissioner',
-  );
-
-  // Determine the recording role for the current user
-  const getRecordingRole = (
-    roundParticipantId: string,
-  ): 'player' | 'marker' | 'commissioner' => {
-    if (isCommissioner) return 'commissioner';
-    const rp = round.participants.find((p) => p.id === roundParticipantId);
-    if (rp?.person.userId === userId) return 'player';
-    return 'marker';
-  };
-
-  // Compute which participants the current user can edit scores for
-  const editableParticipantIds = useMemo(() => {
-    const set = new Set<string>();
-    if (round.status !== 'open') return set;
-
-    const myRoundParticipant = round.participants.find(
-      (rp) => rp.person.userId === userId,
-    );
-    const myTournamentRole = myRoundParticipant?.tournamentParticipant?.role;
-
-    if (myTournamentRole === 'commissioner' || myTournamentRole === 'marker') {
-      for (const rp of round.participants) {
-        set.add(rp.id);
-      }
-    } else if (myRoundParticipant) {
-      set.add(myRoundParticipant.id);
-    }
-    return set;
-  }, [round.participants, round.status, userId]);
+  // Permissions derived from the hook (fixes bug + group-scoped marker logic)
+  const { isCommissioner, editableParticipantIds, getRecordingRole } =
+    useRoundPermissions({ round, tournament: tournament ?? undefined, userId });
 
   // Build participant team colour map (roundParticipantId → hex)
   const participantTeamColours = useMemo(() => {

@@ -389,24 +389,8 @@ export const addParticipantFn = createServerFn({ method: 'POST' })
         const role = isSelfJoin ? 'player' : (data.role ?? 'player');
 
         // Guests can only be players
-        if (
-          person.userId == null &&
-          (role === 'commissioner' || role === 'marker')
-        ) {
+        if (person.userId == null && role === 'commissioner') {
           throw new Error('Guests can only be assigned the player role');
-        }
-
-        // If adding as commissioner, demote any existing commissioner to player
-        if (role === 'commissioner') {
-          await tx
-            .update(tournamentParticipants)
-            .set({ role: 'player' })
-            .where(
-              and(
-                eq(tournamentParticipants.tournamentId, data.tournamentId),
-                eq(tournamentParticipants.role, 'commissioner'),
-              ),
-            );
         }
 
         const [participant] = await tx
@@ -462,44 +446,77 @@ export const addParticipantFn = createServerFn({ method: 'POST' })
 
 export const updateParticipantFn = createServerFn({ method: 'POST' })
   .inputValidator(updateParticipantSchema)
-  .handler(async ({ data }) => {
-    const existing = await db.query.tournamentParticipants.findFirst({
-      where: eq(tournamentParticipants.id, data.participantId),
-      with: { person: true },
-    });
-    if (!existing) throw new Error('Participant not found');
+  .handler(
+    safeHandler(async ({ data }) => {
+      const existing = await db.query.tournamentParticipants.findFirst({
+        where: eq(tournamentParticipants.id, data.participantId),
+        with: { person: true },
+      });
+      if (!existing) throw new Error('Participant not found');
 
-    await requireCommissioner(existing.tournamentId);
-    await requireTournamentSetup(existing.tournamentId);
+      const tournament = await db.query.tournaments.findFirst({
+        where: eq(tournaments.id, existing.tournamentId),
+      });
+      if (!tournament) throw new Error('Tournament not found');
 
-    // Cannot change the role of a commissioner
-    if (data.role !== undefined && existing.role === 'commissioner') {
-      throw new Error('The commissioner role cannot be changed');
-    }
+      await requireCommissioner(existing.tournamentId);
+      await requireTournamentSetup(existing.tournamentId);
 
-    // Guests can only be players
-    if (
-      data.role !== undefined &&
-      existing.person.userId == null &&
-      data.role === 'marker'
-    ) {
-      throw new Error('Guests can only be assigned the player role');
-    }
+      // Guests can only be players (cannot be commissioner)
+      if (
+        data.role !== undefined &&
+        existing.person.userId == null &&
+        data.role === 'commissioner'
+      ) {
+        throw new Error('Guests can only be assigned the player role');
+      }
 
-    const updates: Record<string, unknown> = {};
-    if (data.role !== undefined) updates.role = data.role;
-    if (data.handicapOverride !== undefined)
-      updates.handicapOverride = data.handicapOverride?.toString() ?? null;
+      // Check if trying to demote the tournament creator
+      if (
+        data.role === 'player' &&
+        existing.role === 'commissioner' &&
+        existing.person.userId === tournament.createdByUserId
+      ) {
+        throw new Error(
+          'The tournament creator cannot be demoted. Please transfer ownership first.',
+        );
+      }
 
-    if (Object.keys(updates).length > 0) {
-      await db
-        .update(tournamentParticipants)
-        .set(updates)
-        .where(eq(tournamentParticipants.id, data.participantId));
-    }
+      // Check if demoting the last commissioner
+      if (data.role === 'player' && existing.role === 'commissioner') {
+        const commissionerCount =
+          await db.query.tournamentParticipants.findMany({
+            where: and(
+              eq(tournamentParticipants.tournamentId, existing.tournamentId),
+              eq(tournamentParticipants.role, 'commissioner'),
+            ),
+          });
 
-    return { success: true };
-  });
+        if (commissionerCount.length === 1) {
+          throw new Error(
+            'Cannot demote the last commissioner. Promote another player to commissioner first.',
+          );
+        }
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (data.role !== undefined) {
+        updates.role = data.role;
+      }
+
+      if (data.handicapOverride !== undefined)
+        updates.handicapOverride = data.handicapOverride?.toString() ?? null;
+
+      if (Object.keys(updates).length > 0) {
+        await db
+          .update(tournamentParticipants)
+          .set(updates)
+          .where(eq(tournamentParticipants.id, data.participantId));
+      }
+
+      return { success: true };
+    }),
+  );
 
 // ──────────────────────────────────────────────
 // Remove a participant from a tournament
@@ -507,21 +524,40 @@ export const updateParticipantFn = createServerFn({ method: 'POST' })
 
 export const removeParticipantFn = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ participantId: z.string().uuid() }))
-  .handler(async ({ data }) => {
-    const existing = await db.query.tournamentParticipants.findFirst({
-      where: eq(tournamentParticipants.id, data.participantId),
-    });
-    if (!existing) throw new Error('Participant not found');
+  .handler(
+    safeHandler(async ({ data }) => {
+      const existing = await db.query.tournamentParticipants.findFirst({
+        where: eq(tournamentParticipants.id, data.participantId),
+      });
+      if (!existing) throw new Error('Participant not found');
 
-    await requireCommissioner(existing.tournamentId);
-    await requireTournamentSetup(existing.tournamentId);
+      await requireCommissioner(existing.tournamentId);
+      await requireTournamentSetup(existing.tournamentId);
 
-    await db
-      .delete(tournamentParticipants)
-      .where(eq(tournamentParticipants.id, data.participantId));
+      // Check if removing the last commissioner
+      if (existing.role === 'commissioner') {
+        const commissionerCount =
+          await db.query.tournamentParticipants.findMany({
+            where: and(
+              eq(tournamentParticipants.tournamentId, existing.tournamentId),
+              eq(tournamentParticipants.role, 'commissioner'),
+            ),
+          });
 
-    return { success: true };
-  });
+        if (commissionerCount.length === 1) {
+          throw new Error(
+            'Cannot remove the last commissioner. Promote another player to commissioner first.',
+          );
+        }
+      }
+
+      await db
+        .delete(tournamentParticipants)
+        .where(eq(tournamentParticipants.id, data.participantId));
+
+      return { success: true };
+    }),
+  );
 
 // ──────────────────────────────────────────────
 // Get current user's person record (for "Add Myself")

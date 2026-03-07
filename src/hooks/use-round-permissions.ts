@@ -7,7 +7,7 @@ interface RoundParticipantPerson {
 }
 
 interface TournamentParticipantRole {
-  role: 'player' | 'commissioner' | 'marker';
+  role: 'player' | 'commissioner';
   teamMemberships?: Array<{
     team: { id: string; createdAt: Date | string };
   }>;
@@ -15,6 +15,8 @@ interface TournamentParticipantRole {
 
 interface RoundParticipant {
   id: string;
+  roundGroupId?: string | null;
+  isMarker?: boolean;
   person: RoundParticipantPerson;
   tournamentParticipant?: TournamentParticipantRole | null;
 }
@@ -28,7 +30,7 @@ interface RoundWithParticipants {
 
 interface TournamentParticipant {
   personId: string;
-  role: 'player' | 'commissioner' | 'marker';
+  role: 'player' | 'commissioner';
 }
 
 interface TournamentWithParticipants {
@@ -54,7 +56,7 @@ export function useRoundPermissions({
     if (tournament) {
       const isCreator = userId === tournament.createdByUserId;
       const isTournamentCommissioner = tournament.participants.some(
-        (p) => p.personId && p.role === 'commissioner',
+        (p) => p.role === 'commissioner' && p.personId === userId,
       );
       if (isCreator || isTournamentCommissioner) return true;
     }
@@ -77,6 +79,8 @@ export function useRoundPermissions({
 
   const myRole = myParticipant?.tournamentParticipant?.role;
 
+  const isRoundMarker = myParticipant?.isMarker === true;
+
   const getRecordingRole = (
     roundParticipantId: string,
   ): 'player' | 'marker' | 'commissioner' => {
@@ -90,24 +94,35 @@ export function useRoundPermissions({
     const set = new Set<string>();
     if (!round || round.status !== 'open') return set;
 
-    if (isCommissioner || myRole === 'marker') {
+    if (isCommissioner) {
       for (const rp of round.participants) {
         set.add(rp.id);
+      }
+    } else if (isRoundMarker) {
+      // Marker can only edit participants in their own group
+      const myGroupId = myParticipant?.roundGroupId;
+      for (const rp of round.participants) {
+        if (myGroupId && rp.roundGroupId === myGroupId) {
+          set.add(rp.id);
+        } else if (!myGroupId) {
+          // If marker has no group assigned, fall back to all participants
+          set.add(rp.id);
+        }
       }
     } else if (myParticipant) {
       set.add(myParticipant.id);
     }
 
     return set;
-  }, [round, isCommissioner, myRole, myParticipant]);
+  }, [round, isCommissioner, isRoundMarker, myParticipant]);
 
-  const isMarkerOrCommissioner =
-    myRole === 'marker' || myRole === 'commissioner';
+  const isMarkerOrCommissioner = isRoundMarker || isCommissioner;
 
   return {
     isCommissioner,
     myParticipant,
     myRole,
+    isRoundMarker,
     getRecordingRole,
     editableParticipantIds,
     isMarkerOrCommissioner,

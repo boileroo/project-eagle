@@ -129,6 +129,7 @@ export function ParticipantsSection({
                 <GroupsTab
                   round={round}
                   canEdit={!!canEditGroups}
+                  canToggleMarker={isCommissioner}
                   userId={userId}
                   onChanged={onChanged}
                 />

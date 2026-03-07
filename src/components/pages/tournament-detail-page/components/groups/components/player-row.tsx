@@ -15,6 +15,9 @@ interface PlayerRowProps {
   assigning: string | null;
   onAssignToGroup: (roundParticipantId: string, groupId: string | null) => void;
   showGroupAssign?: boolean;
+  canToggleMarker?: boolean;
+  togglingMarker?: boolean;
+  onToggleMarker?: (roundParticipantId: string, isMarker: boolean) => void;
 }
 
 export function PlayerRow({
@@ -25,9 +28,13 @@ export function PlayerRow({
   assigning,
   onAssignToGroup,
   showGroupAssign = true,
+  canToggleMarker = false,
+  togglingMarker = false,
+  onToggleMarker,
 }: PlayerRowProps) {
   const isMe = rp.person.userId === userId;
   const hcValue = rp.handicapOverride ?? rp.handicapSnapshot;
+  const isMarker = rp.isMarker === true;
 
   return (
     <div
@@ -46,6 +53,27 @@ export function PlayerRow({
       </div>
       <div className="flex items-center gap-1.5">
         <Badge variant="outline">HC {hcValue}</Badge>
+        {canToggleMarker && (
+          <button
+            type="button"
+            disabled={togglingMarker}
+            onClick={() => onToggleMarker?.(rp.id, !isMarker)}
+            className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            title={isMarker ? 'Remove marker role' : 'Assign as marker'}
+          >
+            <Badge
+              variant={isMarker ? 'default' : 'outline'}
+              className="text-xs"
+            >
+              Marker
+            </Badge>
+          </button>
+        )}
+        {!canToggleMarker && isMarker && (
+          <Badge variant="default" className="text-xs">
+            Marker
+          </Badge>
+        )}
         {canMoveGroup && showGroupAssign && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

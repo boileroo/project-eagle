@@ -4,6 +4,7 @@ import {
   useDeleteRoundGroup,
   useAssignParticipantToGroup,
 } from '@/lib/groups';
+import { useToggleRoundMarker } from '@/lib/rounds';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -14,6 +15,7 @@ import { PlayerRow } from './components/player-row';
 type GroupsTabProps = {
   round: RoundData;
   canEdit: boolean;
+  canToggleMarker?: boolean;
   userId: string;
   onChanged: () => void;
 };
@@ -21,16 +23,19 @@ type GroupsTabProps = {
 export function GroupsTab({
   round,
   canEdit,
+  canToggleMarker = false,
   userId,
   onChanged,
 }: GroupsTabProps) {
   const [assigning, setAssigning] = useState<string | null>(null);
+  const [togglingMarker, setTogglingMarker] = useState<string | null>(null);
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
   const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
 
   const [createRoundGroup, { isPending: addingGroup }] = useCreateRoundGroup();
   const [deleteRoundGroup] = useDeleteRoundGroup();
   const [assignParticipantToGroup] = useAssignParticipantToGroup();
+  const [toggleRoundMarker] = useToggleRoundMarker();
 
   const isDraft = round.status === 'draft';
   const canEditGroups = canEdit && isDraft;
@@ -98,6 +103,20 @@ export function GroupsTab({
         toast.error(error.message || 'Failed to delete group'),
     });
     setDeletingGroupId(null);
+  };
+
+  const handleToggleMarker = async (
+    roundParticipantId: string,
+    isMarker: boolean,
+  ) => {
+    setTogglingMarker(roundParticipantId);
+    await toggleRoundMarker({
+      variables: { roundParticipantId, isMarker },
+      onSuccess: () => onChanged(),
+      onError: (error) =>
+        toast.error(error.message || 'Failed to update marker'),
+    });
+    setTogglingMarker(null);
   };
 
   if (round.participants.length === 0) {
@@ -211,6 +230,9 @@ export function GroupsTab({
                     canMoveGroup={canConfigureGroups && groups.length > 0}
                     assigning={assigning}
                     onAssignToGroup={handleAssignToGroup}
+                    canToggleMarker={canToggleMarker}
+                    togglingMarker={togglingMarker === rp.id}
+                    onToggleMarker={handleToggleMarker}
                   />
                 ))
               )}
@@ -239,6 +261,9 @@ export function GroupsTab({
                 canMoveGroup={canConfigureGroups && groups.length > 0}
                 assigning={assigning}
                 onAssignToGroup={handleAssignToGroup}
+                canToggleMarker={canToggleMarker}
+                togglingMarker={togglingMarker === rp.id}
+                onToggleMarker={handleToggleMarker}
               />
             ))}
           </div>

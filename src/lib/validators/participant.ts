@@ -4,14 +4,14 @@ import { handicapField } from './shared';
 export const addParticipantSchema = z.object({
   tournamentId: z.string().uuid(),
   personId: z.string().uuid(),
-  role: z.enum(['commissioner', 'marker', 'player']).default('player'),
+  role: z.enum(['commissioner', 'player']).default('player'),
   handicapOverride: handicapField,
 });
 export type AddParticipantInput = z.infer<typeof addParticipantSchema>;
 
 export const updateParticipantSchema = z.object({
   participantId: z.string().uuid(),
-  role: z.enum(['marker', 'player']).optional(),
+  role: z.enum(['commissioner', 'player']).optional(),
   handicapOverride: handicapField,
 });
 export type UpdateParticipantInput = z.infer<typeof updateParticipantSchema>;

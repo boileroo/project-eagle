@@ -1,7 +1,13 @@
 import { getRequest } from '@tanstack/react-start/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/db';
-import { persons, tournaments, tournamentParticipants } from '@/db/schema';
+import {
+  persons,
+  tournaments,
+  tournamentParticipants,
+  roundParticipants,
+  rounds,
+} from '@/db/schema';
 import { createSupabaseServerClient } from '../supabase.server';
 
 // ──────────────────────────────────────────────
@@ -99,32 +105,55 @@ export async function requireTournamentParticipant(tournamentId: string) {
 }
 
 // ──────────────────────────────────────────────
-// Require commissioner or marker role for a tournament
+// Require commissioner role, or marker status for the round
+// Marker is now a round-level flag (roundParticipants.isMarker).
+// Used by functions like awardBonusFn that markers can also perform.
 // ──────────────────────────────────────────────
 
-export async function requireCommissionerOrMarker(tournamentId: string) {
+export async function requireCommissionerOrRoundMarker(
+  tournamentId: string,
+  roundId: string,
+) {
   const user = await requireAuth();
 
   // Tournament creator always has commissioner-level access
   const tournament = await db.query.tournaments.findFirst({
     where: eq(tournaments.id, tournamentId),
+    columns: { createdByUserId: true },
   });
   if (tournament?.createdByUserId === user.id) return user;
 
   const person = await db.query.persons.findFirst({
     where: eq(persons.userId, user.id),
+    columns: { id: true },
   });
   if (!person) throw new Error('No person record found for your account');
 
+  // Check commissioner tournament role
   const tp = await db.query.tournamentParticipants.findFirst({
     where: and(
       eq(tournamentParticipants.tournamentId, tournamentId),
       eq(tournamentParticipants.personId, person.id),
     ),
+    columns: { role: true },
   });
-  if (!tp || (tp.role !== 'commissioner' && tp.role !== 'marker')) {
-    throw new Error('Only a commissioner or marker can perform this action');
-  }
+  if (tp?.role === 'commissioner') return user;
 
-  return user;
+  // Check round-level marker flag
+  const round = await db.query.rounds.findFirst({
+    where: eq(rounds.id, roundId),
+    columns: { id: true },
+  });
+  if (!round) throw new Error('Round not found');
+
+  const rp = await db.query.roundParticipants.findFirst({
+    where: and(
+      eq(roundParticipants.roundId, roundId),
+      eq(roundParticipants.personId, person.id),
+    ),
+    columns: { isMarker: true },
+  });
+  if (rp?.isMarker) return user;
+
+  throw new Error('Only a commissioner or marker can perform this action');
 }

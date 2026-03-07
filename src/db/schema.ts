@@ -71,7 +71,6 @@ export const groupScopeEnum = pgEnum('group_scope', ['all', 'within_group']);
 
 export const tournamentRoleEnum = pgEnum('tournament_role', [
   'commissioner',
-  'marker',
   'player',
 ]);
 
@@ -344,6 +343,7 @@ export const roundParticipants = pgTable(
       precision: 4,
       scale: 1,
     }),
+    isMarker: boolean('is_marker').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
