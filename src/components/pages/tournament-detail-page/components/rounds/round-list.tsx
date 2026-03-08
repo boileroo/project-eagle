@@ -116,7 +116,8 @@ export function RoundList({
   if (rounds.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">
-        No rounds yet. Add a round to get started.
+        No rounds yet.
+        {isCommissioner && ' Add a round to get started.'}
       </p>
     );
   }
