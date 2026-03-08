@@ -109,6 +109,42 @@ export function useTournamentRealtime(
           invalidateTournamentQueries();
         },
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'tournament_teams',
+          filter: `tournament_id=eq.${tournamentId}`,
+        },
+        () => {
+          invalidateTournamentQueries();
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'tournament_teams',
+          filter: `tournament_id=eq.${tournamentId}`,
+        },
+        () => {
+          invalidateTournamentQueries();
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'tournament_teams',
+          filter: `tournament_id=eq.${tournamentId}`,
+        },
+        () => {
+          invalidateTournamentQueries();
+        },
+      )
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           invalidateTournamentQueries();

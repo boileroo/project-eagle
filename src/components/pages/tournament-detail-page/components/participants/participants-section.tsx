@@ -42,12 +42,21 @@ export function ParticipantsSection({
   );
 
   const hasTournament = !!tournament;
-  const hasTeams = hasTournament && (tournament.teams.length > 0 || true);
+  const hasTeamsConfigured = hasTournament && tournament.teams.length > 0;
+  const shouldShowTeamsTab =
+    hasTournament && (isCommissioner || hasTeamsConfigured);
+  const teamsTabDisabled =
+    hasTournament && !hasTeamsConfigured && !isCommissioner;
   const hasGroups = !!round;
 
-  const tabs: { id: 'players' | 'teams' | 'groups'; label: string }[] = [];
+  const tabs: {
+    id: 'players' | 'teams' | 'groups';
+    label: string;
+    disabled?: boolean;
+  }[] = [];
   if (hasTournament) tabs.push({ id: 'players', label: 'Players' });
-  if (hasTeams) tabs.push({ id: 'teams', label: 'Teams' });
+  if (shouldShowTeamsTab)
+    tabs.push({ id: 'teams', label: 'Teams', disabled: teamsTabDisabled });
   if (hasGroups) tabs.push({ id: 'groups', label: 'Groups' });
 
   const roundStatus = round?.status ?? 'draft';
@@ -91,12 +100,16 @@ export function ParticipantsSection({
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => !tab.disabled && setActiveTab(tab.id)}
+                    disabled={tab.disabled}
                     className={cn(
                       'px-4 py-2 text-sm font-medium transition-colors',
-                      activeTab === tab.id
+                      tab.disabled && 'cursor-not-allowed opacity-50',
+                      activeTab === tab.id && !tab.disabled
                         ? 'border-primary text-primary border-b-2'
                         : 'text-muted-foreground hover:text-foreground',
+                      tab.disabled &&
+                        'text-muted-foreground hover:text-muted-foreground',
                     )}
                   >
                     {tab.label}
