@@ -1,7 +1,4 @@
 ---
-complexity: 1
-# builder: master | standard | light  (optional — defaults: C0→light, C1→standard, C2→standard, C3→master)
-# advanced_ui: true                    (optional — invokes ui-ux-expert as a follow-on step)
 created: YYYY-MM-DD
 ---
 

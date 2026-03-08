@@ -1,6 +1,5 @@
 ---
 description: Finalize and ship the current feature. Runs linting/formatting, typecheck, build, moves kanban ticket to done, makes final commit, merges to main, and checks out main.
-agent: project-manager
 ---
 
 You are the finalizer orchestrator. This is the ONLY time an agent is allowed to make commits. Follow these steps exactly.

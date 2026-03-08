@@ -1,168 +1,202 @@
 # OpenCode Workflow Guide
 
-This guide explains the complete workflow for implementing features using OpenCode agents.
+This guide explains the simplified workflow for implementing features.
 
-## Workflow Overview
+## Overview
 
 The workflow is split into three phases:
 
-1. **Plan** (`/implement` command)
-2. **Review** (manual — you review staged changes)
-3. **Finalize** (`/finalise` command)
-
-### Key Principle: Agents Do NOT Commit
-
-**Agents only stage changes.** Only the `/finalise` command is permitted to make commits. This ensures you can review all changes before they are committed and merged.
+1. **Start** (`yarn kanban work <task>`)
+2. **Implement** (Plan/Build in OpenCode)
+3. **Ship** (`/finalise`)
 
 ---
 
-## Phase 1: Implement
+## Phase 1: Start
 
 ### Command
 
 ```bash
-/implement
+yarn kanban work <task-name>
 ```
 
 ### What happens
 
-1. The project-manager agent reads your task doc from `kanban/doing/<task-name>.md` (or moves it from backlog if needed)
-2. Based on task `complexity`, dispatches the appropriate subagent(s):
-   - **Complexity 0** → @apprentice-builder
-   - **Complexity 1** → @builder
-   - **Complexity 2** → @planner, then @builder
-   - **Complexity 3** → @master-planner, then @master-builder
-3. If `advanced_ui: true`, the @ui-ux-expert reviews the implementation afterward
-4. The builder(s) implement your feature and **stage all changes** (do not commit)
-5. Agents output a summary of changes made
+1. Creates/checks out a feature branch: `feature/<task-name>`
+2. Moves the task doc from `kanban/backlog/` to `kanban/doing/`
+3. Prints instructions to start coding
 
-### What you get
+### Prerequisites
 
-- All implementation changes staged in git (use `git diff --staged` to review)
-- A summary of files modified
-- Your task doc remains in `kanban/doing/`
+- You must have a task doc at `kanban/backlog/<task-name>.md`
+- You must be on the `main` branch
+- The task doc should follow the template in `kanban/TEMPLATE.md`
 
-### Your action
+### Example
 
-Review the staged changes:
+```bash
+# Task doc already created at: kanban/backlog/add-dark-mode.md
+yarn kanban work add-dark-mode
+# → Creates feature/add-dark-mode branch
+# → Moves doc to kanban/doing/add-dark-mode.md
+# → Ready to start coding
+```
+
+---
+
+## Phase 2: Implement
+
+### Open OpenCode
+
+```bash
+opencode
+```
+
+### Use Plan Mode (Tab)
+
+Switch to Plan mode using the **Tab** key to think through your implementation before making changes:
+
+```
+<TAB>  # Switch to Plan mode
+What's the approach for building this feature?
+```
+
+Plan mode has read-only access and won't modify files. Iterate on the plan until you're confident.
+
+### Switch to Build Mode (Tab)
+
+Once you have a solid plan, switch back to Build mode using **Tab**:
+
+```
+<TAB>  # Switch back to Build mode
+Implement the feature now.
+```
+
+Build mode has full access to write and execute code.
+
+### Optional: Get a Code Review
+
+After implementation, you can get feedback from the `@reviewer` agent:
+
+```
+@reviewer review my changes for any issues
+```
+
+The reviewer will analyze your implementation against the project conventions and suggest improvements. Choose your preferred model when prompted.
+
+### Optional: UI/UX Polish
+
+If your changes include UI, you can get polish suggestions:
+
+```
+@ui-expert review the UI and UX
+```
+
+The UI expert will suggest improvements to visual hierarchy, spacing, accessibility, and consistency without touching business logic.
+
+### All Changes Are Staged
+
+Agents only stage changes. No commits are made. Review staged changes before finalizing:
 
 ```bash
 git diff --staged
 git status
 ```
 
-If changes look good, proceed to Phase 2. If you need fixes, tell the agents what to change and they'll update the staged changes.
-
 ---
 
-## Phase 2: Review (Manual)
+## Phase 3: Ship
 
-### What you do
+### Move Task Doc to Review (Manual)
 
-1. Inspect all staged changes thoroughly
-2. Test the feature locally if needed
-3. Verify code style and adherence to project conventions
-4. Update the task doc manually if needed:
-   - Add a `## Changes Made` section with file descriptions
-   - Or run `/review-code` to have an agent review the changes
-
-### When ready
-
-Proceed to Phase 3: Finalize.
-
----
-
-## Phase 3: Finalize
-
-### Command
-
-```bash
-/finalise
-```
-
-### What happens
-
-1. Runs `yarn lint:fix` and `yarn format` to ensure code style is perfect
-2. **If linting fails**, stops immediately without committing or merging
-3. Runs `yarn typecheck` for TypeScript validation
-4. **If typecheck fails**, stops immediately without committing or merging
-5. Runs `yarn build` to validate the production build
-6. **If build fails**, stops immediately without committing or merging
-7. Moves the task doc from `kanban/review/<task-name>.md` to `kanban/done/<task-name>.md`
-8. **Makes the FINAL COMMIT** (the only agent-made commit allowed): `feat: <task-name> - ready to merge`
-9. Merges the feature branch into `main` with fast-forward merge (if possible)
-10. Deletes the feature branch
-11. Checks out `main` and reports success
-
-### Result
-
-- Your feature is merged to `main` only if it passes all quality gates (lint, typecheck, build)
-- Task doc is in `kanban/done/` with a record of what was done
-- Feature branch is deleted
-- You're on the `main` branch
-
----
-
-## Example Workflow
-
-```bash
-# Step 1: Start a feature branch
-git checkout -b feature/add-dark-mode
-
-# Step 2: Run the implement command
-/implement
-# → Agents implement the feature and stage changes
-
-# Step 3: Review staged changes
-git diff --staged
-git status
-
-# Step 4: Test and verify everything looks good
-yarn dev
-# Test the feature...
-
-# Step 5: Finalize and merge
-/finalise
-# → Linting, formatting, final commit, merge to main
-
-# Now you're on main with your feature merged!
-```
-
----
-
-## Important Notes
-
-### No Force-Push
-
-The `/finalise` command uses `--ff-only` (fast-forward only) for merges. This means:
-
-- If your feature branch diverged from main, the merge will fail
-- Keep your feature branch in sync with `main` before finalizing
-- If merge fails, resolve conflicts on your feature branch first, then retry `/finalise`
-
-### Manual File Moves
-
-If you need to move task docs manually between kanban folders, use:
+Before finalizing, move the task doc from `doing/` to `review/`:
 
 ```bash
 mv kanban/doing/<task-name>.md kanban/review/<task-name>.md
+git add kanban/
+git commit -m "kanban: move to review"
 ```
 
-(The `/finalise` command moves from `review/` → `done/`, so you must have it in `review/` first if you're skipping the standard workflow.)
+Or if you're confident, skip this step — `/finalise` can handle it.
 
-### Cancelling Work
-
-If you abandon a feature:
+### Run Finalise
 
 ```bash
-git checkout main
-git branch -D feature/<task-name>  # Delete the branch locally
-# Move task doc to kanban/backlog or delete it
+/finalise
+```
+
+### What happens
+
+1. **Lint & Format** — Runs `yarn lint:fix` and `yarn format`. Stops if there are non-fixable errors.
+2. **Typecheck** — Runs `yarn typecheck`. Stops on any TypeScript errors.
+3. **Build** — Runs `yarn build`. Stops on build failure.
+4. **Move doc** — Moves task doc from `kanban/review/` to `kanban/done/`
+5. **Commit** — Creates a final commit: `feat: <task-name> - ready to merge`
+6. **Merge** — Merges feature branch into `main` with fast-forward merge
+7. **Cleanup** — Deletes the feature branch and checks out `main`
+
+### Result
+
+- Your feature is merged to `main` only if it passes all quality gates
+- Task doc is in `kanban/done/` as a record of what was implemented
+- Feature branch is deleted
+- You're on the `main` branch ready for the next task
+
+---
+
+## Full Example Workflow
+
+```bash
+# Step 1: Create a task doc
+# kanban/backlog/add-notifications.md already exists
+
+# Step 2: Start the task
+yarn kanban work add-notifications
+# → Checks out feature/add-notifications
+# → Moves doc to kanban/doing/
+
+# Step 3: Open OpenCode
+opencode
+
+# Step 4: Plan it out
+<TAB>
+What's the approach for the notification system?
+# → Get a plan
+
+# Step 5: Build it
+<TAB>
+Go ahead and implement the notification system.
+# → Implementation is staged
+
+# Step 6: Review the code (optional)
+@reviewer review my changes
+# → Get feedback
+
+# Step 7: Finalize
+/finalise
+# → Quality checks pass ✓
+# → Merged to main ✓
+# → Done!
 ```
 
 ---
 
 ## Troubleshooting
+
+### Task doc not found when running `yarn kanban work`
+
+Make sure the doc exists at `kanban/backlog/<task-name>.md`. You can create one manually by copying `kanban/TEMPLATE.md` and filling in the details.
+
+### Lint/format/typecheck/build errors during `/finalise`
+
+The `/finalise` command will detect and report the error and **will NOT proceed** with committing or merging. This is by design — we prevent broken code from reaching `main`.
+
+To fix:
+
+1. Go back to your feature branch: `git checkout feature/<task-name>`
+2. Fix the issues in your code
+3. Stage the fixes: `git add .`
+4. Retry `/finalise`
 
 ### Merge conflicts on `/finalise`
 
@@ -175,34 +209,33 @@ git rebase origin/main  # Rebase your feature onto main
 # Then retry /finalise
 ```
 
-### Lint/format/typecheck/build errors during `/finalise`
+---
 
-The command will detect and report errors from any of the quality gates (linting, formatting, typecheck, or build) and **will NOT proceed with committing or merging**. If this happens:
+## Key Principles
 
-1. Go back to your feature branch: `git checkout feature/<task-name>`
-2. Fix the issues manually or re-run `/implement` on your feature branch with updated task doc
-3. Stage your fixes: `git add .`
-4. Retry `/finalise`
-
-The command is designed to prevent broken code from reaching `main` — this is by design!
-
-### Task doc not found
-
-The `/finalise` command expects `kanban/review/<task-name>.md`. If it's not there:
-
-```bash
-mv kanban/doing/<task-name>.md kanban/review/<task-name>.md
-```
-
-Then retry.
+- **You control the workflow** — No automatic orchestration. You decide when to Plan, Build, Review, and Ship.
+- **No forced commits** — Agents only stage changes. You have full visibility before anything is committed.
+- **Quality gates** — `/finalise` runs all quality checks before merge.
+- **Fast-forward merges** — Feature branches must not diverge from `main`. Keep your branch up-to-date.
 
 ---
 
-## Summary of Commands
+## Commands Summary
 
-| Command        | Purpose                                      | Commits? |
-| -------------- | -------------------------------------------- | -------- |
-| `/implement`   | Plan & implement feature using agents        | ✗ No     |
-| `/finalise`    | Finalize, merge to main, and ship            | ✓ Yes    |
-| `/review-code` | Have an agent review code changes            | ✗ No     |
-| `git commit`   | Make manual commits (use before `/finalise`) | ✓ Yes    |
+| Command                   | Purpose                                       |
+| ------------------------- | --------------------------------------------- |
+| `yarn kanban work <task>` | Create branch & move task doc to doing/       |
+| `opencode`                | Start OpenCode session                        |
+| `<TAB>`                   | Switch between Plan and Build modes           |
+| `@reviewer`               | Get a code review                             |
+| `@ui-expert`              | Get UI/UX feedback                            |
+| `/finalise`               | Lint, typecheck, build, commit, merge to main |
+
+---
+
+## File Locations
+
+- **Task docs** — `kanban/{backlog,doing,review,done}/<task-name>.md`
+- **Agents** — `.opencode/agents/{ui-expert,reviewer}.md`
+- **Commands** — `.opencode/commands/finalise.md`
+- **Instructions** — `AGENTS.md`
