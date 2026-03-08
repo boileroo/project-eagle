@@ -1,7 +1,3 @@
----
-created: YYYY-MM-DD
----
-
 # Task Title
 
 ## What
