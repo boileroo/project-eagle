@@ -76,17 +76,31 @@ Build mode has full access to write and execute code.
 
 ### Optional: Get a Code Review
 
-After implementation, you can get feedback from the `@reviewer` agent:
+After implementation, switch to Reviewer mode using **Tab**:
+
+```
+<TAB>  # Cycle to Reviewer mode
+Review my changes for any issues.
+```
+
+Or mention the reviewer directly:
 
 ```
 @reviewer review my changes for any issues
 ```
 
-The reviewer will analyze your implementation against the project conventions and suggest improvements. Choose your preferred model when prompted.
+The reviewer will analyze your implementation against the project conventions and suggest improvements. You'll be prompted to select your preferred model.
 
 ### Optional: UI/UX Polish
 
-If your changes include UI, you can get polish suggestions:
+If your changes include UI, switch to UI Expert mode using **Tab**:
+
+```
+<TAB>  # Cycle to UI Expert mode
+Review the UI and UX.
+```
+
+Or mention the UI expert directly:
 
 ```
 @ui-expert review the UI and UX
@@ -158,18 +172,19 @@ yarn kanban work add-notifications
 # Step 3: Open OpenCode
 opencode
 
-# Step 4: Plan it out
+# Step 4: Plan it out (Tab to Plan mode)
 <TAB>
 What's the approach for the notification system?
 # → Get a plan
 
-# Step 5: Build it
+# Step 5: Build it (Tab back to Build mode)
 <TAB>
 Go ahead and implement the notification system.
 # → Implementation is staged
 
-# Step 6: Review the code (optional)
-@reviewer review my changes
+# Step 6: Review the code (Tab to Reviewer mode, optional)
+<TAB>
+Review my changes for any issues.
 # → Get feedback
 
 # Step 7: Finalize
@@ -222,14 +237,12 @@ git rebase origin/main  # Rebase your feature onto main
 
 ## Commands Summary
 
-| Command                   | Purpose                                       |
-| ------------------------- | --------------------------------------------- |
-| `yarn kanban work <task>` | Create branch & move task doc to doing/       |
-| `opencode`                | Start OpenCode session                        |
-| `<TAB>`                   | Switch between Plan and Build modes           |
-| `@reviewer`               | Get a code review                             |
-| `@ui-expert`              | Get UI/UX feedback                            |
-| `/finalise`               | Lint, typecheck, build, commit, merge to main |
+| Command                   | Purpose                                                    |
+| ------------------------- | ---------------------------------------------------------- |
+| `yarn kanban work <task>` | Create branch & move task doc to doing/                    |
+| `opencode`                | Start OpenCode session                                     |
+| `<TAB>`                   | Cycle through agents (Plan → Build → Reviewer → UI Expert) |
+| `/finalise`               | Lint, typecheck, build, commit, merge to main              |
 
 ---
 

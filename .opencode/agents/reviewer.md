@@ -1,6 +1,6 @@
 ---
 description: Code reviewer for analyzing changes, checking conventions, and identifying issues. Choose your model based on review depth needed.
-mode: subagent
+mode: primary
 tools:
   write: false
   edit: false

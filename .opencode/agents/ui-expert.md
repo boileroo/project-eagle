@@ -1,6 +1,6 @@
 ---
 description: UI/UX expert for reviewing and improving user interface and experience. Does not touch logic or data layers.
-mode: subagent
+mode: primary
 tools:
   write: true
   edit: true

@@ -4,10 +4,10 @@
   "instructions": ["AGENTS.md"],
   "agent": {
     "ui-expert": {
-      "mode": "subagent"
+      "mode": "primary"
     },
     "reviewer": {
-      "mode": "subagent"
+      "mode": "primary"
     }
   }
 }
