@@ -33,6 +33,10 @@ src/components/pages/
 
 ## Key Principles
 
+### Agent Safety
+
+- Agents must not run `git commit`, `git push`, `git merge`, or delete branches. They should only stage changes (e.g. `git add`). Final commit and merge are the developer's responsibility — use the `/finalise` command.
+
 ### 1. Folder Structure
 
 - Main page file at folder root
