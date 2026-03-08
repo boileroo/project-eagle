@@ -10,7 +10,7 @@ import {
   requireTournamentParticipant,
   verifyTournamentMembership,
 } from './server/auth.helpers.server';
-import { competitionConfigSchema } from './competitions';
+import { competitionConfigSchema } from './competition-config';
 import {
   createCompetitionSchema,
   updateCompetitionSchema,

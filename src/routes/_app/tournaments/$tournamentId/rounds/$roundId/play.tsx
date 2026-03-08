@@ -9,10 +9,6 @@ import {
 } from '@/lib/query-options';
 import { LiveScoringPage } from '@/components/pages';
 
-// ──────────────────────────────────────────────
-// Route definition
-// ──────────────────────────────────────────────
-
 export const Route = createFileRoute(
   '/_app/tournaments/$tournamentId/rounds/$roundId/play',
 )({
@@ -37,10 +33,6 @@ export const Route = createFileRoute(
 
   component: RouteComponent,
 });
-
-// ──────────────────────────────────────────────
-// Route component
-// ──────────────────────────────────────────────
 
 function RouteComponent() {
   const { roundId } = Route.useParams();

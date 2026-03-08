@@ -8,7 +8,7 @@ import {
   roundParticipants,
   rounds,
 } from '@/db/schema';
-import { createSupabaseServerClient } from '../supabase.server';
+import { createSupabaseServerClient } from './supabase-client.server';
 
 // ──────────────────────────────────────────────
 // Get authenticated user or throw

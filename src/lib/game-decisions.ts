@@ -2,10 +2,6 @@ import { useMutation } from '@tanstack/react-query';
 import { submitGameDecisionFn } from '@/lib/game-decisions.server';
 import type { MutationCallOptions, MutationHookReturn } from '@/lib/mutation';
 
-// ──────────────────────────────────────────────
-// useSubmitGameDecision
-// ──────────────────────────────────────────────
-
 type SubmitGameDecisionVariables = {
   competitionId: string;
   roundId: string;

@@ -8,7 +8,7 @@ import {
   verifyTournamentMembership,
 } from './server/auth.helpers.server';
 import { resolveEffectiveHandicap, getPlayingHandicap } from './handicaps';
-import { resolveLatestScores } from './scores.server';
+import { resolveLatestScores } from './server/score-events.server';
 import type { HoleData, ParticipantData, ResolvedScore } from './domain/index';
 import {
   calculateIndividualScoreboard,

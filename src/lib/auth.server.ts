@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { profiles } from '@/db/schema';
-import { createSupabaseServerClient } from './supabase.server';
+import { createSupabaseServerClient } from './server/supabase-client.server';
 import { checkRateLimit } from './server/rate-limit.server';
 
 // ──────────────────────────────────────────────

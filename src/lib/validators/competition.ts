@@ -2,7 +2,7 @@ import { z } from 'zod';
 import {
   competitionConfigSchema,
   aggregationConfigSchema,
-} from '../competitions';
+} from '../competition-config';
 
 export const createCompetitionSchema = z.object({
   tournamentId: z.string().uuid(),

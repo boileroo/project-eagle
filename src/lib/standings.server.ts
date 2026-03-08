@@ -15,7 +15,7 @@ import {
   requireTournamentParticipant,
 } from './server/auth.helpers.server';
 import { resolveEffectiveHandicap, getPlayingHandicap } from './handicaps';
-import { resolveLatestScores } from './scores.server';
+import { resolveLatestScores } from './server/score-events.server';
 import { calculateStandings } from './domain/standings';
 import type {
   RoundCompetitionData,
@@ -30,9 +30,8 @@ import type {
   TeamData,
   CompetitionInput,
 } from './domain/index';
-import { isBonusFormat } from './competitions';
+import { aggregationConfigSchema, isBonusFormat } from './competition-config';
 import type { CompetitionConfig } from './competitions';
-import { aggregationConfigSchema } from './competitions';
 import { checkRateLimit } from './server/rate-limit.server';
 import {
   createTournamentStandingSchema,

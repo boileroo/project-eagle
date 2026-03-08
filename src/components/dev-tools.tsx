@@ -4,11 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { bulkSubmitScoresFn } from '@/lib/scores.server';
-
-// ──────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────
+import { useBulkSubmitScores } from '@/lib/scores';
 
 type RoundParticipant = {
   id: string;
@@ -28,10 +24,6 @@ type RoundContext = {
   participants: RoundParticipant[];
   holes: CourseHole[];
 };
-
-// ──────────────────────────────────────────────
-// Score generation
-// ──────────────────────────────────────────────
 
 /**
  * Generate realistic random scores for a player.
@@ -56,10 +48,6 @@ function generateScore(par: number): number {
   else strokes = par + 3;
   return Math.max(1, strokes);
 }
-
-// ──────────────────────────────────────────────
-// Hook: extract round context from the route
-// ──────────────────────────────────────────────
 
 function useRoundContext(): RoundContext | null {
   // Try to match the round detail route
@@ -97,80 +85,73 @@ function useRoundContext(): RoundContext | null {
   };
 }
 
-// ──────────────────────────────────────────────
-// DevTools component
-// ──────────────────────────────────────────────
-
 export function DevTools() {
   const [open, setOpen] = useState(false);
   const [filling, setFilling] = useState<string | null>(null);
   const roundCtx = useRoundContext();
   const router = useRouter();
+  const [bulkSubmit] = useBulkSubmitScores();
 
   const handleFillScorecard = useCallback(
     async (participant: RoundParticipant) => {
       if (!roundCtx) return;
 
       setFilling(participant.id);
-      try {
-        const scores = roundCtx.holes.map((hole) => ({
-          holeNumber: hole.holeNumber,
-          strokes: generateScore(hole.par),
-        }));
-
-        await bulkSubmitScoresFn({
-          data: {
-            roundId: roundCtx.roundId,
-            roundParticipantId: participant.id,
-            scores,
-          },
-        });
-
-        toast.success(`Filled scorecard for ${participant.person.displayName}`);
-        router.invalidate();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : 'Failed to fill scorecard',
-        );
-      }
+      await bulkSubmit({
+        variables: {
+          roundId: roundCtx.roundId,
+          roundParticipantId: participant.id,
+          scores: roundCtx.holes.map((hole) => ({
+            holeNumber: hole.holeNumber,
+            strokes: generateScore(hole.par),
+          })),
+        },
+        onSuccess: () => {
+          toast.success(
+            `Filled scorecard for ${participant.person.displayName}`,
+          );
+          router.invalidate();
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        },
+      });
       setFilling(null);
     },
-    [roundCtx, router],
+    [roundCtx, router, bulkSubmit],
   );
 
   const handleFillAll = useCallback(async () => {
     if (!roundCtx) return;
 
     setFilling('__all__');
-    try {
-      for (const participant of roundCtx.participants) {
-        const scores = roundCtx.holes.map((hole) => ({
-          holeNumber: hole.holeNumber,
-          strokes: generateScore(hole.par),
-        }));
-
-        await bulkSubmitScoresFn({
-          data: {
-            roundId: roundCtx.roundId,
-            roundParticipantId: participant.id,
-            scores,
-          },
-        });
-      }
-
+    let anyError = false;
+    for (const participant of roundCtx.participants) {
+      await bulkSubmit({
+        variables: {
+          roundId: roundCtx.roundId,
+          roundParticipantId: participant.id,
+          scores: roundCtx.holes.map((hole) => ({
+            holeNumber: hole.holeNumber,
+            strokes: generateScore(hole.par),
+          })),
+        },
+        onError: (error) => {
+          anyError = true;
+          toast.error(error.message);
+        },
+      });
+      if (anyError) break;
+    }
+    if (!anyError) {
       toast.success(
         `Filled scorecards for all ${roundCtx.participants.length} players`,
       );
       router.invalidate();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to fill scorecards',
-      );
     }
     setFilling(null);
-  }, [roundCtx, router]);
+  }, [roundCtx, router, bulkSubmit]);
 
-  // Floating toggle button (always visible)
   return (
     <>
       <button

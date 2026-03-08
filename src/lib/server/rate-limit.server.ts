@@ -43,19 +43,21 @@ export function checkRateLimit(
   return true; // allowed
 }
 
+function pruneStaleEntries() {
+  const cutoff = Date.now() - 15 * 60 * 1000;
+
+  for (const [key, entry] of store.entries()) {
+    entry.timestamps = entry.timestamps.filter((t) => t > cutoff);
+    if (entry.timestamps.length === 0) {
+      store.delete(key);
+    }
+  }
+}
+
 // Periodically prune stale entries to prevent unbounded memory growth
-// (runs every 10 minutes)
+// (runs every 10 minutes). `unref()` keeps the timer from blocking short-lived
+// processes like prerender/build shutdown.
 if (typeof setInterval !== 'undefined') {
-  setInterval(
-    () => {
-      const cutoff = Date.now() - 15 * 60 * 1000; // 15 min max window
-      for (const [key, entry] of store.entries()) {
-        entry.timestamps = entry.timestamps.filter((t) => t > cutoff);
-        if (entry.timestamps.length === 0) {
-          store.delete(key);
-        }
-      }
-    },
-    10 * 60 * 1000,
-  );
+  const pruneTimer = setInterval(pruneStaleEntries, 10 * 60 * 1000);
+  pruneTimer.unref?.();
 }

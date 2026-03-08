@@ -48,7 +48,13 @@ src/components/pages/
 - Only use when necessary (required by TypeScript for folder imports)
 - Avoid redundant re-exports
 
-### 3. Component Organization
+### 3. Comments
+
+- Do not add comments unless they are absolutely necessary to explain behavior, constraints, or intent that would otherwise not be obvious
+- Prefer clear naming, small functions, and good structure over explanatory comments
+- Avoid decorative section dividers and comments that just restate what the code already says
+
+### 4. Component Organization
 
 **Wrapper/Container components** (in folder root):
 
@@ -63,7 +69,7 @@ src/components/pages/
 - Reusable where appropriate
 - Example: `delete-team-dialog.tsx`, `team-item.tsx`
 
-### 4. Naming Conventions
+### 5. Naming Conventions
 
 | Type              | Convention              | Example                  |
 | ----------------- | ----------------------- | ------------------------ |
@@ -72,7 +78,7 @@ src/components/pages/
 | Discrete UI       | `{action}-{target}.tsx` | `delete-team-dialog.tsx` |
 | Item/Row          | `{item}.tsx`            | `team-item.tsx`          |
 
-### 5. When to Break Down
+### 6. When to Break Down
 
 Extract into smaller components when:
 
@@ -82,7 +88,7 @@ Extract into smaller components when:
 - Component is reused elsewhere
 - Component has complex conditional rendering
 
-### 6. Import Paths
+### 7. Import Paths
 
 Prefer relative imports for co-located components:
 
@@ -816,3 +822,17 @@ export const RoundStatus = pgEnum('round_status', [
   'completed',
 ]);
 ```
+
+---
+
+# Build Conventions
+
+## Client Chunk Size
+
+The \`main\` client chunk is currently ~638 kB (192 kB gzip) and triggers a Vite warning at the 500 kB threshold. This is a known, accepted limitation — not a build failure.
+
+**Why it cannot be fixed with \`manualChunks\`:** Rollup's \`manualChunks\` cannot extract modules that are statically imported by an entry chunk. TanStack Start's client entry point directly imports React, TanStack Router, and other core libraries, so those modules are inseparably owned by the entry and cannot be split out. Any \`manualChunks\` config targeting those modules is silently ignored.
+
+**The real fix is route-level lazy loading:** Dynamic \`import()\` for page components in route files would allow Rollup to split pages into separate chunks. This is an app-level architectural change and has not yet been implemented.
+
+Do not attempt to fix the \`main\` chunk size by adding \`manualChunks\` to \`vite.config.ts\` — it will have no effect and may introduce side effects (adding an \`environments.client\` block was found to increase \`main\` by ~200 kB).
