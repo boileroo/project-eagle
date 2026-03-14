@@ -4,6 +4,7 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { nitro } from 'nitro/vite';
 
 // TanStack Start registers the `tanstack-start-injected-head-scripts:v` virtual
 // module only for the SSR (server) environment. However, `@tanstack/start-server-core`
@@ -193,6 +194,7 @@ export default defineConfig({
     // React's Vite plugin must come after Start's Vite plugin
     viteReact(),
     tailwindcss(),
+    nitro(),
     VitePWA({
       registerType: 'prompt',
       injectRegister: null,
