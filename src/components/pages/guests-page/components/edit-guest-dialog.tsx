@@ -3,10 +3,12 @@ import { useRouter } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { GuestListItem } from '@/types';
+import { parseHandicap } from '@/lib/handicaps';
 import { useUpdateGuest } from '@/lib/tournaments';
 import { updateGuestSchema, type UpdateGuestInput } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { HandicapField } from '@/components/shared/handicap-field';
 import {
   Form,
   FormControl,
@@ -44,9 +46,7 @@ export function EditGuestDialog({
     defaultValues: {
       personId: guest?.id ?? '',
       displayName: guest?.displayName ?? '',
-      currentHandicap: guest?.currentHandicap
-        ? parseFloat(guest.currentHandicap)
-        : null,
+      currentHandicap: parseHandicap(guest?.currentHandicap),
     },
   });
 
@@ -56,9 +56,7 @@ export function EditGuestDialog({
       form.reset({
         personId: guest.id,
         displayName: guest.displayName,
-        currentHandicap: guest.currentHandicap
-          ? parseFloat(guest.currentHandicap)
-          : null,
+        currentHandicap: parseHandicap(guest.currentHandicap),
       });
     }
   }, [guest, form]);
@@ -111,15 +109,9 @@ export function EditGuestDialog({
                 <FormItem>
                   <FormLabel>Handicap</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      value={field.value ?? ''}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value ? parseFloat(e.target.value) : null,
-                        )
-                      }
+                    <HandicapField
+                      value={field.value}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />

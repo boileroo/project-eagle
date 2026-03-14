@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   tournamentLeaderboardQueryOptions,
@@ -9,6 +9,7 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 import { useTournamentRealtime } from '@/hooks/use-tournament-realtime';
 import { TournamentDetailPage } from '@/components/pages';
+import { toast } from 'sonner';
 
 export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
   loader: async ({ params, context }) => {
@@ -47,6 +48,7 @@ export const Route = createFileRoute('/_app/tournaments/$tournamentId/')({
 
 function RouteComponent() {
   const { tournamentId } = Route.useParams();
+  const navigate = useNavigate();
   const { data: tournament } = useSuspenseQuery(
     tournamentQueryOptions(tournamentId),
   );
@@ -54,7 +56,21 @@ function RouteComponent() {
   const { data: courses } = useSuspenseQuery(coursesQueryOptions());
   const { user, accessToken } = useAuth();
 
-  useTournamentRealtime(tournamentId, accessToken);
+  useTournamentRealtime(tournamentId, accessToken, myPerson?.id, () => {
+    if (typeof window !== 'undefined') {
+      const leaveKey = `tournament-leave:${tournamentId}`;
+      const leaveSource = window.sessionStorage.getItem(leaveKey);
+
+      if (leaveSource === 'self') {
+        window.sessionStorage.removeItem(leaveKey);
+        navigate({ to: '/' });
+        return;
+      }
+    }
+
+    toast.error('You were removed from this tournament.');
+    navigate({ to: '/' });
+  });
 
   return (
     <TournamentDetailPage

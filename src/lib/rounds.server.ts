@@ -10,21 +10,23 @@ import {
   tournamentParticipants,
   tournaments,
   persons,
-  profiles,
 } from '@/db/schema';
 import {
   requireAuth,
   requireCommissioner,
   verifyTournamentMembership,
 } from './server/auth.helpers.server';
+import { resolveOrCreatePersonForUser } from './server/persons.server';
 import {
   createRoundSchema,
   createSingleRoundSchema,
   updateRoundSchema,
+  handicapField,
 } from './validators';
 import { deriveTournamentStatus } from './tournament-status';
 import { safeHandler } from './server/server-utils.server';
 import { generateInviteCode } from './server/invite-codes.server';
+import { isValidHandicap, parseHandicap } from './handicaps';
 
 // ──────────────────────────────────────────────
 // Helper: re-sort round numbers by date/teeTime
@@ -517,7 +519,10 @@ export const addRoundParticipantFn = createServerFn({ method: 'POST' })
       roundId: z.string().uuid(),
       personId: z.string().uuid(),
       tournamentParticipantId: z.string().uuid().optional(),
-      handicapSnapshot: z.string(),
+      handicapSnapshot: z.string().refine((value) => {
+        const parsed = parseHandicap(value);
+        return parsed != null && isValidHandicap(parsed);
+      }, 'Invalid handicap snapshot'),
     }),
   )
   .handler(
@@ -601,7 +606,7 @@ export const updateRoundParticipantFn = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       roundParticipantId: z.string().uuid(),
-      handicapOverride: z.number().nullable(),
+      handicapOverride: handicapField,
     }),
   )
   .handler(async ({ data }) => {
@@ -663,25 +668,7 @@ export const createSingleRoundFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const user = await requireAuth();
 
-    // Ensure the user has a person record
-    let person = await db.query.persons.findFirst({
-      where: eq(persons.userId, user.id),
-    });
-    if (!person) {
-      const profile = await db.query.profiles.findFirst({
-        where: eq(profiles.id, user.id),
-      });
-      const displayName = profile?.displayName || profile?.email || 'Unknown';
-      const [created] = await db
-        .insert(persons)
-        .values({
-          displayName,
-          userId: user.id,
-          createdByUserId: user.id,
-        })
-        .returning();
-      person = created;
-    }
+    const person = await resolveOrCreatePersonForUser(user.id);
 
     // Look up the course name for the auto-generated tournament name
     const course = await db.query.courses.findFirst({

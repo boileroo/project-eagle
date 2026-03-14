@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useJoinTournamentByCode } from '@/lib/tournaments';
 import { joinByCodeSchema, type JoinByCodeInput } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +24,17 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
+function formatInviteCodeInput(value: string) {
+  const cleaned = value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 19);
+
+  if (cleaned.length < 5) return cleaned;
+
+  return `${cleaned.slice(0, 5)}-${cleaned.slice(5)}`;
+}
+
 interface JoinTournamentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,7 +45,6 @@ export function JoinTournamentDialog({
   onOpenChange,
 }: JoinTournamentDialogProps) {
   const navigate = useNavigate();
-  const [joinTournament, { isPending }] = useJoinTournamentByCode();
 
   const form = useForm<JoinByCodeInput>({
     resolver: zodResolver(joinByCodeSchema),
@@ -52,21 +61,11 @@ export function JoinTournamentDialog({
   }, [open, form]);
 
   const handleSubmit = async (data: JoinByCodeInput) => {
-    await joinTournament({
-      variables: data,
-      onSuccess: (result) => {
-        if (!result.alreadyJoined) {
-          toast.success(`You've joined ${result.tournamentName}!`);
-        }
-        onOpenChange(false);
-        navigate({
-          to: '/tournaments/$tournamentId',
-          params: { tournamentId: result.tournamentId },
-        });
-      },
-      onError: (err) => {
-        form.setError('code', { message: err.message });
-      },
+    onOpenChange(false);
+    toast.message('Choose how you want to join on the next screen.');
+    await navigate({
+      to: '/join/$code',
+      params: { code: data.code },
     });
   };
 
@@ -103,8 +102,23 @@ export function JoinTournamentDialog({
                       placeholder="e.g. BIRDIE-12b7"
                       {...field}
                       onChange={(e) =>
-                        field.onChange(e.target.value.toUpperCase())
+                        field.onChange(formatInviteCodeInput(e.target.value))
                       }
+                      onKeyDown={(e) => {
+                        const { value, selectionStart, selectionEnd } =
+                          e.currentTarget;
+
+                        if (
+                          e.key === 'Backspace' &&
+                          value.length === 6 &&
+                          value.endsWith('-') &&
+                          selectionStart === value.length &&
+                          selectionEnd === value.length
+                        ) {
+                          e.preventDefault();
+                          field.onChange(value.slice(0, 4));
+                        }
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -119,9 +133,7 @@ export function JoinTournamentDialog({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? 'Joining...' : 'Join'}
-              </Button>
+              <Button type="submit">Continue</Button>
             </DialogFooter>
           </form>
         </Form>

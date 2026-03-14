@@ -79,7 +79,21 @@ export function RoundDetailPage({
 
   // Permissions derived from the hook (fixes bug + group-scoped marker logic)
   const { isCommissioner, editableParticipantIds, getRecordingRole } =
-    useRoundPermissions({ round, tournament: tournament ?? undefined, userId });
+    useRoundPermissions({
+      round,
+      tournament: tournament
+        ? {
+            id: tournament.id,
+            createdByUserId: tournament.createdByUserId,
+            participants: tournament.participants.map((participant) => ({
+              personId: participant.personId,
+              person: { userId: participant.person.userId },
+              role: participant.role as 'player' | 'commissioner',
+            })),
+          }
+        : undefined,
+      userId,
+    });
 
   // Build participant team colour map (roundParticipantId → hex)
   const participantTeamColours = useMemo(() => {

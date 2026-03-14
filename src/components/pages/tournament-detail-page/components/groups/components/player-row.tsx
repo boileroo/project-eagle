@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { formatHandicapWithFallback } from '@/lib/handicaps';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,7 +53,9 @@ export function PlayerRow({
         )}
       </div>
       <div className="flex items-center gap-1.5">
-        <Badge variant="outline">HC {hcValue}</Badge>
+        <Badge variant="outline">
+          HC {formatHandicapWithFallback(hcValue)}
+        </Badge>
         {canToggleMarker && (
           <button
             type="button"

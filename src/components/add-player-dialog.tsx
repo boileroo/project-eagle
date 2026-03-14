@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { formatHandicap } from '@/lib/handicaps';
 import { getMyGuestsFn } from '@/lib/tournaments.server';
 import { useCreateGuestPerson } from '@/lib/tournaments';
 import { createGuestSchema, type CreateGuestInput } from '@/lib/validators';
@@ -14,6 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { HandicapField } from '@/components/shared/handicap-field';
 import {
   Dialog,
   DialogContent,
@@ -214,7 +216,7 @@ export function AddPlayerDialog({
                     </span>
                     {guest.currentHandicap && (
                       <span className="text-muted-foreground ml-2 text-xs">
-                        HC {guest.currentHandicap}
+                        HC {formatHandicap(guest.currentHandicap)}
                       </span>
                     )}
                   </div>
@@ -273,16 +275,10 @@ export function AddPlayerDialog({
                   <FormItem className="gap-3">
                     <FormLabel>Handicap</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.1"
+                      <HandicapField
+                        value={field.value}
+                        onChange={field.onChange}
                         placeholder="e.g. 18.4"
-                        value={field.value ?? ''}
-                        onChange={(e) =>
-                          field.onChange(
-                            e.target.value ? parseFloat(e.target.value) : null,
-                          )
-                        }
                       />
                     </FormControl>
                     <FormMessage />

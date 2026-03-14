@@ -2,10 +2,11 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { formatHandicapWithFallback, parseHandicap } from '@/lib/handicaps';
 import { useUpdateRoundParticipant } from '@/lib/rounds';
 import { handicapField } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { HandicapField } from '@/components/shared/handicap-field';
 import {
   Form,
   FormControl,
@@ -55,9 +56,7 @@ export function EditRoundHandicapDialog({
     resolver: zodResolver(updateRoundHandicapSchema),
     defaultValues: {
       roundParticipantId: roundParticipant.id,
-      handicapOverride: roundParticipant.handicapOverride
-        ? parseFloat(roundParticipant.handicapOverride)
-        : null,
+      handicapOverride: parseHandicap(roundParticipant.handicapOverride),
     },
   });
 
@@ -66,9 +65,7 @@ export function EditRoundHandicapDialog({
     if (open) {
       form.reset({
         roundParticipantId: roundParticipant.id,
-        handicapOverride: roundParticipant.handicapOverride
-          ? parseFloat(roundParticipant.handicapOverride)
-          : null,
+        handicapOverride: parseHandicap(roundParticipant.handicapOverride),
       });
     }
   }, [open, roundParticipant, form]);
@@ -98,9 +95,7 @@ export function EditRoundHandicapDialog({
         if (v) {
           form.reset({
             roundParticipantId: roundParticipant.id,
-            handicapOverride: roundParticipant.handicapOverride
-              ? parseFloat(roundParticipant.handicapOverride)
-              : null,
+            handicapOverride: parseHandicap(roundParticipant.handicapOverride),
           });
         }
       }}
@@ -111,7 +106,7 @@ export function EditRoundHandicapDialog({
           <DialogTitle>Round Handicap Override</DialogTitle>
           <DialogDescription>
             Override the handicap for this round only. Snapshot from tournament:{' '}
-            {roundParticipant.handicapSnapshot}
+            {formatHandicapWithFallback(roundParticipant.handicapSnapshot)}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -126,16 +121,10 @@ export function EditRoundHandicapDialog({
                 <FormItem>
                   <FormLabel>Handicap</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      placeholder={`Snapshot: ${roundParticipant.handicapSnapshot}`}
-                      value={field.value ?? ''}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value ? parseFloat(e.target.value) : null,
-                        )
-                      }
+                    <HandicapField
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder={`Snapshot: ${formatHandicapWithFallback(roundParticipant.handicapSnapshot)}`}
                       autoFocus
                     />
                   </FormControl>

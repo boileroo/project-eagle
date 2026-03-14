@@ -30,6 +30,7 @@ interface RoundWithParticipants {
 
 interface TournamentParticipant {
   personId: string;
+  person?: { userId: string | null };
   role: 'player' | 'commissioner';
 }
 
@@ -56,7 +57,7 @@ export function useRoundPermissions({
     if (tournament) {
       const isCreator = userId === tournament.createdByUserId;
       const isTournamentCommissioner = tournament.participants.some(
-        (p) => p.role === 'commissioner' && p.personId === userId,
+        (p) => p.role === 'commissioner' && p.person?.userId === userId,
       );
       if (isCreator || isTournamentCommissioner) return true;
     }

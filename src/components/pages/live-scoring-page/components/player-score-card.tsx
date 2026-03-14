@@ -4,6 +4,7 @@
 // ──────────────────────────────────────────────
 
 import { cn } from '@/lib/utils';
+import { formatHandicapAdjustment } from '@/lib/handicaps';
 import { Badge } from '@/components/ui/badge';
 import { parLabel, scoreDiffColorClass } from '@/lib/scoring-utils';
 import { useScoreMutation } from '@/hooks';
@@ -15,7 +16,7 @@ type PlayerScoreCardProps = {
   displayName: string;
   holeNumber: number;
   par: number;
-  strokesReceived: number;
+  handicapAdjustment: number;
   strokes: number | undefined;
   recordedByRole: 'player' | 'marker' | 'commissioner';
   isEditable: boolean;
@@ -27,7 +28,7 @@ export function PlayerScoreCard({
   displayName,
   holeNumber,
   par,
-  strokesReceived,
+  handicapAdjustment,
   strokes,
   recordedByRole,
   isEditable,
@@ -61,9 +62,9 @@ export function PlayerScoreCard({
       <div className="mb-3 flex items-center justify-between">
         <span className="font-medium">{displayName}</span>
         <div className="flex items-center gap-2">
-          {strokesReceived > 0 && (
+          {handicapAdjustment !== 0 && (
             <Badge variant="secondary" className="text-xs">
-              +{strokesReceived} hdcp
+              {formatHandicapAdjustment(handicapAdjustment)}
             </Badge>
           )}
           {recordedByRole !== 'player' && isEditable && (

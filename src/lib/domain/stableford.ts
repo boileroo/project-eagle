@@ -25,7 +25,7 @@ export interface StablefordHoleScore {
   par: number;
   strokeIndex: number;
   grossStrokes: number | null;
-  strokesReceived: number;
+  handicapAdjustment: number;
   netStrokes: number | null;
   points: number;
 }
@@ -55,7 +55,7 @@ export interface StablefordResult {
 
 /**
  * Calculates stableford points for a single hole given net strokes,
- * par, and strokes received from handicap allocation.
+ * par, and handicap adjustment from handicap allocation.
  *
  * Points: double bogey or worse → 0, bogey → 1, par → 2,
  * birdie → 3, eagle → 4, albatross → 5.
@@ -63,9 +63,9 @@ export interface StablefordResult {
 export function stablefordPoints(
   grossStrokes: number,
   par: number,
-  strokesReceived: number,
+  handicapAdjustment: number,
 ): number {
-  const netStrokes = grossStrokes - strokesReceived;
+  const netStrokes = grossStrokes - handicapAdjustment;
   const diff = netStrokes - par; // positive = over par
   // Standard stableford: 2 - diff, min 0
   return Math.max(0, 2 - diff);
@@ -114,7 +114,7 @@ export function calculateStableford(input: CompetitionInput): StablefordResult {
       const holeScores: StablefordHoleScore[] = sortedHoles.map((hole) => {
         const key = `${p.roundParticipantId}:${hole.holeNumber}`;
         const grossStrokes = scoreLookup.get(key) ?? null;
-        const strokesReceived = getStrokesOnHole(
+        const handicapAdjustment = getStrokesOnHole(
           p.playingHandicap,
           hole.strokeIndex,
         );
@@ -122,8 +122,8 @@ export function calculateStableford(input: CompetitionInput): StablefordResult {
         let points = 0;
         let netStrokes: number | null = null;
         if (grossStrokes !== null) {
-          points = stablefordPoints(grossStrokes, hole.par, strokesReceived);
-          netStrokes = grossStrokes - strokesReceived;
+          points = stablefordPoints(grossStrokes, hole.par, handicapAdjustment);
+          netStrokes = grossStrokes - handicapAdjustment;
           totalPoints += points;
           grossTotal += grossStrokes;
           netTotal += netStrokes;
@@ -135,7 +135,7 @@ export function calculateStableford(input: CompetitionInput): StablefordResult {
           par: hole.par,
           strokeIndex: hole.strokeIndex,
           grossStrokes,
-          strokesReceived,
+          handicapAdjustment,
           netStrokes,
           points,
         };

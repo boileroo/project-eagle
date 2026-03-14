@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -43,11 +43,15 @@ export function ParticipantsSection({
 
   const hasTournament = !!tournament;
   const hasTeamsConfigured = hasTournament && tournament.teams.length > 0;
-  const shouldShowTeamsTab =
-    hasTournament && (isCommissioner || hasTeamsConfigured);
   const teamsTabDisabled =
     hasTournament && !hasTeamsConfigured && !isCommissioner;
   const hasGroups = !!round;
+
+  useEffect(() => {
+    if (activeTab === 'teams' && teamsTabDisabled) {
+      setActiveTab('players');
+    }
+  }, [activeTab, teamsTabDisabled]);
 
   const tabs: {
     id: 'players' | 'teams' | 'groups';
@@ -55,7 +59,7 @@ export function ParticipantsSection({
     disabled?: boolean;
   }[] = [];
   if (hasTournament) tabs.push({ id: 'players', label: 'Players' });
-  if (shouldShowTeamsTab)
+  if (hasTournament)
     tabs.push({ id: 'teams', label: 'Teams', disabled: teamsTabDisabled });
   if (hasGroups) tabs.push({ id: 'groups', label: 'Groups' });
 

@@ -13,6 +13,7 @@ export type UpdateTournamentInput = z.infer<typeof updateTournamentSchema>;
 
 export const joinByCodeSchema = z.object({
   code: z.string().min(1, 'Invite code is required').max(20),
+  guestPersonId: z.string().uuid().optional(),
 });
 export type JoinByCodeInput = z.infer<typeof joinByCodeSchema>;
 

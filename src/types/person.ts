@@ -2,10 +2,9 @@ import type { getMyGuestsFn } from '@/lib/tournaments.server';
 
 export type Guest = {
   id: string;
-  name: string;
-  handicap: number | null;
-  email: string | null;
-  phone: string | null;
+  displayName: string;
+  currentHandicap: string | null;
+  createdAt: Date;
 };
 
 export type GuestListItem = Awaited<ReturnType<typeof getMyGuestsFn>>[number];

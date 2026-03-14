@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { GuestListItem } from '@/types';
+import { formatHandicapWithFallback } from '@/lib/handicaps';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { EditGuestDialog } from './components/edit-guest-dialog';
@@ -35,7 +36,11 @@ export function GuestsPage({ guests }: { guests: GuestListItem[] }) {
                 <div>
                   <p className="font-medium">{guest.displayName}</p>
                   <p className="text-muted-foreground text-sm">
-                    Handicap: {guest.currentHandicap ?? 'Not set'}
+                    Handicap:{' '}
+                    {formatHandicapWithFallback(
+                      guest.currentHandicap,
+                      'Not set',
+                    )}
                   </p>
                 </div>
                 <div className="flex gap-2">

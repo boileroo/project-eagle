@@ -4,6 +4,7 @@ import {
   useAddTeamMember,
   useRemoveTeamMember,
 } from '@/lib/teams';
+import { ArrowRight, Trophy, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -117,15 +118,62 @@ export function TeamsTab({
   return (
     <div className="space-y-4">
       {canEdit && teams.length === 0 && (
-        <div className="flex items-center gap-2">
-          <Switch
-            id="teams-toggle"
-            checked={showTeams}
-            onCheckedChange={handleTeamsToggle}
-          />
-          <Label htmlFor="teams-toggle" className="text-sm font-medium">
-            Enable Teams
-          </Label>
+        <div className="from-card via-card to-primary/5 border-border/70 overflow-hidden rounded-xl border bg-gradient-to-br shadow-sm">
+          <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full">
+                  <Users className="h-5 w-5" />
+                </div>
+                <div>
+                  <Label
+                    htmlFor="teams-toggle"
+                    className="text-sm font-semibold"
+                  >
+                    Enable Teams
+                  </Label>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Create fixed teams that carry across the tournament.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="bg-background/70 border-border/60 rounded-lg border p-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Trophy className="text-primary h-4 w-4" />
+                    What teams unlock
+                  </div>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Team matches for points plus tournament team standings
+                    alongside the individual leaderboard.
+                  </p>
+                </div>
+
+                <div className="bg-background/70 border-border/60 rounded-lg border p-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <ArrowRight className="text-primary h-4 w-4" />
+                    Different from groups
+                  </div>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Groups are round-by-round playing groups. Teams are fixed
+                    across multiple rounds.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-background/80 border-border/60 flex items-center gap-3 self-start rounded-full border px-3 py-2">
+              <Switch
+                id="teams-toggle"
+                checked={showTeams}
+                onCheckedChange={handleTeamsToggle}
+              />
+              <span className="text-sm font-medium">
+                {showTeams ? 'Teams enabled' : 'Turn on'}
+              </span>
+            </div>
+          </div>
         </div>
       )}
 

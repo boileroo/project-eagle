@@ -18,7 +18,7 @@ export interface StrokePlayHoleScore {
   par: number;
   strokeIndex: number;
   grossStrokes: number | null;
-  strokesReceived: number;
+  handicapAdjustment: number;
   netStrokes: number | null;
 }
 
@@ -73,14 +73,14 @@ export function calculateStrokePlay(
       const holeScores: StrokePlayHoleScore[] = sortedHoles.map((hole) => {
         const key = `${p.roundParticipantId}:${hole.holeNumber}`;
         const grossStrokes = scoreLookup.get(key) ?? null;
-        const strokesReceived = getStrokesOnHole(
+        const handicapAdjustment = getStrokesOnHole(
           p.playingHandicap,
           hole.strokeIndex,
         );
 
         let netStrokes: number | null = null;
         if (grossStrokes !== null) {
-          netStrokes = grossStrokes - strokesReceived;
+          netStrokes = grossStrokes - handicapAdjustment;
           grossTotal += grossStrokes;
           netTotal += netStrokes;
           holesCompleted++;
@@ -91,7 +91,7 @@ export function calculateStrokePlay(
           par: hole.par,
           strokeIndex: hole.strokeIndex,
           grossStrokes,
-          strokesReceived,
+          handicapAdjustment,
           netStrokes,
         };
       });

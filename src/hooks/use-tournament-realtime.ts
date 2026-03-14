@@ -2,12 +2,15 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { tournamentQueryOptions } from '@/lib/query-options';
 
 const INVALIDATE_DEBOUNCE_MS = 500;
 
 export function useTournamentRealtime(
   tournamentId: string,
   accessToken: string | null,
+  myPersonId?: string | null,
+  onRemoved?: () => void,
 ) {
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -67,9 +70,44 @@ export function useTournamentRealtime(
           event: 'DELETE',
           schema: 'public',
           table: 'tournament_participants',
-          filter: `tournament_id=eq.${tournamentId}`,
+        },
+        (payload) => {
+          if (payload.old.tournament_id !== tournamentId) return;
+
+          if (myPersonId && payload.old.person_id === myPersonId) {
+            onRemoved?.();
+          }
+
+          invalidateTournamentQueries();
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'rounds',
+        },
+        (payload) => {
+          if (payload.old.tournament_id !== tournamentId) return;
+          invalidateTournamentQueries();
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'tournaments',
+          filter: `id=eq.${tournamentId}`,
         },
         () => {
+          void queryClient
+            .fetchQuery(tournamentQueryOptions(tournamentId))
+            .catch(() => {
+              onRemoved?.();
+            });
+
           invalidateTournamentQueries();
         },
       )
@@ -89,18 +127,6 @@ export function useTournamentRealtime(
         'postgres_changes',
         {
           event: 'UPDATE',
-          schema: 'public',
-          table: 'rounds',
-          filter: `tournament_id=eq.${tournamentId}`,
-        },
-        () => {
-          invalidateTournamentQueries();
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
           schema: 'public',
           table: 'rounds',
           filter: `tournament_id=eq.${tournamentId}`,
@@ -183,5 +209,5 @@ export function useTournamentRealtime(
         channelRef.current = null;
       }
     };
-  }, [queryClient, tournamentId, accessToken]);
+  }, [queryClient, tournamentId, accessToken, myPersonId, onRemoved]);
 }

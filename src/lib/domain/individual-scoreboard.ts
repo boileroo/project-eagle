@@ -48,7 +48,7 @@ export interface IndividualHoleScore {
   par: number;
   strokeIndex: number;
   grossStrokes: number | null;
-  strokesReceived: number;
+  handicapAdjustment: number;
   netStrokes: number | null;
   stableford: number;
 }
@@ -122,7 +122,7 @@ export function calculateIndividualScoreboard(
     const holeScores: IndividualHoleScore[] = sortedHoles.map((hole) => {
       const key = `${p.roundParticipantId}:${hole.holeNumber}`;
       const gross = scoreLookup.get(key) ?? null;
-      const strokesReceived = getStrokesOnHole(
+      const handicapAdjustment = getStrokesOnHole(
         p.playingHandicap,
         hole.strokeIndex,
       );
@@ -131,8 +131,8 @@ export function calculateIndividualScoreboard(
       let pts = 0;
 
       if (gross !== null) {
-        net = gross - strokesReceived;
-        pts = stablefordPoints(gross, hole.par, strokesReceived);
+        net = gross - handicapAdjustment;
+        pts = stablefordPoints(gross, hole.par, handicapAdjustment);
         grossStrokes += gross;
         netStrokes += net;
         stablefordTotal += pts;
@@ -144,7 +144,7 @@ export function calculateIndividualScoreboard(
         par: hole.par,
         strokeIndex: hole.strokeIndex,
         grossStrokes: gross,
-        strokesReceived,
+        handicapAdjustment,
         netStrokes: net,
         stableford: pts,
       };

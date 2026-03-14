@@ -192,7 +192,7 @@ export function LiveScoringPage({
             {groupParticipants.map((rp) => {
               const hc = resolveEffectiveHandicap(rp);
               const playingHc = getPlayingHandicap(hc);
-              const strokesReceived = getStrokesOnHole(
+              const handicapAdjustment = getStrokesOnHole(
                 playingHc,
                 holeData.strokeIndex,
               );
@@ -206,7 +206,7 @@ export function LiveScoringPage({
                   displayName={rp.person.displayName}
                   holeNumber={currentHole}
                   par={holeData.par}
-                  strokesReceived={strokesReceived}
+                  handicapAdjustment={handicapAdjustment}
                   strokes={strokes}
                   recordedByRole={getRecordingRole(rp.id)}
                   isEditable={editableParticipantIds.has(rp.id)}

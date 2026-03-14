@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useRouter } from '@tanstack/react-router';
+import { Link, useRouter, useSearch } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import { useSignIn, useSignInWithOAuth } from '@/lib/auth';
 
 export function LoginPage() {
   const router = useRouter();
+  const search = useSearch({ from: '/_auth/login' });
   const [error, setError] = useState<string | null>(null);
   const [signIn, { isPending }] = useSignIn();
   const [signInWithOAuth, { isPending: oauthPending }] = useSignInWithOAuth();
@@ -43,7 +44,10 @@ export function LoginPage() {
     await signIn({
       variables: values,
       onSuccess: async () => {
-        await router.navigate({ to: '/', reloadDocument: true });
+        await router.navigate({
+          to: search.next || '/',
+          reloadDocument: true,
+        });
       },
       onError: (err) => {
         setError(err.message);

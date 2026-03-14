@@ -1,13 +1,19 @@
+import { useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import {
   useAddParticipant,
   useRemoveParticipant,
   useEnsureMyPerson,
 } from '@/lib/tournaments';
 import { useRemoveRoundParticipant } from '@/lib/rounds';
+import { formatHandicapWithFallback } from '@/lib/handicaps';
 import { X } from 'lucide-react';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { AddPlayerDialog } from '@/components/add-player-dialog';
 import { EditHandicapDialog } from '@/components/pages/tournament-detail-page/components/edit-handicap-dialog';
 import { ChangeRoleDialog } from '@/components/pages/tournament-detail-page/components/participants/change-role-dialog';
+import { LeaveTournamentDialog } from '@/components/pages/tournament-detail-page/components/participants/leave-tournament-dialog';
+import { RemoveParticipantDialog } from '@/components/pages/tournament-detail-page/components/participants/remove-participant-dialog';
 import { EditRoundHandicapDialog } from '@/components/pages/round-detail-page/components/edit-round-handicap-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +30,32 @@ type PlayersTabProps = {
   onChanged: () => void;
 };
 
+const roleBadgeClassNames: Record<string, string> = {
+  commissioner:
+    'border-indigo-400 bg-indigo-200 text-indigo-950 hover:bg-indigo-200',
+  player: 'border-indigo-300 bg-indigo-100 text-indigo-900 hover:bg-indigo-100',
+  guest: 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-50',
+};
+
+const participantRoleSortOrder: Record<string, number> = {
+  commissioner: 0,
+  player: 1,
+  guest: 2,
+};
+
+function formatRoleLabel(role: string) {
+  return role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getParticipantRole(participant: any, isTournamentMode: boolean) {
+  if (participant.person.userId == null) return 'guest';
+
+  return isTournamentMode
+    ? participant.role
+    : (participant.tournamentParticipant?.role ?? 'player');
+}
+
 export function PlayersTab({
   tournament,
   round,
@@ -33,13 +65,34 @@ export function PlayersTab({
   roundStatus,
   onChanged,
 }: PlayersTabProps) {
+  const navigate = useNavigate();
   const isDraft = roundStatus === 'draft';
   const isTournamentMode = !!tournament;
+  const canJoinOrLeaveInTournament = tournament?.status === 'setup';
 
   const [addParticipant] = useAddParticipant();
   const [removeParticipant] = useRemoveParticipant();
   const [ensureMyPerson] = useEnsureMyPerson();
   const [removeRoundParticipant] = useRemoveRoundParticipant();
+  const {
+    open: leaveDialogOpen,
+    setOpen: setLeaveDialogOpen,
+    loading: leaving,
+    handleConfirm: handleLeaveConfirm,
+  } = useConfirmDialog();
+  const [leavingTarget, setLeavingTarget] = useState<{
+    participantId: string;
+  } | null>(null);
+  const {
+    open: removeDialogOpen,
+    setOpen: setRemoveDialogOpen,
+    loading: removing,
+    handleConfirm: handleRemoveConfirm,
+  } = useConfirmDialog();
+  const [removeTarget, setRemoveTarget] = useState<{
+    participantId: string;
+    name: string;
+  } | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const participants: any[] = isTournamentMode
@@ -50,9 +103,23 @@ export function PlayersTab({
     ? participants.some((p) => p.person.userId === userId)
     : false;
 
+  const sortedParticipants = [...participants].sort((a, b) => {
+    const roleOrderA =
+      participantRoleSortOrder[getParticipantRole(a, isTournamentMode)] ?? 99;
+    const roleOrderB =
+      participantRoleSortOrder[getParticipantRole(b, isTournamentMode)] ?? 99;
+
+    if (roleOrderA !== roleOrderB) return roleOrderA - roleOrderB;
+
+    return a.person.displayName.localeCompare(b.person.displayName, undefined, {
+      sensitivity: 'base',
+    });
+  });
+
   // Compute commissioner count (tournament mode only)
   const commissionerCount = isTournamentMode
-    ? participants.filter((p) => p.role === 'commissioner').length
+    ? participants.filter((p) => getParticipantRole(p, true) === 'commissioner')
+        .length
     : 0;
 
   // Get tournament creator ID (tournament mode only)
@@ -100,6 +167,8 @@ export function PlayersTab({
     participantId: string,
     name: string,
   ) => {
+    let removeError: Error | null = null;
+
     if (tournament) {
       await removeParticipant({
         variables: { participantId },
@@ -109,6 +178,7 @@ export function PlayersTab({
         },
         onError: (error) => {
           toast.error(error.message);
+          removeError = error;
         },
       });
     } else if (round) {
@@ -120,16 +190,58 @@ export function PlayersTab({
         },
         onError: (error) => {
           toast.error(error.message);
+          removeError = error;
         },
       });
     }
+
+    if (removeError) {
+      throw removeError;
+    }
+  };
+
+  const handleLeave = async () => {
+    if (!leavingTarget) return;
+
+    await handleLeaveConfirm(async () => {
+      await removeParticipant({
+        variables: { participantId: leavingTarget.participantId },
+        onSuccess: () => {
+          if (typeof window !== 'undefined' && tournament) {
+            window.sessionStorage.setItem(
+              `tournament-leave:${tournament.id}`,
+              'self',
+            );
+          }
+          toast.success(
+            `You left ${tournament?.isSingleRound ? 'the round' : 'the tournament'}.`,
+          );
+          navigate({ to: '/' });
+        },
+        onError: (error) => {
+          toast.error(error.message);
+          throw error;
+        },
+      });
+    });
+  };
+
+  const handleConfirmRemove = async () => {
+    if (!removeTarget) return;
+
+    await handleRemoveConfirm(async () => {
+      await handleRemoveParticipant(
+        removeTarget.participantId,
+        removeTarget.name,
+      );
+    });
   };
 
   if (participants.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">
         No players yet.
-        {tournament && !iAmParticipant && isDraft && (
+        {tournament && !iAmParticipant && canJoinOrLeaveInTournament && (
           <Button
             variant="link"
             size="sm"
@@ -145,41 +257,39 @@ export function PlayersTab({
 
   return (
     <div className="space-y-2">
-      {participants.map((p) => {
+      {sortedParticipants.map((p) => {
         const personUserId = p.person.userId;
         const displayName = p.person.displayName;
         const handicapValue =
           p.handicapOverride ?? p.handicapSnapshot ?? p.person.currentHandicap;
+        const handicapLabel = formatHandicapWithFallback(handicapValue);
         const isMe = personUserId === userId;
 
         // Determine participant role
-        const participantRole =
-          personUserId == null
-            ? 'guest'
-            : isTournamentMode
-              ? p.role
-              : (p.tournamentParticipant?.role ?? 'player');
+        const participantRole = getParticipantRole(p, isTournamentMode);
 
         const isCommissionerParticipant = participantRole === 'commissioner';
-
-        // Get role badge styling
-        const getRoleBadgeStyle = (role: string) => {
-          switch (role) {
-            case 'commissioner':
-              return 'bg-amber-100 text-amber-900';
-            case 'guest':
-              return 'bg-slate-100 text-slate-700';
-            case 'player':
-            default:
-              return 'bg-blue-100 text-blue-900';
-          }
-        };
+        const roleBadgeClassName =
+          roleBadgeClassNames[participantRole] ?? roleBadgeClassNames.player;
+        const isCreator = personUserId === creatorUserId;
+        const canLeaveSelf =
+          isMe &&
+          canJoinOrLeaveInTournament &&
+          !isCreator &&
+          (!isCommissionerParticipant || commissionerCount > 1);
+        const canRemoveOtherParticipant =
+          canEdit &&
+          canJoinOrLeaveInTournament &&
+          !isCommissionerParticipant &&
+          !isMe;
+        const canRemoveThisParticipant =
+          canRemoveOtherParticipant || canLeaveSelf;
 
         return (
           <div
             key={p.id}
-            className={`flex items-center justify-between rounded-md border px-3 py-2 ${
-              isMe ? 'bg-primary/5' : ''
+            className={`flex items-center justify-between rounded-md border px-3 py-2 transition-colors ${
+              isMe ? 'border-primary/25 bg-primary/10' : ''
             }`}
           >
             <div className="flex items-center gap-2">
@@ -191,8 +301,6 @@ export function PlayersTab({
               )}
             </div>
             <div className="flex items-center gap-1.5">
-              {isMe && <Badge className="text-xs">You</Badge>}
-
               {canEdit && isTournamentMode && participantRole !== 'guest' ? (
                 <ChangeRoleDialog
                   participantId={p.id}
@@ -202,24 +310,18 @@ export function PlayersTab({
                   isLastCommissioner={
                     isCommissionerParticipant && commissionerCount === 1
                   }
-                  isCreator={personUserId === creatorUserId}
+                  isCreator={isCreator}
                   trigger={
                     <button type="button" className="cursor-pointer">
-                      <Badge
-                        className={`text-xs ${getRoleBadgeStyle(participantRole)}`}
-                      >
-                        {participantRole.charAt(0).toUpperCase() +
-                          participantRole.slice(1)}
+                      <Badge className={`text-xs ${roleBadgeClassName}`}>
+                        {formatRoleLabel(participantRole)}
                       </Badge>
                     </button>
                   }
                 />
               ) : (
-                <Badge
-                  className={`text-xs ${getRoleBadgeStyle(participantRole)}`}
-                >
-                  {participantRole.charAt(0).toUpperCase() +
-                    participantRole.slice(1)}
+                <Badge className={`text-xs ${roleBadgeClassName}`}>
+                  {formatRoleLabel(participantRole)}
                 </Badge>
               )}
 
@@ -233,8 +335,11 @@ export function PlayersTab({
                     onSaved={onChanged}
                     trigger={
                       <button type="button" className="cursor-pointer">
-                        <Badge variant="outline" className="hover:bg-accent">
-                          HC {handicapValue ?? '-'}
+                        <Badge
+                          variant="outline"
+                          className="hover:bg-accent min-w-16 justify-center tabular-nums"
+                        >
+                          HC {handicapLabel}
                         </Badge>
                       </button>
                     }
@@ -245,24 +350,48 @@ export function PlayersTab({
                     onSaved={onChanged}
                     trigger={
                       <button type="button" className="cursor-pointer">
-                        <Badge variant="outline" className="hover:bg-accent">
-                          HC {handicapValue ?? '-'}
+                        <Badge
+                          variant="outline"
+                          className="hover:bg-accent min-w-16 justify-center tabular-nums"
+                        >
+                          HC {handicapLabel}
                         </Badge>
                       </button>
                     }
                   />
                 )
               ) : (
-                <Badge variant="outline">HC {handicapValue ?? '-'}</Badge>
+                <Badge
+                  variant="outline"
+                  className="min-w-16 justify-center tabular-nums"
+                >
+                  HC {handicapLabel}
+                </Badge>
               )}
 
               <Button
                 variant="ghost"
                 size="icon"
-                disabled={!canEdit || isCommissionerParticipant || isMe}
+                disabled={!canRemoveThisParticipant}
                 className="text-muted-foreground hover:text-destructive h-6 w-6 disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label={`Remove ${displayName}`}
-                onClick={() => handleRemoveParticipant(p.id, displayName)}
+                aria-label={`${isMe ? 'Leave' : 'Remove'} ${displayName}`}
+                onClick={() => {
+                  if (canLeaveSelf) {
+                    setLeavingTarget({
+                      participantId: p.id,
+                    });
+                    setLeaveDialogOpen(true);
+                    return;
+                  }
+
+                  if (tournament) {
+                    setRemoveTarget({ participantId: p.id, name: displayName });
+                    setRemoveDialogOpen(true);
+                    return;
+                  }
+
+                  void handleRemoveParticipant(p.id, displayName);
+                }}
               >
                 <X className="h-3.5 w-3.5" />
               </Button>
@@ -271,7 +400,7 @@ export function PlayersTab({
         );
       })}
 
-      {tournament && !iAmParticipant && isDraft && (
+      {tournament && !iAmParticipant && canJoinOrLeaveInTournament && (
         <Button
           size="sm"
           variant="outline"
@@ -302,6 +431,23 @@ export function PlayersTab({
           }}
         />
       )}
+
+      <LeaveTournamentDialog
+        open={leaveDialogOpen}
+        onOpenChange={setLeaveDialogOpen}
+        isSingleRound={!!tournament?.isSingleRound}
+        loading={leaving}
+        onConfirm={handleLeave}
+      />
+
+      <RemoveParticipantDialog
+        open={removeDialogOpen}
+        onOpenChange={setRemoveDialogOpen}
+        participantName={removeTarget?.name ?? 'this player'}
+        isSingleRound={!!tournament?.isSingleRound}
+        loading={removing}
+        onConfirm={handleConfirmRemove}
+      />
     </div>
   );
 }

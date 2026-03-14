@@ -3,6 +3,8 @@ import {
   resolveEffectiveHandicap,
   getPlayingHandicap,
   getStrokesOnHole,
+  formatHandicapAdjustment,
+  formatHandicap,
 } from '@/lib/handicaps';
 import { shortName, scoreCellClass } from '@/lib/scoring-utils';
 
@@ -103,7 +105,7 @@ export function Scorecard({
     hole: Hole,
   ) => {
     const cell = scores[participant.id]?.[hole.holeNumber];
-    const strokesReceived = getStrokesOnHole(
+    const handicapAdjustment = getStrokesOnHole(
       playingHCs[participantIdx],
       hole.strokeIndex,
     );
@@ -148,15 +150,14 @@ export function Scorecard({
         ) : (
           <span className="text-muted-foreground/40">–</span>
         )}
-        {/* Stroke dots — show strokes received on this hole */}
-        {strokesReceived > 0 && (
-          <span className="absolute top-0.5 right-0.5 flex gap-px">
-            {Array.from({ length: strokesReceived }).map((_, i) => (
-              <span
-                key={i}
-                className="bg-foreground/30 inline-block h-1 w-1 rounded-full"
-              />
-            ))}
+        {handicapAdjustment !== 0 && (
+          <span
+            className="text-muted-foreground absolute top-0.5 right-0.5 text-[9px] font-medium"
+            title={formatHandicapAdjustment(handicapAdjustment)}
+          >
+            {handicapAdjustment > 0
+              ? `+${handicapAdjustment}`
+              : `G${Math.abs(handicapAdjustment)}`}
           </span>
         )}
       </td>
@@ -214,7 +215,7 @@ export function Scorecard({
               <th
                 key={p.id}
                 className="border px-2 py-1.5 text-center text-xs font-medium"
-                title={`${p.person.displayName} (HC ${playingHCs[i]})`}
+                title={`${p.person.displayName} (HC ${formatHandicap(playingHCs[i]) ?? '-'})`}
                 style={
                   participantTeamColours?.has(p.id)
                     ? {

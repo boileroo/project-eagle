@@ -56,7 +56,10 @@ export function TournamentDetailPage({
         courses={courses}
       />
 
-      <LeaderboardSection tournamentId={tournament.id} />
+      <LeaderboardSection
+        tournamentId={tournament.id}
+        isCommissioner={isCommissioner}
+      />
     </div>
   );
 }

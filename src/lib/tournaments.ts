@@ -14,6 +14,7 @@ import {
   unlockTournamentFn,
   joinTournamentByCodeFn,
 } from '@/lib/tournaments.server';
+import type { getTournamentJoinStateFn } from '@/lib/tournaments.server';
 import type {
   CreateTournamentInput,
   UpdateTournamentInput,
@@ -533,7 +534,12 @@ type JoinByCodeResult = {
   tournamentId: string;
   tournamentName: string;
   alreadyJoined?: boolean;
+  joinedByClaimingGuest?: boolean;
 };
+
+export type TournamentJoinState = Awaited<
+  ReturnType<typeof getTournamentJoinStateFn>
+>;
 
 export function useJoinTournamentByCode(): MutationHookReturn<
   JoinByCodeVariables,

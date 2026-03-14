@@ -2,9 +2,11 @@ import { useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useUpdateMyAccount } from '@/lib/persons';
+import { parseHandicap } from '@/lib/handicaps';
 import { updateAccountSchema, type UpdateAccountInput } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { HandicapField } from '@/components/shared/handicap-field';
 import {
   Form,
   FormControl,
@@ -29,9 +31,7 @@ export function AccountForm({ account }: { account: AccountData }) {
     resolver: zodResolver(updateAccountSchema),
     defaultValues: {
       displayName: account.profile.displayName ?? '',
-      currentHandicap: account.person?.currentHandicap
-        ? Number(account.person.currentHandicap)
-        : null,
+      currentHandicap: parseHandicap(account.person?.currentHandicap),
     },
   });
 
@@ -84,21 +84,15 @@ export function AccountForm({ account }: { account: AccountData }) {
             <FormField
               control={form.control}
               name="currentHandicap"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Handicap</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      min={-10}
-                      max={54}
+                    <HandicapField
+                      value={field.value}
+                      onChange={field.onChange}
                       placeholder="e.g. 18.4"
-                      className="w-32"
-                      {...form.register('currentHandicap', {
-                        setValueAs: (v) =>
-                          v === '' || v == null ? null : Number(v),
-                      })}
+                      inputClassName="w-32"
                     />
                   </FormControl>
                   <FormDescription>

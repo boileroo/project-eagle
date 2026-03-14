@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { db } from '@/db';
 import {
   persons,
-  profiles,
   roundGroups,
   roundParticipants,
   rounds,
@@ -16,6 +15,7 @@ import {
   requireCommissioner,
   requireTournamentParticipant,
 } from './server/auth.helpers.server';
+import { resolveOrCreatePersonForUser } from './server/persons.server';
 import {
   addParticipantSchema,
   createGuestSchema,
@@ -30,6 +30,10 @@ import { isTournamentInSetup } from './tournament-status';
 import { safeHandler } from './server/server-utils.server';
 import { generateInviteCode } from './server/invite-codes.server';
 import { requireTournamentSetup } from './server/tournament-status.server';
+
+function normalizeInviteCode(code: string) {
+  return code.trim().toUpperCase();
+}
 
 // ──────────────────────────────────────────────
 // List all tournaments
@@ -526,13 +530,38 @@ export const removeParticipantFn = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ participantId: z.string().uuid() }))
   .handler(
     safeHandler(async ({ data }) => {
+      const user = await requireAuth();
       const existing = await db.query.tournamentParticipants.findFirst({
         where: eq(tournamentParticipants.id, data.participantId),
+        with: {
+          person: {
+            columns: { userId: true },
+          },
+          tournament: {
+            columns: { status: true, createdByUserId: true },
+          },
+        },
       });
       if (!existing) throw new Error('Participant not found');
 
-      await requireCommissioner(existing.tournamentId);
-      await requireTournamentSetup(existing.tournamentId);
+      const isSelfRemoval = existing.person.userId === user.id;
+
+      if (isSelfRemoval) {
+        if (!isTournamentInSetup(existing.tournament.status)) {
+          throw new Error(
+            'You can only leave while the tournament is in setup',
+          );
+        }
+
+        if (existing.tournament.createdByUserId === user.id) {
+          throw new Error(
+            'The tournament creator cannot leave until ownership transfer is available.',
+          );
+        }
+      } else {
+        await requireCommissioner(existing.tournamentId);
+        await requireTournamentSetup(existing.tournamentId);
+      }
 
       // Check if removing the last commissioner
       if (existing.role === 'commissioner') {
@@ -551,9 +580,16 @@ export const removeParticipantFn = createServerFn({ method: 'POST' })
         }
       }
 
-      await db
-        .delete(tournamentParticipants)
-        .where(eq(tournamentParticipants.id, data.participantId));
+      await db.transaction(async (tx) => {
+        await tx
+          .delete(tournamentParticipants)
+          .where(eq(tournamentParticipants.id, data.participantId));
+
+        await tx
+          .update(tournaments)
+          .set({ updatedAt: new Date() })
+          .where(eq(tournaments.id, existing.tournamentId));
+      });
 
       return { success: true };
     }),
@@ -583,27 +619,7 @@ export const ensureMyPersonFn = createServerFn({ method: 'POST' }).handler(
   async () => {
     const user = await requireAuth();
 
-    const existing = await db.query.persons.findFirst({
-      where: eq(persons.userId, user.id),
-    });
-    if (existing) return existing;
-
-    // Look up profile for display name
-    const profile = await db.query.profiles.findFirst({
-      where: eq(profiles.id, user.id),
-    });
-    const displayName = profile?.displayName || profile?.email || 'Unknown';
-
-    const [person] = await db
-      .insert(persons)
-      .values({
-        displayName,
-        userId: user.id,
-        createdByUserId: user.id,
-      })
-      .returning();
-
-    return person;
+    return resolveOrCreatePersonForUser(user.id);
   },
 );
 
@@ -706,7 +722,7 @@ export const unlockTournamentFn = createServerFn({ method: 'POST' })
 export const getTournamentByInviteCodeFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ code: z.string() }))
   .handler(async ({ data }) => {
-    const code = data.code.trim().toUpperCase();
+    const code = normalizeInviteCode(data.code);
 
     // Use ilike for case-insensitive comparison
     const tournament = await db.query.tournaments.findFirst({
@@ -721,6 +737,77 @@ export const getTournamentByInviteCodeFn = createServerFn({ method: 'GET' })
     return tournament;
   });
 
+export const getTournamentJoinStateFn = createServerFn({ method: 'GET' })
+  .inputValidator(z.object({ code: z.string() }))
+  .handler(async ({ data }) => {
+    const code = normalizeInviteCode(data.code);
+    const tournament = await db.query.tournaments.findFirst({
+      where: ilike(tournaments.inviteCode, code),
+      columns: { id: true, name: true, status: true },
+      with: {
+        participants: {
+          with: {
+            person: {
+              columns: {
+                id: true,
+                displayName: true,
+                userId: true,
+                currentHandicap: true,
+              },
+            },
+            teamMemberships: {
+              with: {
+                team: {
+                  columns: { id: true, name: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!tournament) {
+      throw new Error('Tournament not found');
+    }
+
+    const requestUser = await requireAuth().catch(() => null);
+    const person = requestUser
+      ? await db.query.persons.findFirst({
+          where: eq(persons.userId, requestUser.id),
+          columns: { id: true },
+        })
+      : null;
+
+    const alreadyJoined =
+      person != null
+        ? tournament.participants.some(
+            (participant) => participant.personId === person.id,
+          )
+        : false;
+
+    const claimableGuests = tournament.participants
+      .filter((participant) => participant.person.userId == null)
+      .map((participant) => ({
+        personId: participant.person.id,
+        displayName: participant.person.displayName,
+        currentHandicap: participant.person.currentHandicap,
+        teamName: participant.teamMemberships[0]?.team.name ?? null,
+      }))
+      .sort((a, b) =>
+        a.displayName.localeCompare(b.displayName, undefined, {
+          sensitivity: 'base',
+        }),
+      );
+
+    return {
+      tournament,
+      isAuthenticated: requestUser != null,
+      alreadyJoined,
+      claimableGuests,
+    };
+  });
+
 // ──────────────────────────────────────────────
 // Join tournament by invite code
 // ──────────────────────────────────────────────
@@ -733,7 +820,7 @@ export const joinTournamentByCodeFn = createServerFn({ method: 'POST' })
 
       // Find the tournament by invite code (case-insensitive)
       const tournament = await db.query.tournaments.findFirst({
-        where: ilike(tournaments.inviteCode, data.code.trim().toUpperCase()),
+        where: ilike(tournaments.inviteCode, normalizeInviteCode(data.code)),
       });
 
       if (!tournament) {
@@ -747,14 +834,7 @@ export const joinTournamentByCodeFn = createServerFn({ method: 'POST' })
         );
       }
 
-      // Get user's person record
-      const person = await db.query.persons.findFirst({
-        where: eq(persons.userId, user.id),
-      });
-
-      if (!person) {
-        throw new Error('Your profile is not set up. Please try again.');
-      }
+      const person = await resolveOrCreatePersonForUser(user.id);
 
       // Check if already a participant
       const existingParticipant =
@@ -772,6 +852,73 @@ export const joinTournamentByCodeFn = createServerFn({ method: 'POST' })
           tournamentName: tournament.name,
           alreadyJoined: true,
         };
+      }
+
+      const guestPersonId = data.guestPersonId;
+
+      if (guestPersonId) {
+        return db.transaction(async (tx) => {
+          const guestParticipant =
+            await tx.query.tournamentParticipants.findFirst({
+              where: and(
+                eq(tournamentParticipants.tournamentId, tournament.id),
+                eq(tournamentParticipants.personId, guestPersonId),
+              ),
+              with: {
+                person: true,
+              },
+            });
+
+          if (!guestParticipant) {
+            throw new Error('That guest is not available to claim.');
+          }
+
+          if (guestParticipant.person.userId != null) {
+            throw new Error('That guest has already been claimed.');
+          }
+
+          const duplicateParticipant =
+            await tx.query.tournamentParticipants.findFirst({
+              where: and(
+                eq(tournamentParticipants.tournamentId, tournament.id),
+                eq(tournamentParticipants.personId, person.id),
+              ),
+            });
+
+          if (duplicateParticipant) {
+            throw new Error('You are already in this tournament.');
+          }
+
+          await tx
+            .update(tournamentParticipants)
+            .set({
+              personId: person.id,
+              handicapOverride:
+                guestParticipant.handicapOverride ??
+                guestParticipant.person.currentHandicap ??
+                null,
+            })
+            .where(eq(tournamentParticipants.id, guestParticipant.id));
+
+          await tx
+            .update(roundParticipants)
+            .set({ personId: person.id })
+            .where(
+              and(
+                eq(
+                  roundParticipants.tournamentParticipantId,
+                  guestParticipant.id,
+                ),
+                eq(roundParticipants.personId, guestParticipant.person.id),
+              ),
+            );
+
+          return {
+            tournamentId: tournament.id,
+            tournamentName: tournament.name,
+            joinedByClaimingGuest: true,
+          };
+        });
       }
 
       // Add as participant (default role is player)
@@ -815,7 +962,11 @@ export const joinTournamentByCodeFn = createServerFn({ method: 'POST' })
         }
       }
 
-      return { tournamentId: tournament.id, tournamentName: tournament.name };
+      return {
+        tournamentId: tournament.id,
+        tournamentName: tournament.name,
+        joinedByClaimingGuest: false,
+      };
     }),
   );
 

@@ -6,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatHandicapWithFallback } from '@/lib/handicaps';
 
 interface StablefordLeaderboardProps {
   result: {
@@ -45,7 +46,9 @@ export function StablefordLeaderboard({ result }: StablefordLeaderboardProps) {
           <TableRow key={p.roundParticipantId}>
             <TableCell className="font-medium">{p.rank}</TableCell>
             <TableCell>{p.displayName}</TableCell>
-            <TableCell className="text-center">{p.playingHandicap}</TableCell>
+            <TableCell className="text-center">
+              {formatHandicapWithFallback(p.playingHandicap)}
+            </TableCell>
             <TableCell className="text-muted-foreground text-center">
               {p.holesCompleted}
             </TableCell>

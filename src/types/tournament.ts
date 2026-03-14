@@ -55,3 +55,7 @@ export type TeamsSectionTournament = {
     }[];
   }[];
 };
+
+export type TournamentJoinState = Awaited<
+  ReturnType<typeof import('@/lib/tournaments.server').getTournamentJoinStateFn>
+>;

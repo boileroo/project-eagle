@@ -1,13 +1,14 @@
 import { type ReactNode, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { parseHandicap } from '@/lib/handicaps';
 import { useUpdateParticipant } from '@/lib/tournaments';
 import {
   updateParticipantSchema,
   type UpdateParticipantInput,
 } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { HandicapField } from '@/components/shared/handicap-field';
 import {
   Form,
   FormControl,
@@ -45,9 +46,7 @@ export function EditHandicapDialog({
     resolver: zodResolver(updateParticipantSchema),
     defaultValues: {
       participantId: participant.id,
-      handicapOverride: participant.handicapOverride
-        ? parseFloat(participant.handicapOverride)
-        : null,
+      handicapOverride: parseHandicap(participant.handicapOverride),
     },
   });
 
@@ -73,9 +72,7 @@ export function EditHandicapDialog({
         if (v) {
           form.reset({
             participantId: participant.id,
-            handicapOverride: participant.handicapOverride
-              ? parseFloat(participant.handicapOverride)
-              : null,
+            handicapOverride: parseHandicap(participant.handicapOverride),
           });
         }
       }}
@@ -101,16 +98,10 @@ export function EditHandicapDialog({
                 <FormItem>
                   <FormLabel>Handicap</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.1"
+                    <HandicapField
+                      value={field.value}
+                      onChange={field.onChange}
                       placeholder="e.g. 18.4"
-                      value={field.value ?? ''}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value ? parseFloat(e.target.value) : null,
-                        )
-                      }
                       autoFocus
                     />
                   </FormControl>

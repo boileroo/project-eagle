@@ -13,7 +13,10 @@
 //     excluded — not zeroed.
 // ──────────────────────────────────────────────
 
-import type { IndividualScoreboardRow } from './individual-scoreboard';
+import type {
+  IndividualScoreboardRow,
+  StandaloneBadge,
+} from './individual-scoreboard';
 
 // ──────────────────────────────────────────────
 // Input types
@@ -48,12 +51,34 @@ export interface TournamentLeaderboardRoundContribution {
   total: number;
 }
 
+export type TournamentLeaderboardRoundStatus =
+  | 'counted'
+  | 'incomplete'
+  | 'absent'
+  | 'pending';
+
+export interface TournamentLeaderboardRoundCell {
+  roundId: string;
+  roundName: string;
+  totalHoles: number;
+  isFinalised: boolean;
+  status: TournamentLeaderboardRoundStatus;
+  holesCompleted: number;
+  grossStrokes: number | null;
+  netStrokes: number | null;
+  stableford: number | null;
+  contributorBonusTotal: number | null;
+  total: number | null;
+  standaloneBadges: StandaloneBadge[];
+}
+
 export interface TournamentLeaderboardRow {
   roundParticipantIds: string[];
   personId: string;
   displayName: string;
   /** Only rounds where the player has all holes scored */
   roundContributions: TournamentLeaderboardRoundContribution[];
+  roundCells: TournamentLeaderboardRoundCell[];
   roundsPlayed: number;
   grossStrokes: number;
   netStrokes: number;
@@ -83,17 +108,15 @@ export interface TournamentLeaderboardResult {
 export function calculateTournamentLeaderboard(
   input: TournamentLeaderboardInput,
 ): TournamentLeaderboardResult {
-  // Only consider finalised rounds
   const finalisedRounds = input.rounds.filter((r) => r.isFinalised);
 
-  // Aggregate per person
-  // Key: personId
   const personMap = new Map<
     string,
     {
       displayName: string;
       roundParticipantIds: string[];
       roundContributions: TournamentLeaderboardRoundContribution[];
+      roundCellMap: Map<string, TournamentLeaderboardRoundCell>;
       grossStrokes: number;
       netStrokes: number;
       stableford: number;
@@ -112,6 +135,7 @@ export function calculateTournamentLeaderboard(
           displayName: row.displayName,
           roundParticipantIds: [],
           roundContributions: [],
+          roundCellMap: new Map(),
           grossStrokes: 0,
           netStrokes: 0,
           stableford: 0,
@@ -122,6 +146,23 @@ export function calculateTournamentLeaderboard(
 
       const entry = personMap.get(row.personId)!;
       entry.roundParticipantIds.push(row.roundParticipantId);
+
+      const isCounted = row.holesCompleted === round.totalHoles;
+      entry.roundCellMap.set(round.roundId, {
+        roundId: round.roundId,
+        roundName: round.roundName,
+        totalHoles: round.totalHoles,
+        isFinalised: round.isFinalised,
+        status: isCounted ? 'counted' : 'incomplete',
+        holesCompleted: row.holesCompleted,
+        grossStrokes: isCounted ? row.grossStrokes : null,
+        netStrokes: isCounted ? row.netStrokes : null,
+        stableford: isCounted ? row.stableford : null,
+        contributorBonusTotal: isCounted ? row.contributorBonusTotal : null,
+        total: isCounted ? row.total : null,
+        standaloneBadges: row.standaloneBadges,
+      });
+
       entry.roundContributions.push({
         roundId: round.roundId,
         roundName: round.roundName,
@@ -139,30 +180,87 @@ export function calculateTournamentLeaderboard(
     }
   }
 
-  // Build rows
+  for (const round of input.rounds.filter((r) => !r.isFinalised)) {
+    for (const row of round.scoreboardRows) {
+      if (!personMap.has(row.personId)) {
+        personMap.set(row.personId, {
+          displayName: row.displayName,
+          roundParticipantIds: [],
+          roundContributions: [],
+          roundCellMap: new Map(),
+          grossStrokes: 0,
+          netStrokes: 0,
+          stableford: 0,
+          contributorBonusTotal: 0,
+          total: 0,
+        });
+      }
+
+      const entry = personMap.get(row.personId)!;
+      if (!entry.roundParticipantIds.includes(row.roundParticipantId)) {
+        entry.roundParticipantIds.push(row.roundParticipantId);
+      }
+      entry.roundCellMap.set(round.roundId, {
+        roundId: round.roundId,
+        roundName: round.roundName,
+        totalHoles: round.totalHoles,
+        isFinalised: false,
+        status: 'pending',
+        holesCompleted: row.holesCompleted,
+        grossStrokes: null,
+        netStrokes: null,
+        stableford: null,
+        contributorBonusTotal: null,
+        total: null,
+        standaloneBadges: row.standaloneBadges,
+      });
+    }
+  }
+
   const rows: TournamentLeaderboardRow[] = [...personMap.entries()].map(
-    ([personId, data]) => ({
-      personId,
-      displayName: data.displayName,
-      roundParticipantIds: data.roundParticipantIds,
-      roundContributions: data.roundContributions,
-      roundsPlayed: data.roundContributions.length,
-      grossStrokes: data.grossStrokes,
-      netStrokes: data.netStrokes,
-      stableford: data.stableford,
-      contributorBonusTotal: data.contributorBonusTotal,
-      total: data.total,
-      rank: 0,
-    }),
+    ([personId, data]) => {
+      const roundCells = input.rounds.map((round) => {
+        const existing = data.roundCellMap.get(round.roundId);
+        if (existing) return existing;
+
+        return {
+          roundId: round.roundId,
+          roundName: round.roundName,
+          totalHoles: round.totalHoles,
+          isFinalised: round.isFinalised,
+          status: round.isFinalised ? 'absent' : 'pending',
+          holesCompleted: 0,
+          grossStrokes: null,
+          netStrokes: null,
+          stableford: null,
+          contributorBonusTotal: null,
+          total: null,
+          standaloneBadges: [],
+        } satisfies TournamentLeaderboardRoundCell;
+      });
+
+      return {
+        personId,
+        displayName: data.displayName,
+        roundParticipantIds: data.roundParticipantIds,
+        roundContributions: data.roundContributions,
+        roundCells,
+        roundsPlayed: data.roundContributions.length,
+        grossStrokes: data.grossStrokes,
+        netStrokes: data.netStrokes,
+        stableford: data.stableford,
+        contributorBonusTotal: data.contributorBonusTotal,
+        total: data.total,
+        rank: 0,
+      };
+    },
   );
 
-  // Sort by total stableford descending, then gross ascending as tiebreak
   rows.sort((a, b) => {
     if (b.stableford !== a.stableford) return b.stableford - a.stableford;
     return a.grossStrokes - b.grossStrokes;
   });
 
-  // Assign ranks (ties share position)
   let rank = 1;
   for (let i = 0; i < rows.length; i++) {
     if (i > 0) {

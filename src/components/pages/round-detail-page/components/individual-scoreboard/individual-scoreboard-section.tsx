@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import type { ScoreboardData } from '@/types';
+import { formatHandicapWithFallback } from '@/lib/handicaps';
 import { getIndividualScoreboardFn } from '@/lib/scoreboards.server';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -166,7 +167,7 @@ export function IndividualScoreboardSection({ roundId }: { roundId: string }) {
                     </div>
                   </td>
                   <td className="text-muted-foreground px-4 py-2 text-right tabular-nums">
-                    {row.playingHandicap}
+                    {formatHandicapWithFallback(row.playingHandicap)}
                   </td>
                   <td
                     className={`px-4 py-2 text-right tabular-nums ${colClass('gross_strokes')}`}
