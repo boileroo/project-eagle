@@ -24,15 +24,42 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
+const GOLF_WORDS = [
+  'ACE',
+  'BIRDIE',
+  'BOGEY',
+  'BUNKER',
+  'CHIP',
+  'EAGLE',
+  'GREEN',
+  'HOOK',
+  'IRON',
+  'LINKS',
+  'LOFT',
+  'PARS',
+  'PITCH',
+  'PUTT',
+  'ROUGH',
+  'SCORE',
+  'SLICE',
+  'SWING',
+  'TEE',
+  'WEDGE',
+  'WOOD',
+];
+
 function formatInviteCodeInput(value: string) {
   const cleaned = value
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '')
-    .slice(0, 19);
+    .slice(0, 10); // max: 6-char word + 4-char suffix
 
-  if (cleaned.length < 5) return cleaned;
+  const matchedWord = GOLF_WORDS.find((word) => cleaned.startsWith(word));
+  if (matchedWord && cleaned.length > matchedWord.length) {
+    return `${matchedWord}-${cleaned.slice(matchedWord.length)}`;
+  }
 
-  return `${cleaned.slice(0, 5)}-${cleaned.slice(5)}`;
+  return cleaned;
 }
 
 interface JoinTournamentDialogProps {
@@ -110,13 +137,12 @@ export function JoinTournamentDialog({
 
                         if (
                           e.key === 'Backspace' &&
-                          value.length === 6 &&
                           value.endsWith('-') &&
                           selectionStart === value.length &&
                           selectionEnd === value.length
                         ) {
                           e.preventDefault();
-                          field.onChange(value.slice(0, 4));
+                          field.onChange(value.slice(0, -2));
                         }
                       }}
                     />
