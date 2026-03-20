@@ -55,8 +55,14 @@ function formatInviteCodeInput(value: string) {
     .slice(0, 10); // max: 6-char word + 4-char suffix
 
   const matchedWord = GOLF_WORDS.find((word) => cleaned.startsWith(word));
-  if (matchedWord && cleaned.length > matchedWord.length) {
-    return `${matchedWord}-${cleaned.slice(matchedWord.length)}`;
+  if (!matchedWord) {
+    return cleaned;
+  }
+
+  // If the input is exactly a matched word or more, format with dash
+  if (cleaned.length >= matchedWord.length) {
+    const suffix = cleaned.slice(matchedWord.length);
+    return `${matchedWord}-${suffix}`;
   }
 
   return cleaned;
