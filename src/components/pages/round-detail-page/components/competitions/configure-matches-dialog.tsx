@@ -81,6 +81,9 @@ export function ConfigureMatchesDialog({
   };
 
   const getPairingsForGroup = (groupId: string) => {
+    if (groupId === UNGROUPED_ID) {
+      return pairings.map((p, i) => ({ ...p, index: i }));
+    }
     const groupMemberIds = new Set(
       participants
         .filter((rp) => rp.roundGroupId === groupId)
@@ -93,15 +96,23 @@ export function ConfigureMatchesDialog({
       );
   };
 
-  const getAvailableInGroup = (groupId: string) =>
-    participants.filter(
+  const getAvailableInGroup = (groupId: string) => {
+    if (groupId === UNGROUPED_ID) {
+      return participants.filter((rp) => !assignedIds.has(rp.id));
+    }
+    return participants.filter(
       (rp) => rp.roundGroupId === groupId && !assignedIds.has(rp.id),
     );
+  };
 
   /** Returns the two distinct team IDs present in a group (in insertion order), or [] if not exactly 2. */
   const getGroupTeamIds = (groupId: string): [string, string] | [] => {
+    const groupParticipants =
+      groupId === UNGROUPED_ID
+        ? participants
+        : participants.filter((p) => p.roundGroupId === groupId);
     const seen = new Map<string, boolean>();
-    for (const rp of participants.filter((p) => p.roundGroupId === groupId)) {
+    for (const rp of groupParticipants) {
       const teamId =
         rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id ?? null;
       if (teamId && !seen.has(teamId)) seen.set(teamId, true);
@@ -157,11 +168,32 @@ export function ConfigureMatchesDialog({
     setOpen(next);
   };
 
-  const hasGroups = groups.length > 0;
+  const UNGROUPED_ID = '__ungrouped__';
 
-  const ungroupedPlayers = participants.filter(
-    (rp) => !rp.roundGroupId && !assignedIds.has(rp.id),
-  );
+  const hasRealGroups = groups.length > 0;
+
+  // When no groups have been created yet (legacy rounds or very small games),
+  // expose all participants as a single virtual pool so matches can still be configured.
+  const effectiveGroups: {
+    id: string;
+    groupNumber: number;
+    name: string | null;
+  }[] = hasRealGroups
+    ? groups
+    : participants.length >= 2
+      ? [{ id: UNGROUPED_ID, groupNumber: 1, name: 'All Players' }]
+      : [];
+
+  const hasGroups = effectiveGroups.length > 0;
+
+  const getGroupMemberCount = (groupId: string) => {
+    if (groupId === UNGROUPED_ID) return participants.length;
+    return participants.filter((rp) => rp.roundGroupId === groupId).length;
+  };
+
+  const ungroupedPlayers = hasRealGroups
+    ? participants.filter((rp) => !rp.roundGroupId && !assignedIds.has(rp.id))
+    : [];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -175,20 +207,19 @@ export function ConfigureMatchesDialog({
           <DialogTitle>Configure Matches</DialogTitle>
           <DialogDescription>
             Set up head-to-head pairings for {comp.name}.
-            {hasGroups
+            {hasRealGroups
               ? ' Pairings are organised by group.'
-              : ' Create groups first to organise pairings.'}
+              : ' Pair players below.'}
           </DialogDescription>
         </DialogHeader>
 
         {!hasGroups ? (
           <p className="text-muted-foreground py-2 text-sm">
-            No groups have been created. Set up groups in the Players &amp;
-            Groups section above, then come back to configure matches.
+            Add at least two players to configure matches.
           </p>
         ) : (
           <div className="space-y-5">
-            {groups.map((group) => {
+            {effectiveGroups.map((group) => {
               const groupPairings = getPairingsForGroup(group.id);
               const available = getAvailableInGroup(group.id);
               const { playerA, playerB } = getAddState(group.id);
@@ -200,12 +231,7 @@ export function ConfigureMatchesDialog({
                       {group.name || `Group ${group.groupNumber}`}
                     </span>
                     <Badge variant="secondary" className="text-xs">
-                      {
-                        participants.filter(
-                          (rp) => rp.roundGroupId === group.id,
-                        ).length
-                      }{' '}
-                      players
+                      {getGroupMemberCount(group.id)} players
                     </Badge>
                   </div>
 
@@ -409,7 +435,7 @@ export function ConfigureMatchesDialog({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving || !hasGroups}>
+          <Button onClick={handleSave} disabled={saving}>
             {saving ? 'Saving…' : 'Save'}
           </Button>
         </DialogFooter>

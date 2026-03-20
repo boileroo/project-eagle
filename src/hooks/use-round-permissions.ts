@@ -85,9 +85,9 @@ export function useRoundPermissions({
   const getRecordingRole = (
     roundParticipantId: string,
   ): 'player' | 'marker' | 'commissioner' => {
-    if (isCommissioner) return 'commissioner';
     const rp = round?.participants.find((p) => p.id === roundParticipantId);
     if (rp?.person.userId === userId) return 'player';
+    if (isCommissioner) return 'commissioner';
     return 'marker';
   };
 

@@ -285,8 +285,8 @@ export const createRoundFn = createServerFn({ method: 'POST' })
           );
         }
 
-        // Create default Group 1 and assign all participants only if more than 4 players
-        if (tpList.length > 4) {
+        // Create default Group 1 and assign all participants
+        if (tpList.length >= 1) {
           const [defaultGroup] = await tx
             .insert(roundGroups)
             .values({
@@ -723,15 +723,26 @@ export const createSingleRoundFn = createServerFn({ method: 'POST' })
       .returning();
 
     // 4. Add creator as round participant
-    await db.insert(roundParticipants).values({
-      roundId: round.id,
-      personId: person.id,
-      tournamentParticipantId: tp.id,
-      handicapSnapshot: person.currentHandicap ?? '0',
-    });
+    const [roundParticipant] = await db
+      .insert(roundParticipants)
+      .values({
+        roundId: round.id,
+        personId: person.id,
+        tournamentParticipantId: tp.id,
+        handicapSnapshot: person.currentHandicap ?? '0',
+      })
+      .returning();
 
-    // 5. Don't create default group - groups are only needed for >4 players
-    // Commissioners can create groups manually or use auto-assign when needed
+    // 5. Create default Group 1 and assign the creator to it
+    const [defaultGroup] = await db
+      .insert(roundGroups)
+      .values({ roundId: round.id, groupNumber: 1, name: 'Group 1' })
+      .returning();
+
+    await db
+      .update(roundParticipants)
+      .set({ roundGroupId: defaultGroup.id })
+      .where(eq(roundParticipants.id, roundParticipant.id));
 
     return {
       tournamentId: tournament.id,

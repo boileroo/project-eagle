@@ -1,4 +1,4 @@
-import { ShareDialog } from '@/components/pages/tournament-detail-page/components/share-dialog';
+import { ShareDialog } from '@/components/shared/share-dialog/share-dialog';
 import { DeleteTournamentButton } from './actions/delete-tournament-button';
 import { LockTournamentButton } from './actions/lock-tournament-button';
 import { UnlockTournamentButton } from './actions/unlock-tournament-button';
@@ -38,7 +38,7 @@ export function TournamentActions({
 
       <EditTournamentLink tournamentId={id} />
 
-      <ShareDialog tournamentName={name} inviteCode={inviteCode} />
+      <ShareDialog displayName={name} inviteCode={inviteCode} />
 
       {isSetup && (
         <DeleteTournamentButton

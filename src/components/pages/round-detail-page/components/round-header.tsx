@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ShareDialog } from '@/components/shared/share-dialog/share-dialog';
 import { EditRoundDialog } from './edit-round-dialog';
 import { DeleteRoundDialog } from './delete-round-dialog';
 import { statusColors, statusLabels, nextTransitions } from './constants';
@@ -14,6 +15,7 @@ interface RoundHeaderProps {
   >;
   isSingleRound: boolean;
   isCommissioner: boolean;
+  inviteCode?: string;
   onTransition: (
     newStatus: 'draft' | 'scheduled' | 'open' | 'finalized',
   ) => void;
@@ -25,6 +27,7 @@ export function RoundHeader({
   courses,
   isSingleRound,
   isCommissioner,
+  inviteCode,
   onTransition,
   onSaved,
 }: RoundHeaderProps) {
@@ -110,6 +113,13 @@ export function RoundHeader({
 
         {isCommissioner && isDraft && (
           <EditRoundDialog round={round} courses={courses} onSaved={onSaved} />
+        )}
+
+        {isCommissioner && isSingleRound && inviteCode && (
+          <ShareDialog
+            displayName={round.course.name}
+            inviteCode={inviteCode}
+          />
         )}
 
         {isCommissioner && round.status === 'draft' && (

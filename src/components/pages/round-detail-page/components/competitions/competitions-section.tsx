@@ -223,7 +223,7 @@ export function TeamCompetitionsSection({
               {isCommissioner && isDraft && (
                 <>
                   <br />
-                  Use the above button to add additional games or matches.
+                  Use the above buttons to add additional games or matches.
                 </>
               )}
             </p>

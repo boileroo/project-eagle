@@ -11,10 +11,10 @@ import {
 import { useClipboard } from '@/hooks/use-clipboard';
 
 export function ShareDialog({
-  tournamentName,
+  displayName,
   inviteCode,
 }: {
-  tournamentName: string;
+  displayName: string;
   inviteCode: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -34,7 +34,7 @@ export function ShareDialog({
         <DialogHeader>
           <DialogTitle>Invite players</DialogTitle>
           <DialogDescription>
-            Share this code with players you want to invite to {tournamentName}
+            Share this code with players you want to invite to {displayName}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">

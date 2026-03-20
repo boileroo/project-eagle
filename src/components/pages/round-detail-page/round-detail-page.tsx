@@ -170,6 +170,7 @@ export function RoundDetailPage({
         courses={courses}
         isSingleRound={isSingleRound}
         isCommissioner={isCommissioner}
+        inviteCode={round.tournament?.inviteCode ?? undefined}
         onTransition={handleTransition}
         onSaved={invalidateRoundData}
       />

@@ -63,12 +63,10 @@ export function AddTeamCompDialog({
 
   const bestBallPairings = useMemo(() => {
     const pairings: { teamA: string; teamB: string }[] = [];
-    for (const group of round.groups ?? []) {
-      const groupParticipants = round.participants.filter(
-        (rp) => rp.roundGroupId === group.id,
-      );
+
+    const checkPool = (poolParticipants: typeof round.participants) => {
       const teamCounts = new Map<string, number>();
-      for (const rp of groupParticipants) {
+      for (const rp of poolParticipants) {
         const teamId = rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id;
         if (teamId) {
           teamCounts.set(teamId, (teamCounts.get(teamId) ?? 0) + 1);
@@ -82,18 +80,28 @@ export function AddTeamCompDialog({
       ) {
         pairings.push({ teamA: teamIds[0], teamB: teamIds[1] });
       }
+    };
+
+    if ((round.groups ?? []).length > 0) {
+      for (const group of round.groups ?? []) {
+        checkPool(
+          round.participants.filter((rp) => rp.roundGroupId === group.id),
+        );
+      }
+    } else {
+      // No groups: treat all participants as a single pool
+      checkPool(round.participants);
     }
+
     return pairings;
   }, [round.groups, round.participants]);
 
   const validBestBallGroups = useMemo(() => {
     let count = 0;
-    for (const group of round.groups ?? []) {
-      const groupParticipants = round.participants.filter(
-        (rp) => rp.roundGroupId === group.id,
-      );
+
+    const checkPool = (poolParticipants: typeof round.participants) => {
       const teamCounts = new Map<string, number>();
-      for (const rp of groupParticipants) {
+      for (const rp of poolParticipants) {
         const teamId = rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id;
         if (teamId) {
           teamCounts.set(teamId, (teamCounts.get(teamId) ?? 0) + 1);
@@ -107,7 +115,19 @@ export function AddTeamCompDialog({
       ) {
         count++;
       }
+    };
+
+    if ((round.groups ?? []).length > 0) {
+      for (const group of round.groups ?? []) {
+        checkPool(
+          round.participants.filter((rp) => rp.roundGroupId === group.id),
+        );
+      }
+    } else {
+      // No groups: treat all participants as a single pool
+      checkPool(round.participants);
     }
+
     return count;
   }, [round.groups, round.participants]);
 
@@ -117,18 +137,27 @@ export function AddTeamCompDialog({
   /** Valid Rumble groups: exactly 4 players from the same team per group */
   const validRumbleGroups = useMemo(() => {
     let count = 0;
-    for (const group of round.groups ?? []) {
-      const groupParticipants = round.participants.filter(
-        (rp) => rp.roundGroupId === group.id,
-      );
-      if (groupParticipants.length !== 4) continue;
+
+    const checkPool = (poolParticipants: typeof round.participants) => {
+      if (poolParticipants.length !== 4) return;
       const teams = new Set(
-        groupParticipants
+        poolParticipants
           .map((rp) => rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id)
           .filter(Boolean),
       );
       if (teams.size === 1) count++;
+    };
+
+    if ((round.groups ?? []).length > 0) {
+      for (const group of round.groups ?? []) {
+        checkPool(
+          round.participants.filter((rp) => rp.roundGroupId === group.id),
+        );
+      }
+    } else {
+      checkPool(round.participants);
     }
+
     return count;
   }, [round.groups, round.participants]);
 
