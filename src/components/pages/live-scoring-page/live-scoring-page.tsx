@@ -155,7 +155,7 @@ export function LiveScoringPage({
   return (
     <div className="flex h-[100dvh] flex-col">
       {/* ── Scrollable content ─────────────────── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-lg space-y-4 px-4 pb-4">
           {/* Header bar: back link + group selector */}
           <div className="flex items-center justify-between pt-3">

@@ -40,6 +40,9 @@ export function useScoreRealtime(
         void queryClient.invalidateQueries({
           queryKey: ['competition', 'round', roundId],
         });
+        void queryClient.invalidateQueries({
+          queryKey: ['individual-scoreboard', roundId],
+        });
       }, INVALIDATE_DEBOUNCE_MS);
     };
 

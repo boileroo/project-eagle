@@ -163,6 +163,8 @@ export function TeamCompetitionsSection({
     setDeletingId(null);
   };
 
+  const hasEnoughPlayers = round.participants.length >= 2;
+
   const scoredComps = competitions.filter(
     (c) => !isBonusFormat(c.formatType as CompetitionConfig['formatType']),
   );
@@ -181,9 +183,12 @@ export function TeamCompetitionsSection({
               <AddIndividualCompDialog
                 tournamentId={round.tournamentId}
                 roundId={round.id}
+                round={round}
                 hasTeams={hasTeams}
                 onSaved={onChanged}
-                disabled={!(isCommissioner && isDraft) || hasTeams}
+                disabled={
+                  !(isCommissioner && isDraft) || hasTeams || !hasEnoughPlayers
+                }
               />
 
               <AddTeamCompDialog
@@ -192,14 +197,16 @@ export function TeamCompetitionsSection({
                 round={round}
                 competitions={competitions}
                 onSaved={onChanged}
-                disabled={!(isCommissioner && isDraft) || !hasTeams}
+                disabled={
+                  !(isCommissioner && isDraft) || !hasTeams || !hasEnoughPlayers
+                }
               />
 
               <AddBonusCompDialog
                 tournamentId={round.tournamentId}
                 roundId={round.id}
                 onSaved={onChanged}
-                disabled={!(isCommissioner && isDraft)}
+                disabled={!(isCommissioner && isDraft) || !hasEnoughPlayers}
               />
 
               {/* Help button always visible */}

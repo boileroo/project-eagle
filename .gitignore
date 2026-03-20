@@ -41,3 +41,12 @@ yarn-error.log*
 # drizzle
 src/db/migrations/meta/
 .playwright-mcp/
+
+# test coverage
+coverage/
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

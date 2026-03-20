@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/shared/page-header/page-header';
 import { TournamentActions } from './tournament-actions/tournament-actions';
 import { useNavigate, useRouter } from '@tanstack/react-router';
 import type { TournamentLoaderData } from '@/types';
@@ -35,24 +35,21 @@ export function TournamentHeader({
   const { description, name, status } = tournament;
 
   return (
-    <>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">{name}</h1>
-          <Badge variant={STATUS_COLORS[status ?? 'setup']}>
-            {STATUS_LABELS[status ?? 'setup']}
-          </Badge>
-        </div>
-
+    <PageHeader
+      title={name}
+      statusBadge={{
+        label: STATUS_LABELS[status ?? 'setup'],
+        variant: STATUS_COLORS[status ?? 'setup'],
+      }}
+      description={description ?? undefined}
+      actions={
         <TournamentActions
           tournament={tournament}
           isCommissioner={isCommissioner}
           onChanged={() => router.invalidate()}
           onDeleted={() => navigate({ to: '/tournaments' })}
         />
-      </div>
-
-      {description && <p className="text-muted-foreground">{description}</p>}
-    </>
+      }
+    />
   );
 }

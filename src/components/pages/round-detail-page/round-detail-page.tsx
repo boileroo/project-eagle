@@ -1,9 +1,7 @@
-import { Link } from '@tanstack/react-router';
-import { Play, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { useTransitionRound } from '@/lib/rounds';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScoreEntryDialog } from '@/components/score-entry-dialog';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -49,12 +47,16 @@ export function RoundDetailPage({
   userId: string;
 }) {
   const queryClient = useQueryClient();
-  const [transitionRound] = useTransitionRound();
+  const [transitionRound, { isPending: isTransitioning }] =
+    useTransitionRound();
 
   const invalidateRoundData = () => {
     void queryClient.invalidateQueries({ queryKey: ['round', round.id] });
     void queryClient.invalidateQueries({
       queryKey: ['competition', 'round', round.id],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ['individual-scoreboard', round.id],
     });
     if (isSingleRound) {
       void queryClient.invalidateQueries({
@@ -66,6 +68,14 @@ export function RoundDetailPage({
   const isDraft = round.status === 'draft';
   const isScheduled = round.status === 'scheduled';
   const isSingleRound = round.tournament?.isSingleRound ?? false;
+  const hasAnyScores = Object.values(scorecard).some(
+    (holes) => Object.keys(holes).length > 0,
+  );
+
+  const totalHoles = round.course.holes.length;
+  const allScorecardsComplete = round.participants.every(
+    (rp) => Object.keys(scorecard[rp.id] ?? {}).length >= totalHoles,
+  );
 
   // Score entry dialog state
   const [scoreDialogOpen, setScoreDialogOpen] = useState(false);
@@ -173,6 +183,9 @@ export function RoundDetailPage({
         inviteCode={round.tournament?.inviteCode ?? undefined}
         onTransition={handleTransition}
         onSaved={invalidateRoundData}
+        isTransitioning={isTransitioning}
+        hasAnyScores={hasAnyScores}
+        allScorecardsComplete={allScorecardsComplete}
       />
 
       <Separator />
@@ -190,33 +203,19 @@ export function RoundDetailPage({
         </div>
       )}
 
-      {/* Participants Section - handles Players, Teams, and Groups tabs */}
-      <ParticipantsSection
-        tournament={tournament ?? undefined}
-        round={round}
-        isSingleRound={isSingleRound}
-        competitions={competitions}
-        isCommissioner={isCommissioner}
-        userId={userId}
-        myPerson={myPerson}
-        onChanged={() => invalidateRoundData()}
-        defaultOpen={isDraft || isScheduled}
-      />
-
-      {/* Quick Score button — shown when round is open and user can score */}
-      {round.status === 'open' && editableParticipantIds.size > 0 && (
-        <div className="flex justify-end">
-          <Button size="sm" asChild>
-            <Link
-              to="/tournaments/$tournamentId/rounds/$roundId/play"
-              params={{ tournamentId, roundId: round.id }}
-              search={{ hole: 1, group: undefined }}
-            >
-              <Play className="mr-1.5 h-3.5 w-3.5" />
-              Quick Score
-            </Link>
-          </Button>
-        </div>
+      {/* Participants Section - hidden once round is in play or finished */}
+      {(isDraft || isScheduled) && (
+        <ParticipantsSection
+          tournament={tournament ?? undefined}
+          round={round}
+          isSingleRound={isSingleRound}
+          competitions={competitions}
+          isCommissioner={isCommissioner}
+          userId={userId}
+          myPerson={myPerson}
+          onChanged={() => invalidateRoundData()}
+          defaultOpen={isDraft || isScheduled}
+        />
       )}
 
       {/* Scorecards — one per group, visible when round is open or finalized */}
@@ -227,6 +226,11 @@ export function RoundDetailPage({
         editableParticipantIds={editableParticipantIds}
         participantTeamColours={participantTeamColours}
         onScoreClick={handleScoreClick}
+        quickScoreProps={
+          round.status === 'open' && editableParticipantIds.size > 0
+            ? { tournamentId, roundId: round.id }
+            : undefined
+        }
       />
 
       {/* Score entry dialog */}
@@ -249,22 +253,25 @@ export function RoundDetailPage({
         <IndividualScoreboardSection roundId={round.id} />
       )}
 
-      {/* Team Competitions */}
-      <TeamCompetitionsSection
-        round={round}
-        scorecard={scorecard}
-        competitions={competitions}
-        isCommissioner={isCommissioner}
-        hasTeams={
-          isSingleRound
-            ? (tournament?.teams?.length ?? 0) > 0
-            : round.participants.some(
-                (rp) =>
-                  (rp.tournamentParticipant?.teamMemberships?.length ?? 0) > 0,
-              )
-        }
-        onChanged={() => invalidateRoundData()}
-      />
+      {/* Team Competitions — hidden when no competitions exist and round is past draft */}
+      {(isDraft || competitions.length > 0) && (
+        <TeamCompetitionsSection
+          round={round}
+          scorecard={scorecard}
+          competitions={competitions}
+          isCommissioner={isCommissioner}
+          hasTeams={
+            isSingleRound
+              ? (tournament?.teams?.length ?? 0) > 0
+              : round.participants.some(
+                  (rp) =>
+                    (rp.tournamentParticipant?.teamMemberships?.length ?? 0) >
+                    0,
+                )
+          }
+          onChanged={() => invalidateRoundData()}
+        />
+      )}
     </div>
   );
 }

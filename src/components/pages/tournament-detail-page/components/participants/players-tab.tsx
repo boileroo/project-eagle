@@ -325,7 +325,7 @@ export function PlayersTab({
                 </Badge>
               )}
 
-              {canEdit || isMe ? (
+              {(canEdit || isMe) && isDraft ? (
                 isTournamentMode ? (
                   <EditHandicapDialog
                     participant={{

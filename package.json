@@ -23,7 +23,14 @@
     "typecheck": "tsc --noEmit",
     "generate-pwa-assets": "pwa-assets-generator",
     "generate-routes": "tsx scripts/generate-route-tree.ts",
-    "kanban": "tsx scripts/kanban.ts"
+    "kanban": "tsx scripts/kanban.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:install": "npm install --no-save --legacy-peer-deps vitest@4.1.0 @vitest/coverage-v8@4.1.0",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -57,6 +64,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.1.18",
     "@types/node": "^22.13.2",
     "@types/react": "^19.0.8",
@@ -81,5 +89,8 @@
     "vite": "^7.0.0",
     "vite-plugin-pwa": "^1.2.0",
     "vite-tsconfig-paths": "^6.1.1"
+  },
+  "comments": {
+    "vitest": "vitest@4.1.0 and @vitest/coverage-v8@4.1.0 are installed via `yarn test:install` (npm) because Yarn 1 has a linking bug with vitest's vite peer dependency on Vite 7."
   }
 }

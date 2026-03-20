@@ -36,7 +36,10 @@ export function NewRoundForm({
     defaultValues: {
       courseId: '',
       date: new Date().toISOString().split('T')[0],
-      teeTime: '',
+      teeTime: new Date().toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
     },
   });
 

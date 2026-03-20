@@ -153,10 +153,12 @@ export function ScoreEntryDialog({
             )}
           </div>
 
-          {/* Role badge */}
-          <Badge variant="outline" className="text-xs">
-            Recording as {recordedByRole}
-          </Badge>
+          {/* Role badge — only shown when recording on behalf of someone else */}
+          {recordedByRole !== 'player' && (
+            <Badge variant="outline" className="text-xs">
+              Recording as {recordedByRole}
+            </Badge>
+          )}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">

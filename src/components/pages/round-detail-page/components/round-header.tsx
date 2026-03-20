@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/shared/page-header/page-header';
 import { ShareDialog } from '@/components/shared/share-dialog/share-dialog';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog/confirm-dialog';
 import { EditRoundDialog } from './edit-round-dialog';
 import { DeleteRoundDialog } from './delete-round-dialog';
 import { statusColors, statusLabels, nextTransitions } from './constants';
@@ -20,6 +23,9 @@ interface RoundHeaderProps {
     newStatus: 'draft' | 'scheduled' | 'open' | 'finalized',
   ) => void;
   onSaved: () => void;
+  isTransitioning?: boolean;
+  hasAnyScores?: boolean;
+  allScorecardsComplete?: boolean;
 }
 
 export function RoundHeader({
@@ -30,127 +36,161 @@ export function RoundHeader({
   inviteCode,
   onTransition,
   onSaved,
+  isTransitioning = false,
+  hasAnyScores = false,
+  allScorecardsComplete = true,
 }: RoundHeaderProps) {
   const isDraft = round.status === 'draft';
   const tournamentId = round.tournamentId;
+  const [finishWarningOpen, setFinishWarningOpen] = useState(false);
 
   const transitions = nextTransitions[round.status] ?? [];
-  const backTransitions = transitions.filter((t) => t.direction === 'back');
+  const backTransitions = transitions.filter((t) => {
+    if (t.direction !== 'back') return false;
+    if (round.status === 'open' && t.status === 'scheduled' && hasAnyScores)
+      return false;
+    return true;
+  });
   const forwardTransitions = transitions.filter(
     (t) => t.direction === 'forward',
   );
 
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        {!isSingleRound && (
-          <div className="text-muted-foreground mb-1 text-sm">
-            <Link
-              to="/tournaments/$tournamentId"
-              params={{ tournamentId }}
-              className="hover:text-primary underline"
-            >
-              ← {round.tournament?.name ?? 'Tournament'}
-            </Link>
-          </div>
-        )}
-        {isSingleRound && (
-          <div className="text-muted-foreground mb-1 text-sm">
-            <Link to="/" className="hover:text-primary underline">
-              ← Dashboard
-            </Link>
-          </div>
-        )}
-        <h1 className="text-3xl font-bold tracking-tight">
-          {isSingleRound
-            ? round.course.name
-            : `Round ${round.roundNumber ?? '—'}`}
-        </h1>
-        <div className="text-muted-foreground mt-1 flex items-center gap-3">
-          <Link
-            to="/courses/$courseId"
-            params={{ courseId: round.course.id }}
-            className="hover:text-primary hover:underline"
-          >
-            @ {round.course.name}
-          </Link>
-          {round.date && (
-            <span>
-              {new Date(round.date).toLocaleDateString('en-AU', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-              })}
-              {(round as { teeTime?: string | null }).teeTime && (
-                <> · {(round as { teeTime?: string | null }).teeTime}</>
-              )}
-            </span>
+  const breadcrumb = isSingleRound ? (
+    <Link to="/" className="hover:text-primary underline">
+      &larr; Dashboard
+    </Link>
+  ) : (
+    <Link
+      to="/tournaments/$tournamentId"
+      params={{ tournamentId }}
+      className="hover:text-primary underline"
+    >
+      &larr; {round.tournament?.name ?? 'Tournament'}
+    </Link>
+  );
+
+  const metadata = (
+    <>
+      <Link
+        to="/courses/$courseId"
+        params={{ courseId: round.course.id }}
+        className="hover:text-primary hover:underline"
+      >
+        @ {round.course.name}
+      </Link>
+      {round.date && (
+        <span>
+          {new Date(round.date).toLocaleDateString('en-AU', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })}
+          {(round as { teeTime?: string | null }).teeTime && (
+            <> &middot; {(round as { teeTime?: string | null }).teeTime}</>
           )}
-          <Badge variant={statusColors[round.status]}>
-            {statusLabels[round.status]}
-          </Badge>
-        </div>
-      </div>
+        </span>
+      )}
+      <Badge variant={statusColors[round.status]}>
+        {statusLabels[round.status]}
+      </Badge>
+    </>
+  );
 
-      <div className="flex items-center gap-2">
-        {/* Back transitions — left side */}
-        {isCommissioner &&
-          backTransitions.map((t) => (
-            <Button
-              key={t.status}
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                onTransition(
-                  t.status as 'draft' | 'scheduled' | 'open' | 'finalized',
-                )
-              }
-            >
-              <ChevronLeft className="mr-1 h-3.5 w-3.5" />
-              {t.label}
-            </Button>
-          ))}
+  const actions = (
+    <>
+      {isCommissioner &&
+        backTransitions.map((t) => (
+          <Button
+            key={t.status}
+            size="sm"
+            variant="outline"
+            disabled={isTransitioning}
+            onClick={() =>
+              onTransition(
+                t.status as 'draft' | 'scheduled' | 'open' | 'finalized',
+              )
+            }
+          >
+            <ChevronLeft className="mr-1 h-3.5 w-3.5" />
+            {t.label}
+          </Button>
+        ))}
 
-        {isCommissioner && isDraft && (
-          <EditRoundDialog round={round} courses={courses} onSaved={onSaved} />
-        )}
+      {isCommissioner && isDraft && (
+        <EditRoundDialog round={round} courses={courses} onSaved={onSaved} />
+      )}
 
-        {isCommissioner && isSingleRound && inviteCode && (
-          <ShareDialog
-            displayName={round.course.name}
-            inviteCode={inviteCode}
-          />
-        )}
+      {isCommissioner && isSingleRound && inviteCode && (
+        <ShareDialog displayName={round.course.name} inviteCode={inviteCode} />
+      )}
 
-        {isCommissioner && round.status === 'draft' && (
-          <DeleteRoundDialog
-            roundId={round.id}
-            tournamentId={round.tournamentId}
-            roundNumber={round.roundNumber}
-            isSingleRound={isSingleRound}
-            isCommissioner={isCommissioner}
-            roundStatus={round.status}
-          />
-        )}
+      {isCommissioner && round.status === 'draft' && (
+        <DeleteRoundDialog
+          roundId={round.id}
+          tournamentId={round.tournamentId}
+          roundNumber={round.roundNumber}
+          isSingleRound={isSingleRound}
+          isCommissioner={isCommissioner}
+          roundStatus={round.status}
+        />
+      )}
 
-        {/* Forward transitions — right side */}
-        {isCommissioner &&
-          forwardTransitions.map((t) => (
+      {isCommissioner &&
+        forwardTransitions.map((t) => {
+          const targetStatus = t.status as
+            | 'draft'
+            | 'scheduled'
+            | 'open'
+            | 'finalized';
+          const needsWarning =
+            targetStatus === 'finalized' && !allScorecardsComplete;
+
+          return (
             <Button
               key={t.status}
               size="sm"
               variant="default"
-              onClick={() =>
-                onTransition(
-                  t.status as 'draft' | 'scheduled' | 'open' | 'finalized',
-                )
-              }
+              disabled={isTransitioning}
+              onClick={() => {
+                if (needsWarning) {
+                  setFinishWarningOpen(true);
+                } else {
+                  onTransition(targetStatus);
+                }
+              }}
             >
               {t.label}
               <ChevronRight className="ml-1 h-3.5 w-3.5" />
             </Button>
-          ))}
-      </div>
-    </div>
+          );
+        })}
+    </>
+  );
+
+  return (
+    <>
+      <PageHeader
+        breadcrumb={breadcrumb}
+        title={
+          isSingleRound
+            ? round.course.name
+            : `Round ${round.roundNumber ?? '—'}`
+        }
+        metadata={metadata}
+        actions={actions}
+      />
+
+      <ConfirmDialog
+        open={finishWarningOpen}
+        onOpenChange={setFinishWarningOpen}
+        title="Incomplete Scorecards"
+        description="Some players have not completed their scorecards. Are you sure you want to finish the round?"
+        confirmText="Finish Round"
+        onConfirm={async () => {
+          setFinishWarningOpen(false);
+          onTransition('finalized');
+        }}
+      />
+    </>
   );
 }

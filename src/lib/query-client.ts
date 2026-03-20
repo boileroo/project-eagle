@@ -54,6 +54,9 @@ export const registerMutationDefaults = (queryClient: QueryClient) => {
       void queryClient.invalidateQueries({
         queryKey: ['round', variables.roundId, 'scorecard'],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ['individual-scoreboard', variables.roundId],
+      });
     },
     retry: 3,
   });

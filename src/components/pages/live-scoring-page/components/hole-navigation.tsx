@@ -25,7 +25,7 @@ export function HoleNavigation({
   const holes = Array.from({ length: totalHoles }, (_, i) => i + 1);
 
   return (
-    <div className="bg-background border-t py-2">
+    <div className="bg-background shrink-0 border-t py-2">
       {/* Hole dots */}
       <div className="mb-2 flex items-center justify-center gap-1 overflow-x-auto px-2">
         {holes.map((n) => {

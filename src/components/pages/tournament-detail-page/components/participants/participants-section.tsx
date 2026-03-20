@@ -43,15 +43,18 @@ export function ParticipantsSection({
 
   const hasTournament = !!tournament;
   const hasTeamsConfigured = hasTournament && tournament.teams.length > 0;
+  const hasGroups = !!round;
+  const hasGroupsConfigured = hasGroups && (round.groups ?? []).length > 0;
+
+  const roundStatus = round?.status ?? 'draft';
+  const isDraft = roundStatus === 'draft';
+  const tournamentStatus = tournament?.status;
+  const isPastSetup =
+    roundStatus !== 'draft' ||
+    (tournamentStatus != null && tournamentStatus !== 'setup');
+
   const teamsTabDisabled =
     hasTournament && !hasTeamsConfigured && !isCommissioner;
-  const hasGroups = !!round;
-
-  useEffect(() => {
-    if (activeTab === 'teams' && teamsTabDisabled) {
-      setActiveTab('players');
-    }
-  }, [activeTab, teamsTabDisabled]);
 
   const tabs: {
     id: 'players' | 'teams' | 'groups';
@@ -59,12 +62,16 @@ export function ParticipantsSection({
     disabled?: boolean;
   }[] = [];
   if (hasTournament) tabs.push({ id: 'players', label: 'Players' });
-  if (hasTournament)
+  if (hasTournament && !(isPastSetup && !hasTeamsConfigured))
     tabs.push({ id: 'teams', label: 'Teams', disabled: teamsTabDisabled });
-  if (hasGroups) tabs.push({ id: 'groups', label: 'Groups' });
+  if (hasGroups && !(isPastSetup && !hasGroupsConfigured))
+    tabs.push({ id: 'groups', label: 'Groups' });
 
-  const roundStatus = round?.status ?? 'draft';
-  const isDraft = roundStatus === 'draft';
+  useEffect(() => {
+    if (!tabs.some((t) => t.id === activeTab)) {
+      setActiveTab('players');
+    }
+  }, [activeTab, tabs]);
 
   const canEditPlayers =
     isCommissioner && (!round || (isSingleRound && isDraft));

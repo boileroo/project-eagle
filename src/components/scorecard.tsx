@@ -167,10 +167,15 @@ export function Scorecard({
   const renderTotalCell = (
     participantId: string,
     holeList: Hole[],
-    par: number,
+    _par: number,
   ) => {
     const total = getTotal(participantId, holeList);
-    const diff = total != null ? total - par : null;
+    const ps = scores[participantId];
+    const scoredPar =
+      total != null && ps
+        ? holeList.reduce((s, h) => (ps[h.holeNumber] ? s + h.par : s), 0)
+        : null;
+    const diff = total != null && scoredPar != null ? total - scoredPar : null;
     return (
       <td
         key={participantId}

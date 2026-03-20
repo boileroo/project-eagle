@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useCreateCompetition } from '@/lib/competitions';
 import type { CompetitionConfig } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
@@ -16,14 +16,23 @@ import {
 import { toast } from 'sonner';
 import { INDIVIDUAL_FORMATS } from '../constants';
 import { ScoringBasisRadio } from './competition-fields/scoring-basis-radio';
+import type { RoundData } from '../types';
+
+const REQUIRED_GROUP_SIZE: Record<string, number> = {
+  wolf: 4,
+  six_point: 3,
+  chair: 4,
+};
 
 export function AddIndividualCompDialog({
   tournamentId,
   roundId,
+  round,
   onSaved,
 }: {
   tournamentId: string;
   roundId: string;
+  round: RoundData;
   /** Kept for API compatibility but no longer used */
   hasTeams?: boolean;
   disabled?: boolean;
@@ -43,6 +52,42 @@ export function AddIndividualCompDialog({
   const [sixPointScoringBasis, setSixPointScoringBasis] = useState<
     'stableford' | 'gross'
   >('stableford');
+
+  const groupSizeValidation = useMemo(() => {
+    const groups = round.groups ?? [];
+    const required = REQUIRED_GROUP_SIZE[formatType];
+    if (!required) return { valid: true, message: null };
+
+    if (groups.length === 0) {
+      return {
+        valid: false,
+        message: `${formatType === 'six_point' ? 'Six Point' : formatType === 'wolf' ? 'Wolf' : 'Chair'} requires groups of exactly ${required} players. No groups have been created yet.`,
+      };
+    }
+
+    const invalidGroups: { groupNumber: number; size: number }[] = [];
+    for (const g of groups) {
+      const size = round.participants.filter(
+        (rp) => rp.roundGroupId === g.id,
+      ).length;
+      if (size !== required) {
+        invalidGroups.push({ groupNumber: g.groupNumber, size });
+      }
+    }
+
+    if (invalidGroups.length > 0) {
+      const label =
+        invalidGroups.length === 1
+          ? `Group ${invalidGroups[0].groupNumber} has ${invalidGroups[0].size} player${invalidGroups[0].size === 1 ? '' : 's'}`
+          : `${invalidGroups.length} groups have incorrect sizes`;
+      return {
+        valid: false,
+        message: `${formatType === 'six_point' ? 'Six Point' : formatType === 'wolf' ? 'Wolf' : 'Chair'} requires exactly ${required} players per group. ${label}.`,
+      };
+    }
+
+    return { valid: true, message: null };
+  }, [formatType, round.groups, round.participants]);
 
   const getFormatLabel = () => {
     return (
@@ -160,12 +205,21 @@ export function AddIndividualCompDialog({
               1 point per hole the chair is held.
             </p>
           )}
+
+          {!groupSizeValidation.valid && (
+            <p className="text-destructive text-xs font-medium">
+              {groupSizeValidation.message}
+            </p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isPending}>
+          <Button
+            onClick={handleSave}
+            disabled={isPending || !groupSizeValidation.valid}
+          >
             {isPending ? 'Creating…' : 'Create'}
           </Button>
         </DialogFooter>
