@@ -9,7 +9,7 @@ import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
-import { DevTools } from '@/components/dev-tools';
+import { DevTools } from '@/components/dev-tools/dev-tools';
 import { PwaUpdateToast } from '@/components/pwa-update-toast';
 import { getAuthUser } from '@/lib/auth.server';
 import appCss from '@/styles/globals.css?url';
