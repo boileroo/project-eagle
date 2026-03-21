@@ -16,11 +16,11 @@ import {
   roundParticipants,
   competitions,
 } from '@/db/schema';
-import { requireAuth } from '../server/auth.helpers.server';
-import { generateInviteCode } from '../server/invite-codes.server';
-import { TEST_ACCOUNTS } from './test-accounts';
-import { TEST_COURSES } from './test-courses';
-import type { SetupScenarioResult } from './types';
+import { requireAuth } from './server/auth.helpers.server';
+import { generateInviteCode } from './server/invite-codes.server';
+import { TEST_ACCOUNTS } from './dev/test-accounts';
+import { TEST_COURSES } from './dev/test-courses';
+import type { SetupScenarioResult } from './dev/types';
 
 type JsonValue =
   | string

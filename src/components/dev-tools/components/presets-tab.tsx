@@ -7,7 +7,7 @@ import {
   setupScenarioFn,
   teardownScenarioFn,
   teardownAllTestDataFn,
-} from '@/lib/dev/dev-tools.server';
+} from '@/lib/dev-tools.server';
 import type { ScenarioPreset } from '@/lib/dev/types';
 import type { RoundContext } from '../dev-tools';
 
