@@ -141,12 +141,12 @@ export function calculateChair(input: CompetitionInput): ChairResult {
     }
     // If tie: chair holder retains (chairHolderId unchanged)
 
-    // Award point to chair holder
-    const pointEarned = chairHolderId !== null;
-    if (chairHolderId !== null) {
+    // Award point only when the chair holder defended (no transfer this hole)
+    const pointEarned = chairHolderId !== null && chairTakenBy === null;
+    if (pointEarned) {
       playerPoints.set(
-        chairHolderId,
-        (playerPoints.get(chairHolderId) ?? 0) + 1,
+        chairHolderId!,
+        (playerPoints.get(chairHolderId!) ?? 0) + 1,
       );
     }
 
