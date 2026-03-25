@@ -35,11 +35,6 @@ import {
   type CompetitionConfig,
 } from './competition-config';
 
-const SCORING_BASIS_LABELS = {
-  gross_strokes: 'gross',
-  net_strokes: 'net',
-} as const;
-
 type OutcomeCategory = 'individual' | 'team';
 
 type CompetitionOutcomeSummary = {
@@ -205,27 +200,6 @@ function summariseSingleResult(
   const prefix = context ? `${getGroupLabel(context)}: ` : '';
 
   switch (result.type) {
-    case 'stableford': {
-      const leaders = result.result.leaderboard.filter((row) => row.rank === 1);
-      if (leaders.length === 0) return null;
-      const names = joinNames(leaders.map((row) => row.displayName));
-      const points = leaders[0]?.totalPoints ?? 0;
-      return {
-        headline: `${names} on ${points} pts`,
-        detail: `${prefix}${names} on ${points} pts`,
-      };
-    }
-    case 'stroke_play': {
-      const leaders = result.result.leaderboard.filter((row) => row.rank === 1);
-      if (leaders.length === 0) return null;
-      const names = joinNames(leaders.map((row) => row.displayName));
-      const score = leaders[0]?.rankingScore ?? 0;
-      const basis = SCORING_BASIS_LABELS[result.result.scoringBasis];
-      return {
-        headline: `${names} on ${score} ${basis}`,
-        detail: `${prefix}${names} on ${score} ${basis}`,
-      };
-    }
     case 'match_play': {
       const details = result.result.matches.map(
         (match) => `${prefix}${match.resultText}`,

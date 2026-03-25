@@ -10,6 +10,8 @@
 import type { AggregationConfig } from '../competitions';
 import type { CompetitionResult, CompetitionInput, GroupData } from './index';
 import { calculateCompetitionResults } from './index';
+import { calculateStableford } from './stableford';
+import { calculateStrokePlay } from './stroke-play';
 import { assignRanks } from './rank';
 
 // ──────────────────────────────────────────────
@@ -127,68 +129,66 @@ function aggregateSumStableford(
   const personLookup = buildPersonLookup(rounds);
 
   for (const round of rounds) {
-    for (const input of round.competitionInputs) {
-      const results = expandByGroup(input, round.groups);
-      for (const result of results) {
-        if (result.type !== 'stableford') continue;
+    // Use the first competition input per round as the vehicle for scores/holes/participants.
+    // Stableford is a primary scoring metric, not a competition — compute it directly.
+    const input = round.competitionInputs[0];
+    if (!input) continue;
 
-        if (participantType === 'team') {
-          // Map individual stableford points to teams
-          const inputTeams = input.teams ?? [];
-          const playerTeamMap = new Map<
-            string,
-            { teamId: string; teamName: string }
-          >();
-          for (const team of inputTeams) {
-            for (const memberId of team.memberParticipantIds) {
-              playerTeamMap.set(memberId, {
-                teamId: team.teamId,
-                teamName: team.name,
-              });
-            }
-          }
+    const stablefordResult = calculateStableford(input);
 
-          for (const entry of result.result.leaderboard) {
-            const team = playerTeamMap.get(entry.roundParticipantId);
-            if (!team) continue;
-
-            const existing =
-              totals.get(team.teamId) ?? emptyTotalsEntry(team.teamName);
-
-            existing.total += entry.totalPoints;
-            const existingRound = existing.perRound.find(
-              (pr) => pr.roundId === round.roundId,
-            );
-            if (existingRound) {
-              existingRound.value += entry.totalPoints;
-            } else {
-              existing.roundsPlayed += 1;
-              existing.perRound.push({
-                roundId: round.roundId,
-                roundNumber: round.roundNumber,
-                value: entry.totalPoints,
-              });
-            }
-            totals.set(team.teamId, existing);
-          }
-        } else {
-          for (const entry of result.result.leaderboard) {
-            const person = personLookup.get(entry.roundParticipantId);
-            const entityId = person?.personId ?? entry.roundParticipantId;
-            const displayName = person?.displayName ?? entry.displayName;
-
-            const existing =
-              totals.get(entityId) ?? emptyTotalsEntry(displayName);
-            existing.total += entry.totalPoints;
-            existing.roundsPlayed += 1;
-            existing.perRound.push({
-              roundId: round.roundId,
-              roundNumber: round.roundNumber,
-              value: entry.totalPoints,
-            });
-            totals.set(entityId, existing);
-          }
+    if (participantType === 'team') {
+      const inputTeams = input.teams ?? [];
+      const playerTeamMap = new Map<
+        string,
+        { teamId: string; teamName: string }
+      >();
+      for (const team of inputTeams) {
+        for (const memberId of team.memberParticipantIds) {
+          playerTeamMap.set(memberId, {
+            teamId: team.teamId,
+            teamName: team.name,
+          });
         }
+      }
+
+      for (const entry of stablefordResult.leaderboard) {
+        const team = playerTeamMap.get(entry.roundParticipantId);
+        if (!team) continue;
+
+        const existing =
+          totals.get(team.teamId) ?? emptyTotalsEntry(team.teamName);
+
+        existing.total += entry.totalPoints;
+        const existingRound = existing.perRound.find(
+          (pr) => pr.roundId === round.roundId,
+        );
+        if (existingRound) {
+          existingRound.value += entry.totalPoints;
+        } else {
+          existing.roundsPlayed += 1;
+          existing.perRound.push({
+            roundId: round.roundId,
+            roundNumber: round.roundNumber,
+            value: entry.totalPoints,
+          });
+        }
+        totals.set(team.teamId, existing);
+      }
+    } else {
+      for (const entry of stablefordResult.leaderboard) {
+        const person = personLookup.get(entry.roundParticipantId);
+        const entityId = person?.personId ?? entry.roundParticipantId;
+        const displayName = person?.displayName ?? entry.displayName;
+
+        const existing = totals.get(entityId) ?? emptyTotalsEntry(displayName);
+        existing.total += entry.totalPoints;
+        existing.roundsPlayed += 1;
+        existing.perRound.push({
+          roundId: round.roundId,
+          roundNumber: round.roundNumber,
+          value: entry.totalPoints,
+        });
+        totals.set(entityId, existing);
       }
     }
   }
@@ -257,78 +257,76 @@ function aggregateLowestStrokes(
   const personLookup = buildPersonLookup(rounds);
 
   for (const round of rounds) {
-    for (const input of round.competitionInputs) {
-      const results = expandByGroup(input, round.groups);
-      for (const result of results) {
-        if (result.type !== 'stroke_play') continue;
+    const input = round.competitionInputs[0];
+    if (!input) continue;
 
-        if (participantType === 'team') {
-          // Map individual stroke play results to teams
-          const inputTeams = input.teams ?? [];
-          const playerTeamMap = new Map<
-            string,
-            { teamId: string; teamName: string }
-          >();
-          for (const team of inputTeams) {
-            for (const memberId of team.memberParticipantIds) {
-              playerTeamMap.set(memberId, {
-                teamId: team.teamId,
-                teamName: team.name,
-              });
-            }
-          }
+    const strokePlayResult = calculateStrokePlay(input, {
+      scoringBasis: config.scoringBasis,
+    });
 
-          for (const entry of result.result.leaderboard) {
-            const team = playerTeamMap.get(entry.roundParticipantId);
-            if (!team) continue;
-
-            const value =
-              config.scoringBasis === 'net_strokes'
-                ? entry.rankingScore
-                : entry.grossTotal;
-
-            const existing =
-              totals.get(team.teamId) ?? emptyTotalsEntry(team.teamName);
-
-            existing.total += value;
-            const existingRound = existing.perRound.find(
-              (pr) => pr.roundId === round.roundId,
-            );
-            if (existingRound) {
-              existingRound.value += value;
-            } else {
-              existing.roundsPlayed += 1;
-              existing.perRound.push({
-                roundId: round.roundId,
-                roundNumber: round.roundNumber,
-                value,
-              });
-            }
-            totals.set(team.teamId, existing);
-          }
-        } else {
-          for (const entry of result.result.leaderboard) {
-            const value =
-              config.scoringBasis === 'net_strokes'
-                ? entry.rankingScore
-                : entry.grossTotal;
-
-            const person = personLookup.get(entry.roundParticipantId);
-            const entityId = person?.personId ?? entry.roundParticipantId;
-            const displayName = person?.displayName ?? entry.displayName;
-
-            const existing =
-              totals.get(entityId) ?? emptyTotalsEntry(displayName);
-            existing.total += value;
-            existing.roundsPlayed += 1;
-            existing.perRound.push({
-              roundId: round.roundId,
-              roundNumber: round.roundNumber,
-              value,
-            });
-            totals.set(entityId, existing);
-          }
+    if (participantType === 'team') {
+      const inputTeams = input.teams ?? [];
+      const playerTeamMap = new Map<
+        string,
+        { teamId: string; teamName: string }
+      >();
+      for (const team of inputTeams) {
+        for (const memberId of team.memberParticipantIds) {
+          playerTeamMap.set(memberId, {
+            teamId: team.teamId,
+            teamName: team.name,
+          });
         }
+      }
+
+      for (const entry of strokePlayResult.leaderboard) {
+        const team = playerTeamMap.get(entry.roundParticipantId);
+        if (!team) continue;
+
+        const value =
+          config.scoringBasis === 'net_strokes'
+            ? entry.rankingScore
+            : entry.grossTotal;
+
+        const existing =
+          totals.get(team.teamId) ?? emptyTotalsEntry(team.teamName);
+
+        existing.total += value;
+        const existingRound = existing.perRound.find(
+          (pr) => pr.roundId === round.roundId,
+        );
+        if (existingRound) {
+          existingRound.value += value;
+        } else {
+          existing.roundsPlayed += 1;
+          existing.perRound.push({
+            roundId: round.roundId,
+            roundNumber: round.roundNumber,
+            value,
+          });
+        }
+        totals.set(team.teamId, existing);
+      }
+    } else {
+      for (const entry of strokePlayResult.leaderboard) {
+        const value =
+          config.scoringBasis === 'net_strokes'
+            ? entry.rankingScore
+            : entry.grossTotal;
+
+        const person = personLookup.get(entry.roundParticipantId);
+        const entityId = person?.personId ?? entry.roundParticipantId;
+        const displayName = person?.displayName ?? entry.displayName;
+
+        const existing = totals.get(entityId) ?? emptyTotalsEntry(displayName);
+        existing.total += value;
+        existing.roundsPlayed += 1;
+        existing.perRound.push({
+          roundId: round.roundId,
+          roundNumber: round.roundNumber,
+          value,
+        });
+        totals.set(entityId, existing);
       }
     }
   }

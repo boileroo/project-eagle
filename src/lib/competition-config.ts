@@ -98,8 +98,6 @@ export const chairConfigSchema = z.object({
 });
 
 export const competitionConfigSchema = z.discriminatedUnion('formatType', [
-  stablefordConfigSchema,
-  strokePlayConfigSchema,
   matchPlayConfigSchema,
   bestBallConfigSchema,
   nearestPinConfigSchema,
@@ -128,8 +126,6 @@ export const FORMAT_TYPE_LABELS: Record<
   CompetitionConfig['formatType'],
   string
 > = {
-  stableford: 'Stableford',
-  stroke_play: 'Stroke Play',
   match_play: 'Singles',
   best_ball: 'Best Ball',
   nearest_pin: 'Nearest the Pin',

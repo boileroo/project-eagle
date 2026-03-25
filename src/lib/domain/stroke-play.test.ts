@@ -43,8 +43,8 @@ function makeInput(
       id: 'c1',
       name: 'Test',
       config: {
-        formatType: 'stroke_play',
-        config: { scoringBasis: 'gross_strokes' },
+        formatType: 'wolf',
+        config: {},
       },
       groupScope: 'all',
     },

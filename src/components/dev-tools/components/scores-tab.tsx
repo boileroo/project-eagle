@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +12,6 @@ type ScoreMode = 'random' | 'deterministic';
 
 interface ScoresTabProps {
   roundCtx: RoundContext | null;
-  router: { invalidate: () => void };
 }
 
 function generateScore(par: number): number {
@@ -32,7 +32,6 @@ function detectScenarioId(tournamentName: string): string | null {
   const prefix = match[1].toLowerCase();
   const idMap: Record<string, string> = {
     s1: 's1-stableford',
-    s2: 's2-stroke-play',
     s3: 's3-match-play',
     s4: 's4-six-point',
     s5: 's5-wolf',
@@ -49,10 +48,26 @@ function detectScenarioId(tournamentName: string): string | null {
   return idMap[prefix] ?? null;
 }
 
-export function ScoresTab({ roundCtx, router }: ScoresTabProps) {
+export function ScoresTab({ roundCtx }: ScoresTabProps) {
   const [mode, setMode] = useState<ScoreMode>('random');
   const [filling, setFilling] = useState<string | null>(null);
   const [bulkSubmit] = useBulkSubmitScores();
+  const queryClient = useQueryClient();
+
+  const invalidateRoundQueries = useCallback(
+    (roundId: string) => {
+      void queryClient.invalidateQueries({
+        queryKey: ['round', roundId, 'scorecard'],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['individual-scoreboard', roundId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['competition', 'round', roundId],
+      });
+    },
+    [queryClient],
+  );
 
   const scenarioId = roundCtx
     ? detectScenarioId(roundCtx.tournamentName)
@@ -99,7 +114,7 @@ export function ScoresTab({ roundCtx, router }: ScoresTabProps) {
               (pp) => pp.id === participantId,
             );
             toast.success(`Filled: ${p?.person.displayName ?? 'player'}`);
-            router.invalidate();
+            invalidateRoundQueries(roundCtx.roundId);
           },
           onError: (error) => toast.error(error.message),
         });
@@ -107,7 +122,7 @@ export function ScoresTab({ roundCtx, router }: ScoresTabProps) {
         setFilling(null);
       }
     },
-    [roundCtx, router, bulkSubmit, getScores],
+    [roundCtx, bulkSubmit, getScores, invalidateRoundQueries],
   );
 
   const handleFillAll = useCallback(async () => {
@@ -133,10 +148,10 @@ export function ScoresTab({ roundCtx, router }: ScoresTabProps) {
       toast.success(
         `Filled all ${roundCtx.participants.length} scorecards (${mode})`,
       );
-      router.invalidate();
+      invalidateRoundQueries(roundCtx.roundId);
     }
     setFilling(null);
-  }, [roundCtx, router, bulkSubmit, getScores, mode]);
+  }, [roundCtx, bulkSubmit, getScores, mode, invalidateRoundQueries]);
 
   if (!roundCtx) {
     return (

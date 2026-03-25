@@ -17,7 +17,7 @@ import type { ScenarioPreset } from './types';
 export const S1_STABLEFORD: ScenarioPreset = {
   id: 's1-stableford',
   label: 'S1 — Stableford Baseline',
-  description: '4 players, 1 group, Stableford (all)',
+  description: '4 players, 1 group, no game competitions',
   phase: 1,
   players: [
     { slot: 'test_a', handicap: 12 },
@@ -29,43 +29,7 @@ export const S1_STABLEFORD: ScenarioPreset = {
     {
       courseIndex: 0,
       groups: [{ playerIndices: [0, 1, 2, 3] }],
-      competitions: [
-        {
-          name: 'Stableford',
-          competitionCategory: 'game',
-          groupScope: 'all',
-          formatType: 'stableford',
-          config: {},
-        },
-      ],
-    },
-  ],
-};
-
-export const S2_STROKE_PLAY: ScenarioPreset = {
-  id: 's2-stroke-play',
-  label: 'S2 — Stroke Play',
-  description: '4 players, 1 group, Stroke Play net (all)',
-  phase: 1,
-  players: [
-    { slot: 'test_a', handicap: 12 },
-    { slot: 'test_b', handicap: 18 },
-    { slot: 'guest', guestName: 'Guest C', handicap: 5 },
-    { slot: 'guest', guestName: 'Guest D', handicap: 24 },
-  ],
-  rounds: [
-    {
-      courseIndex: 0,
-      groups: [{ playerIndices: [0, 1, 2, 3] }],
-      competitions: [
-        {
-          name: 'Stroke Play (Net)',
-          competitionCategory: 'game',
-          groupScope: 'all',
-          formatType: 'stroke_play',
-          config: { scoringBasis: 'net_strokes' },
-        },
-      ],
+      competitions: [],
     },
   ],
 };
@@ -194,7 +158,7 @@ export const S6_CHAIR: ScenarioPreset = {
 export const S7_GROUPS: ScenarioPreset = {
   id: 's7-groups',
   label: 'S7 — Groups',
-  description: '8 players, 2 groups of 4, Stableford (within_group)',
+  description: '8 players, 2 groups of 4, no game competitions',
   phase: 2,
   players: [
     { slot: 'test_a', handicap: 12 },
@@ -213,15 +177,7 @@ export const S7_GROUPS: ScenarioPreset = {
         { playerIndices: [0, 2, 4, 6] },
         { playerIndices: [1, 3, 5, 7] },
       ],
-      competitions: [
-        {
-          name: 'Stableford',
-          competitionCategory: 'game',
-          groupScope: 'within_group',
-          formatType: 'stableford',
-          config: {},
-        },
-      ],
+      competitions: [],
     },
   ],
 };
@@ -344,7 +300,7 @@ export const S10_RUMBLE: ScenarioPreset = {
 export const S11_BONUSES: ScenarioPreset = {
   id: 's11-bonuses',
   label: 'S11 — NTP + LD',
-  description: '4 players, 1 group, Stableford + NTP + LD',
+  description: '4 players, 1 group, NTP + LD',
   phase: 4,
   players: [
     { slot: 'test_a', handicap: 12 },
@@ -357,13 +313,6 @@ export const S11_BONUSES: ScenarioPreset = {
       courseIndex: 0,
       groups: [{ playerIndices: [0, 1, 2, 3] }],
       competitions: [
-        {
-          name: 'Stableford',
-          competitionCategory: 'game',
-          groupScope: 'all',
-          formatType: 'stableford',
-          config: {},
-        },
         {
           name: 'NTP Hole 7',
           competitionCategory: 'bonus',
@@ -396,7 +345,7 @@ export const S11_BONUSES: ScenarioPreset = {
 export const S12_MULTI_FORMAT: ScenarioPreset = {
   id: 's12-multi-format',
   label: 'S12 — Multi-Format',
-  description: '4 players, 1 group, Stableford + Wolf + NTP',
+  description: '4 players, 1 group, Wolf + NTP',
   phase: 5,
   players: [
     { slot: 'test_a', handicap: 12 },
@@ -409,13 +358,6 @@ export const S12_MULTI_FORMAT: ScenarioPreset = {
       courseIndex: 0,
       groups: [{ playerIndices: [0, 1, 2, 3] }],
       competitions: [
-        {
-          name: 'Stableford',
-          competitionCategory: 'game',
-          groupScope: 'all',
-          formatType: 'stableford',
-          config: {},
-        },
         {
           name: 'Wolf',
           competitionCategory: 'game',
@@ -444,7 +386,7 @@ export const S12_MULTI_FORMAT: ScenarioPreset = {
 export const S13_TWO_ROUND_INDIVIDUAL: ScenarioPreset = {
   id: 's13-two-round-individual',
   label: 'S13 — Two-Round Individual',
-  description: '6 players, 2 rounds, Stableford per round',
+  description: '6 players, 2 rounds, no game competitions',
   phase: 6,
   players: [
     { slot: 'test_a', handicap: 12 },
@@ -458,28 +400,12 @@ export const S13_TWO_ROUND_INDIVIDUAL: ScenarioPreset = {
     {
       courseIndex: 0,
       groups: [{ playerIndices: [0, 1, 2, 3, 4, 5] }],
-      competitions: [
-        {
-          name: 'Stableford R1',
-          competitionCategory: 'game',
-          groupScope: 'all',
-          formatType: 'stableford',
-          config: {},
-        },
-      ],
+      competitions: [],
     },
     {
       courseIndex: 1,
       groups: [{ playerIndices: [0, 1, 2, 3, 4, 5] }],
-      competitions: [
-        {
-          name: 'Stableford R2',
-          competitionCategory: 'game',
-          groupScope: 'all',
-          formatType: 'stableford',
-          config: {},
-        },
-      ],
+      competitions: [],
     },
   ],
 };
@@ -487,7 +413,7 @@ export const S13_TWO_ROUND_INDIVIDUAL: ScenarioPreset = {
 export const S14_TWO_ROUND_TEAM: ScenarioPreset = {
   id: 's14-two-round-team',
   label: 'S14 — Two-Round Team',
-  description: '8 players, 2 teams, 2 rounds, Stableford + Best Ball',
+  description: '8 players, 2 teams, 2 rounds, Best Ball per round',
   phase: 6,
   players: [
     { slot: 'test_a', handicap: 12 },
@@ -512,13 +438,6 @@ export const S14_TWO_ROUND_TEAM: ScenarioPreset = {
       ],
       competitions: [
         {
-          name: 'Stableford R1',
-          competitionCategory: 'game',
-          groupScope: 'all',
-          formatType: 'stableford',
-          config: {},
-        },
-        {
           name: 'Best Ball R1',
           competitionCategory: 'match',
           groupScope: 'within_group',
@@ -540,13 +459,6 @@ export const S14_TWO_ROUND_TEAM: ScenarioPreset = {
       ],
       competitions: [
         {
-          name: 'Stableford R2',
-          competitionCategory: 'game',
-          groupScope: 'all',
-          formatType: 'stableford',
-          config: {},
-        },
-        {
           name: 'Best Ball R2',
           competitionCategory: 'match',
           groupScope: 'within_group',
@@ -565,7 +477,6 @@ export const S14_TWO_ROUND_TEAM: ScenarioPreset = {
 
 export const ALL_SCENARIOS: ScenarioPreset[] = [
   S1_STABLEFORD,
-  S2_STROKE_PLAY,
   S3_MATCH_PLAY,
   S4_SIX_POINT,
   S5_WOLF,

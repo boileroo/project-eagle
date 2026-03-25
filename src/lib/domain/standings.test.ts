@@ -39,7 +39,7 @@ function makeStablefordInput(
     competition: {
       id: 'c1',
       name: 'Test',
-      config: { formatType: 'stableford', config: {} },
+      config: { formatType: 'wolf', config: {} },
       groupScope: 'all',
     },
     holes,
@@ -51,14 +51,13 @@ function makeStablefordInput(
 function makeStrokePlayInput(
   participants: ParticipantData[],
   scores: CompetitionInput['scores'],
-  basis: 'gross_strokes' | 'net_strokes' = 'gross_strokes',
   holes = makeHoles(),
 ): CompetitionInput {
   return {
     competition: {
       id: 'c1',
       name: 'Test',
-      config: { formatType: 'stroke_play', config: { scoringBasis: basis } },
+      config: { formatType: 'wolf', config: {} },
       groupScope: 'all',
     },
     holes,

@@ -41,12 +41,6 @@ export function EditCompetitionDialog({
   const [groupScope, setGroupScope] = useState<'all' | 'within_group'>(
     (comp.groupScope as 'all' | 'within_group') ?? 'all',
   );
-  const [scoringBasis, setScoringBasis] = useState<
-    'net_strokes' | 'gross_strokes'
-  >(
-    (existingConfig.scoringBasis as 'net_strokes' | 'gross_strokes') ??
-      'net_strokes',
-  );
   const [pointsPerWin, setPointsPerWin] = useState<number>(
     (existingConfig.pointsPerWin as number) ?? 1,
   );
@@ -69,10 +63,6 @@ export function EditCompetitionDialog({
   const resetForm = () => {
     setName(comp.name);
     setGroupScope((comp.groupScope as 'all' | 'within_group') ?? 'all');
-    setScoringBasis(
-      (existingConfig.scoringBasis as 'net_strokes' | 'gross_strokes') ??
-        'net_strokes',
-    );
     setPointsPerWin((existingConfig.pointsPerWin as number) ?? 1);
     setPointsPerHalf((existingConfig.pointsPerHalf as number) ?? 0.5);
     setHoleNumber((existingConfig.holeNumber as number) ?? 1);
@@ -88,10 +78,6 @@ export function EditCompetitionDialog({
 
   const buildConfig = (): CompetitionConfig => {
     switch (formatType) {
-      case 'stableford':
-        return { formatType: 'stableford', config: {} };
-      case 'stroke_play':
-        return { formatType: 'stroke_play', config: { scoringBasis } };
       case 'match_play':
         return {
           formatType: 'match_play',
@@ -241,23 +227,6 @@ export function EditCompetitionDialog({
               <p className="text-muted-foreground text-xs">
                 Fixed distribution: 1st = 4 pts, 2nd = 2 pts, 3rd = 0 pts.
               </p>
-            </div>
-          )}
-
-          {formatType === 'stroke_play' && (
-            <div className="space-y-2">
-              <Label>Scoring Basis</Label>
-              <Select
-                value={scoringBasis}
-                onChange={(e) =>
-                  setScoringBasis(
-                    e.target.value as 'net_strokes' | 'gross_strokes',
-                  )
-                }
-              >
-                <option value="net_strokes">Net Strokes</option>
-                <option value="gross_strokes">Gross Strokes</option>
-              </Select>
             </div>
           )}
 

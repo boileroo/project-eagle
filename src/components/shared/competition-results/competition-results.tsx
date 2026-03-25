@@ -1,14 +1,5 @@
-// ──────────────────────────────────────────────
-// Competition Results Component
-//
-// Renders leaderboard/results for any competition type.
-// Purely presentational — receives pre-calculated results.
-// ──────────────────────────────────────────────
-
 import type { CompetitionResult } from '@/lib/domain';
 import { PointLeaderboard } from './components/point-leaderboard';
-import { StablefordLeaderboard } from './components/stableford-leaderboard';
-import { StrokePlayLeaderboard } from './components/stroke-play-leaderboard';
 import { MatchResults } from './components/match-results';
 import { HiLoResults } from './components/hi-lo-results';
 import { RumbleResults } from './components/rumble-results';
@@ -23,10 +14,6 @@ export function CompetitionResults({
   teamColours?: Map<string, string>;
 }) {
   switch (result.type) {
-    case 'stableford':
-      return <StablefordLeaderboard result={result.result} />;
-    case 'stroke_play':
-      return <StrokePlayLeaderboard result={result.result} />;
     case 'match_play':
       return <MatchResults matches={result.result.matches} />;
     case 'best_ball':

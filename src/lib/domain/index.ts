@@ -5,8 +5,6 @@
 // ──────────────────────────────────────────────
 
 import type { CompetitionConfig } from '../competitions';
-import { calculateStableford, type StablefordResult } from './stableford';
-import { calculateStrokePlay, type StrokePlayResult } from './stroke-play';
 import { calculateMatchPlay, type MatchPlayResult } from './match-play';
 import { calculateBestBall, type BestBallResult } from './best-ball';
 import { calculateRumble, type RumbleResult } from './rumble';
@@ -89,8 +87,6 @@ export interface CompetitionInput {
 // ──────────────────────────────────────────────
 
 export type CompetitionResult =
-  | { type: 'stableford'; result: StablefordResult }
-  | { type: 'stroke_play'; result: StrokePlayResult }
   | { type: 'match_play'; result: MatchPlayResult }
   | { type: 'best_ball'; result: BestBallResult }
   | { type: 'nearest_pin'; result: null }
@@ -129,16 +125,6 @@ export function calculateCompetitionResults(
   const { config } = input.competition;
 
   switch (config.formatType) {
-    case 'stableford':
-      return {
-        type: 'stableford',
-        result: calculateStableford(input),
-      };
-    case 'stroke_play':
-      return {
-        type: 'stroke_play',
-        result: calculateStrokePlay(input, config.config),
-      };
     case 'match_play':
       return {
         type: 'match_play',
@@ -186,8 +172,6 @@ export function calculateCompetitionResults(
 }
 
 // Re-exports
-export type { StablefordResult } from './stableford';
-export type { StrokePlayResult } from './stroke-play';
 export type { MatchPlayResult, MatchResult } from './match-play';
 export type { BestBallResult, BestBallMatchResult } from './best-ball';
 export type { RumbleResult, RumbleTeamResult } from './rumble';

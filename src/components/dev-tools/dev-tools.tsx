@@ -1,12 +1,15 @@
 import { useState, useCallback } from 'react';
 import { useMatch, useRouter } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { TEST_ACCOUNTS } from '@/lib/dev/test-accounts';
+import { roundQueryOptions } from '@/lib/query-options';
 import { PresetsTab } from './components/presets-tab';
 import { ScoresTab } from './components/scores-tab';
 import { ActionsTab } from './components/actions-tab';
+import { SignInTab } from './components/sign-in-tab';
 
-type Tab = 'presets' | 'scores' | 'actions';
+type Tab = 'presets' | 'scores' | 'actions' | 'signin';
 
 type RoundParticipant = {
   id: string;
@@ -33,6 +36,12 @@ function useRoundContext(): RoundContext | null {
   const match = useMatch({
     from: '/_app/tournaments/$tournamentId/rounds/$roundId/',
     shouldThrow: false,
+  });
+
+  const roundId = match ? (match.params as { roundId: string }).roundId : '';
+  const { data: liveRound } = useQuery({
+    ...roundQueryOptions(roundId),
+    enabled: !!roundId,
   });
 
   if (!match?.loaderData) return null;
@@ -63,7 +72,7 @@ function useRoundContext(): RoundContext | null {
   return {
     tournamentId: round.tournamentId,
     roundId: round.id,
-    roundStatus: round.status,
+    roundStatus: liveRound?.status ?? round.status,
     tournamentName: tournament.name,
     participants: round.participants,
     holes: round.course.holes.sort((a, b) => a.holeNumber - b.holeNumber),
@@ -90,6 +99,7 @@ const TAB_CONFIG: { id: Tab; label: string }[] = [
   { id: 'presets', label: 'Presets' },
   { id: 'actions', label: 'Actions' },
   { id: 'scores', label: 'Scores' },
+  { id: 'signin', label: 'Sign In' },
 ];
 
 export function DevTools() {
@@ -187,8 +197,12 @@ export function DevTools() {
             {tab === 'actions' && (
               <ActionsTab roundCtx={roundCtx} router={router} />
             )}
-            {tab === 'scores' && (
-              <ScoresTab roundCtx={roundCtx} router={router} />
+            {tab === 'scores' && <ScoresTab roundCtx={roundCtx} />}
+            {tab === 'signin' && (
+              <SignInTab
+                currentTestUser={testUser}
+                onSuccess={() => router.invalidate()}
+              />
             )}
           </div>
         </div>
