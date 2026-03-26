@@ -48,9 +48,16 @@ export function AddIndividualCompDialog({
   const [formatType, setFormatType] =
     useState<CompetitionConfig['formatType']>('wolf');
 
-  // Six Point scoring basis: stableford or gross
   const [sixPointScoringBasis, setSixPointScoringBasis] = useState<
-    'stableford' | 'gross'
+    'stableford' | 'gross' | 'net'
+  >('stableford');
+
+  const [wolfScoringBasis, setWolfScoringBasis] = useState<
+    'stableford' | 'gross' | 'net'
+  >('stableford');
+
+  const [chairScoringBasis, setChairScoringBasis] = useState<
+    'stableford' | 'gross' | 'net'
   >('stableford');
 
   const groupSizeValidation = useMemo(() => {
@@ -99,21 +106,29 @@ export function AddIndividualCompDialog({
   const resetForm = () => {
     setFormatType('wolf');
     setSixPointScoringBasis('stableford');
+    setWolfScoringBasis('stableford');
+    setChairScoringBasis('stableford');
   };
 
   const buildConfig = (): CompetitionConfig => {
     switch (formatType) {
       case 'wolf':
-        return { formatType: 'wolf', config: {} };
+        return {
+          formatType: 'wolf',
+          config: { scoringBasis: wolfScoringBasis },
+        };
       case 'six_point':
         return {
           formatType: 'six_point',
           config: { scoringBasis: sixPointScoringBasis },
         };
       case 'chair':
-        return { formatType: 'chair', config: {} };
+        return {
+          formatType: 'chair',
+          config: { scoringBasis: chairScoringBasis },
+        };
       default:
-        return { formatType: 'wolf', config: {} };
+        return { formatType: 'wolf', config: { scoringBasis: 'stableford' } };
     }
   };
 
@@ -179,10 +194,18 @@ export function AddIndividualCompDialog({
           </div>
 
           {formatType === 'wolf' && (
-            <p className="text-muted-foreground text-xs">
-              Wolf rotates by group position. Points: wolf+partner win = 2 each;
-              lone wolf win = 4; lone wolf loss = 2 to each of the other 3.
-            </p>
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-xs">
+                Wolf rotates by group position. Points: wolf+partner win = 2
+                each; lone wolf win = 6; blind lone wolf win = 9; losses award 2
+                (or 3 for blind) to each opponent.
+              </p>
+              <ScoringBasisRadio
+                value={wolfScoringBasis}
+                onChange={setWolfScoringBasis}
+                name="wolf-basis"
+              />
+            </div>
           )}
 
           {formatType === 'six_point' && (
@@ -200,10 +223,17 @@ export function AddIndividualCompDialog({
           )}
 
           {formatType === 'chair' && (
-            <p className="text-muted-foreground text-xs">
-              Win a hole outright to take the chair. Tie = chair holder retains.
-              1 point per hole the chair is held.
-            </p>
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-xs">
+                Win a hole outright to take the chair. Tie = chair holder
+                retains. 1 point per hole the chair is held.
+              </p>
+              <ScoringBasisRadio
+                value={chairScoringBasis}
+                onChange={setChairScoringBasis}
+                name="chair-basis"
+              />
+            </div>
           )}
 
           {!groupSizeValidation.valid && (

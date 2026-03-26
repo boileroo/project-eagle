@@ -6,14 +6,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getGameDecisionsFn } from '@/lib/game-decisions.server';
 import { useSubmitGameDecision } from '@/lib/game-decisions';
+import { wolfIndexForHole } from '@/lib/domain/wolf';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import type { RoundData, RoundCompetitionsData } from '@/types';
-
-// ──────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────
 
 type WolfDeclarationControlProps = {
   round: RoundData;
@@ -24,18 +21,6 @@ type WolfDeclarationControlProps = {
   /** Can the current user submit a wolf declaration? (commissioner or marker) */
   canDeclare: boolean;
 };
-
-// ──────────────────────────────────────────────
-// Helper: wolf index for a hole (0-based)
-// ──────────────────────────────────────────────
-
-function wolfIndexForHole(holeNumber: number, playerCount: number): number {
-  return (holeNumber - 1) % playerCount;
-}
-
-// ──────────────────────────────────────────────
-// Component
-// ──────────────────────────────────────────────
 
 export function WolfDeclarationControl({
   round,
@@ -68,9 +53,11 @@ export function WolfDeclarationControl({
 
   // Find latest decision for this hole (decisions are already deduplicated by server)
   const currentDecision = decisions?.find((d) => d.holeNumber === holeNumber);
-  const currentPartnerIdRaw =
-    (currentDecision?.data as { partnerPlayerId?: string | null } | null)
-      ?.partnerPlayerId ?? null;
+  const currentDecisionData = currentDecision?.data as {
+    partnerPlayerId?: string | null;
+    isBlindLoneWolf?: boolean;
+  } | null;
+  const currentPartnerIdRaw = currentDecisionData?.partnerPlayerId ?? null;
   // Validate partner is still in the group
   const currentPartnerId =
     currentPartnerIdRaw !== null &&
@@ -78,6 +65,10 @@ export function WolfDeclarationControl({
       ? currentPartnerIdRaw
       : null;
 
+  const isCurrentlyBlindLoneWolf =
+    currentDecision != null &&
+    currentPartnerId === null &&
+    currentDecisionData?.isBlindLoneWolf === true;
   const isLoneWolf = currentPartnerId === null;
 
   const currentPartner = currentPartnerId
@@ -85,7 +76,10 @@ export function WolfDeclarationControl({
     : null;
 
   // ── Submit handler ───────────────────────────
-  const handleSubmit = async (partnerPlayerId: string | null) => {
+  const handleSubmit = async (
+    partnerPlayerId: string | null,
+    isBlindLoneWolf = false,
+  ) => {
     if (!canDeclare || submitting) return;
     await submitGameDecision({
       variables: {
@@ -94,13 +88,15 @@ export function WolfDeclarationControl({
         holeNumber,
         wolfPlayerId: wolfParticipant.id,
         partnerPlayerId,
+        isBlindLoneWolf,
       },
       onSuccess: () => {
-        toast.success(
-          partnerPlayerId
+        const label = isBlindLoneWolf
+          ? 'Going blind lone wolf'
+          : partnerPlayerId
             ? `Partner set to ${groupParticipants.find((p) => p.id === partnerPlayerId)?.person.displayName ?? 'unknown'}`
-            : 'Going lone wolf',
-        );
+            : 'Going lone wolf';
+        toast.success(label);
         void queryClient.invalidateQueries({
           queryKey: ['game-decisions', wolfComp.id],
         });
@@ -140,7 +136,11 @@ export function WolfDeclarationControl({
       <div className="mb-2 flex items-center gap-2 text-sm">
         <span className="text-muted-foreground">Declaration:</span>
         {currentDecision ? (
-          isLoneWolf ? (
+          isCurrentlyBlindLoneWolf ? (
+            <Badge variant="destructive" className="text-xs">
+              Blind Lone Wolf
+            </Badge>
+          ) : isLoneWolf ? (
             <Badge variant="secondary" className="text-xs">
               Lone Wolf
             </Badge>
@@ -175,13 +175,28 @@ export function WolfDeclarationControl({
 
           {/* Lone wolf option */}
           <Button
-            variant={currentDecision && isLoneWolf ? 'default' : 'outline'}
+            variant={
+              currentDecision && isLoneWolf && !isCurrentlyBlindLoneWolf
+                ? 'default'
+                : 'outline'
+            }
             size="sm"
             className="h-7 text-xs"
             disabled={submitting}
             onClick={() => handleSubmit(null)}
           >
             Lone Wolf
+          </Button>
+
+          {/* Blind lone wolf option */}
+          <Button
+            variant={isCurrentlyBlindLoneWolf ? 'destructive' : 'outline'}
+            size="sm"
+            className="h-7 text-xs"
+            disabled={submitting}
+            onClick={() => handleSubmit(null, true)}
+          >
+            Blind Lone Wolf
           </Button>
         </div>
       )}

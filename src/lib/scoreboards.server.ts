@@ -102,6 +102,7 @@ function getLatestGameDecisions(
             typeof decision.data.partnerPlayerId === 'string'
               ? decision.data.partnerPlayerId
               : null,
+          isBlindLoneWolf: decision.data.isBlindLoneWolf === true,
         },
       },
     ];

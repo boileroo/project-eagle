@@ -25,7 +25,7 @@ function makeInput(
     competition: {
       id: 'comp-1',
       name: 'Stableford',
-      config: { formatType: 'wolf', config: {} },
+      config: { formatType: 'wolf', config: { scoringBasis: 'stableford' } },
       groupScope: 'all',
     },
     holes: makeHoles(18),

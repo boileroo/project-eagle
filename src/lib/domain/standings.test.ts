@@ -39,7 +39,7 @@ function makeStablefordInput(
     competition: {
       id: 'c1',
       name: 'Test',
-      config: { formatType: 'wolf', config: {} },
+      config: { formatType: 'wolf', config: { scoringBasis: 'stableford' } },
       groupScope: 'all',
     },
     holes,
@@ -57,7 +57,7 @@ function makeStrokePlayInput(
     competition: {
       id: 'c1',
       name: 'Test',
-      config: { formatType: 'wolf', config: {} },
+      config: { formatType: 'wolf', config: { scoringBasis: 'stableford' } },
       groupScope: 'all',
     },
     holes,

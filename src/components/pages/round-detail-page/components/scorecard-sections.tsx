@@ -9,8 +9,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { WolfDeclarationPanel } from './wolf-declaration-panel';
 import type { SectionPairing } from './build-match-pairings';
-import type { RoundData, ScorecardData } from '@/types';
+import type { RoundData, ScorecardData, RoundCompetitionsData } from '@/types';
 
 interface ScorecardSectionsProps {
   round: RoundData;
@@ -18,6 +19,8 @@ interface ScorecardSectionsProps {
   matchPairingsForGroups: Map<string, SectionPairing[]>;
   editableParticipantIds: Set<string>;
   participantTeamColours: Map<string, string>;
+  competitions: RoundCompetitionsData;
+  isCommissioner: boolean;
   onScoreClick: (
     rpId: string,
     holeNumber: number,
@@ -32,6 +35,8 @@ export function ScorecardSections({
   matchPairingsForGroups,
   editableParticipantIds,
   participantTeamColours,
+  competitions,
+  isCommissioner,
   onScoreClick,
   quickScoreProps,
 }: ScorecardSectionsProps) {
@@ -45,6 +50,8 @@ export function ScorecardSections({
 
   const groups = round.groups ?? [];
   const ungrouped = round.participants.filter((rp) => !rp.roundGroupId);
+
+  const wolfComp = competitions.find((c) => c.formatType === 'wolf') ?? null;
 
   const sections: {
     label: string;
@@ -192,6 +199,20 @@ export function ScorecardSections({
                         />
                       </div>
                     )}
+                    {wolfComp && (
+                      <WolfDeclarationPanel
+                        wolfComp={wolfComp}
+                        groupParticipants={section.participants}
+                        round={round}
+                        holeCount={round.course.holes.length}
+                        canDeclare={
+                          isCommissioner ||
+                          section.participants.some((rp) =>
+                            editableParticipantIds.has(rp.id),
+                          )
+                        }
+                      />
+                    )}
                   </CardContent>
                 </CollapsibleContent>
               </Card>
@@ -219,7 +240,7 @@ export function ScorecardSections({
                 </CardHeader>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <CardContent className="p-0 sm:p-6 sm:pt-0">
+                <CardContent className="space-y-4 p-0 sm:p-6 sm:pt-0">
                   <Scorecard
                     holes={round.course.holes}
                     participants={section.participants}
@@ -229,6 +250,20 @@ export function ScorecardSections({
                     editableParticipantIds={editableParticipantIds}
                     participantTeamColours={participantTeamColours}
                   />
+                  {wolfComp && (
+                    <WolfDeclarationPanel
+                      wolfComp={wolfComp}
+                      groupParticipants={section.participants}
+                      round={round}
+                      holeCount={round.course.holes.length}
+                      canDeclare={
+                        isCommissioner ||
+                        section.participants.some((rp) =>
+                          editableParticipantIds.has(rp.id),
+                        )
+                      }
+                    />
+                  )}
                 </CardContent>
               </CollapsibleContent>
             </Card>

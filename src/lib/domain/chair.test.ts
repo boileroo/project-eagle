@@ -30,7 +30,10 @@ function makeInput(
     competition: {
       id: 'c1',
       name: 'Test',
-      config: { formatType: 'chair', config: {} },
+      config: {
+        formatType: 'chair',
+        config: { scoringBasis: 'stableford' as const },
+      },
       groupScope: 'within_group',
     },
     holes,

@@ -225,6 +225,8 @@ export function RoundDetailPage({
         matchPairingsForGroups={matchPairingsForGroups}
         editableParticipantIds={editableParticipantIds}
         participantTeamColours={participantTeamColours}
+        competitions={competitions}
+        isCommissioner={isCommissioner}
         onScoreClick={handleScoreClick}
         quickScoreProps={
           round.status === 'open' && editableParticipantIds.size > 0

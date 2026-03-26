@@ -15,9 +15,25 @@ export function CompetitionResults({
 }) {
   switch (result.type) {
     case 'match_play':
-      return <MatchResults matches={result.result.matches} />;
+      return (
+        <MatchResults
+          matches={result.result.matches.map((m) => ({
+            ...m,
+            sideA: m.playerA.displayName,
+            sideB: m.playerB.displayName,
+          }))}
+        />
+      );
     case 'best_ball':
-      return <MatchResults matches={result.result.matches} />;
+      return (
+        <MatchResults
+          matches={result.result.matches.map((m) => ({
+            ...m,
+            sideA: m.teamA.name,
+            sideB: m.teamB.name,
+          }))}
+        />
+      );
     case 'rumble':
       return (
         <RumbleResults
@@ -28,6 +44,13 @@ export function CompetitionResults({
       );
     case 'hi_lo':
       return <HiLoResults result={result.result} teamColours={teamColours} />;
+    case 'wolf':
+      return (
+        <PointLeaderboard
+          leaderboard={result.result.leaderboard}
+          participantTeamColours={participantTeamColours}
+        />
+      );
     case 'six_point':
       return (
         <PointLeaderboard

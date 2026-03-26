@@ -443,30 +443,6 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
         }
       }
 
-      // 8. Lock tournament: setup -> scheduled, all rounds -> scheduled
-      await tx
-        .update(tournaments)
-        .set({ status: 'scheduled', updatedAt: new Date() })
-        .where(eq(tournaments.id, tournament.id));
-
-      for (const roundId of roundIds) {
-        await tx
-          .update(rounds)
-          .set({ status: 'scheduled', updatedAt: new Date() })
-          .where(eq(rounds.id, roundId));
-      }
-
-      // 9. Open round 1: scheduled -> open, tournament -> underway
-      await tx
-        .update(rounds)
-        .set({ status: 'open', updatedAt: new Date() })
-        .where(eq(rounds.id, roundIds[0]));
-
-      await tx
-        .update(tournaments)
-        .set({ status: 'underway', updatedAt: new Date() })
-        .where(eq(tournaments.id, tournament.id));
-
       return {
         tournamentId: tournament.id,
         roundIds,

@@ -50,7 +50,6 @@ export const TEAM_FORMATS: {
   value: CompetitionConfig['formatType'];
   label: string;
 }[] = [
-  { value: 'match_play', label: 'Singles' },
   { value: 'best_ball', label: 'Best Ball' },
   { value: 'hi_lo', label: 'Hi-Lo' },
   { value: 'rumble', label: 'Rumble' },

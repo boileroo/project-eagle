@@ -57,8 +57,25 @@ export function EditCompetitionDialog({
     (existingConfig.bonusPoints as number) ?? 1,
   );
   const [sixPointScoringBasis, setSixPointScoringBasis] = useState<
-    'stableford' | 'gross'
-  >((existingConfig.scoringBasis as 'stableford' | 'gross') ?? 'stableford');
+    'stableford' | 'gross' | 'net'
+  >(
+    (existingConfig.scoringBasis as 'stableford' | 'gross' | 'net') ??
+      'stableford',
+  );
+
+  const [wolfScoringBasis, setWolfScoringBasis] = useState<
+    'stableford' | 'gross' | 'net'
+  >(
+    (existingConfig.scoringBasis as 'stableford' | 'gross' | 'net') ??
+      'stableford',
+  );
+
+  const [chairScoringBasis, setChairScoringBasis] = useState<
+    'stableford' | 'gross' | 'net'
+  >(
+    (existingConfig.scoringBasis as 'stableford' | 'gross' | 'net') ??
+      'stableford',
+  );
 
   const resetForm = () => {
     setName(comp.name);
@@ -72,7 +89,16 @@ export function EditCompetitionDialog({
     );
     setBonusPoints((existingConfig.bonusPoints as number) ?? 1);
     setSixPointScoringBasis(
-      (existingConfig.scoringBasis as 'stableford' | 'gross') ?? 'stableford',
+      (existingConfig.scoringBasis as 'stableford' | 'gross' | 'net') ??
+        'stableford',
+    );
+    setWolfScoringBasis(
+      (existingConfig.scoringBasis as 'stableford' | 'gross' | 'net') ??
+        'stableford',
+    );
+    setChairScoringBasis(
+      (existingConfig.scoringBasis as 'stableford' | 'gross' | 'net') ??
+        'stableford',
     );
   };
 
@@ -124,8 +150,16 @@ export function EditCompetitionDialog({
         };
       default:
         // wolf, chair: name-only edit (no config fields needed)
-        if (formatType === 'wolf') return { formatType: 'wolf', config: {} };
-        if (formatType === 'chair') return { formatType: 'chair', config: {} };
+        if (formatType === 'wolf')
+          return {
+            formatType: 'wolf',
+            config: { scoringBasis: wolfScoringBasis },
+          };
+        if (formatType === 'chair')
+          return {
+            formatType: 'chair',
+            config: { scoringBasis: chairScoringBasis },
+          };
         if (formatType === 'six_point')
           return {
             formatType: 'six_point',
@@ -227,6 +261,26 @@ export function EditCompetitionDialog({
               <p className="text-muted-foreground text-xs">
                 Fixed distribution: 1st = 4 pts, 2nd = 2 pts, 3rd = 0 pts.
               </p>
+            </div>
+          )}
+
+          {formatType === 'wolf' && (
+            <div className="space-y-2">
+              <ScoringBasisRadio
+                value={wolfScoringBasis}
+                onChange={setWolfScoringBasis}
+                name="edit-wolf-basis"
+              />
+            </div>
+          )}
+
+          {formatType === 'chair' && (
+            <div className="space-y-2">
+              <ScoringBasisRadio
+                value={chairScoringBasis}
+                onChange={setChairScoringBasis}
+                name="edit-chair-basis"
+              />
             </div>
           )}
 

@@ -5,13 +5,17 @@ import { FORMAT_TYPE_LABELS, isBonusFormat } from '@/lib/competitions';
 import type { CompetitionConfig } from '@/lib/competitions';
 import {
   calculateCompetitionResults,
+  calculateGroupedResults,
   type CompetitionInput,
   type HoleData,
   type ParticipantData,
   type ResolvedScore,
   type GroupData,
   type TeamData,
+  type GameDecisionData,
 } from '@/lib/domain';
+import { useQuery } from '@tanstack/react-query';
+import { getGameDecisionsFn } from '@/lib/game-decisions.server';
 import { resolveEffectiveHandicap, getPlayingHandicap } from '@/lib/handicaps';
 import { buildTeamColourMap } from '@/lib/team-colours';
 import { CompetitionResults } from '@/components/shared/competition-results';
@@ -23,11 +27,183 @@ import { toast } from 'sonner';
 import { EditCompetitionDialog } from './edit-competition-dialog';
 import { ConfigureMatchesDialog } from './configure-matches-dialog';
 import { AddIndividualCompDialog } from './add-individual-comp-dialog';
+import { AddMatchDialog } from './add-match-dialog';
 import { AddTeamCompDialog } from './add-team-comp-dialog';
 import { AddBonusCompDialog } from './add-bonus-comp-dialog';
 import { BonusCompRow } from './bonus-comp-row';
 import { CompetitionsExplainerDialog } from './components/competitions-explainer-dialog';
 import type { RoundData, ScorecardData, RoundCompetitionsData } from '../types';
+
+type EngineInputs = {
+  holes: HoleData[];
+  participants: ParticipantData[];
+  scores: ResolvedScore[];
+  groups: GroupData[];
+  teams: TeamData[];
+};
+
+function CompetitionEntry({
+  comp,
+  engineInputs,
+  participantTeamColours,
+  teamColours,
+  isCommissioner,
+  isDraft,
+  deletingId,
+  round,
+  onDelete,
+  onChanged,
+}: {
+  comp: RoundCompetitionsData[number];
+  engineInputs: EngineInputs;
+  participantTeamColours: Map<string, string>;
+  teamColours: Map<string, string>;
+  isCommissioner: boolean;
+  isDraft: boolean;
+  deletingId: string | null;
+  round: RoundData;
+  onDelete: (id: string) => void;
+  onChanged: () => void;
+}) {
+  const isWolf = comp.formatType === 'wolf';
+
+  const { data: rawDecisions } = useQuery({
+    queryKey: ['game-decisions', comp.id],
+    queryFn: () => getGameDecisionsFn({ data: { competitionId: comp.id } }),
+    enabled: isWolf,
+    staleTime: 30_000,
+  });
+
+  const gameDecisions = useMemo((): GameDecisionData[] => {
+    if (!isWolf || !rawDecisions) return [];
+    return rawDecisions
+      .filter(
+        (
+          d,
+        ): d is typeof d & {
+          data: {
+            wolfPlayerId: string;
+            partnerPlayerId: string | null;
+            isBlindLoneWolf?: boolean;
+          };
+        } =>
+          typeof (d.data as Record<string, unknown>)?.wolfPlayerId === 'string',
+      )
+      .map((d) => ({
+        holeNumber: d.holeNumber,
+        data: {
+          wolfPlayerId: (
+            d.data as {
+              wolfPlayerId: string;
+              partnerPlayerId: string | null;
+              isBlindLoneWolf?: boolean;
+            }
+          ).wolfPlayerId,
+          partnerPlayerId: (
+            d.data as {
+              wolfPlayerId: string;
+              partnerPlayerId: string | null;
+              isBlindLoneWolf?: boolean;
+            }
+          ).partnerPlayerId,
+          isBlindLoneWolf: (
+            d.data as {
+              wolfPlayerId: string;
+              partnerPlayerId: string | null;
+              isBlindLoneWolf?: boolean;
+            }
+          ).isBlindLoneWolf,
+        },
+      }));
+  }, [isWolf, rawDecisions]);
+
+  const result = useMemo(() => {
+    const config: CompetitionConfig = {
+      formatType: comp.formatType as CompetitionConfig['formatType'],
+      config: (comp.configJson ?? {}) as CompetitionConfig['config'],
+    } as CompetitionConfig;
+    const groupScope = (comp.groupScope ?? 'all') as 'all' | 'within_group';
+    const input: CompetitionInput = {
+      competition: { id: comp.id, name: comp.name, config, groupScope },
+      ...engineInputs,
+      gameDecisions: isWolf ? gameDecisions : undefined,
+    };
+
+    try {
+      if (groupScope === 'within_group' && engineInputs.groups.length > 0) {
+        const grouped = calculateGroupedResults(input);
+        if (grouped.scope === 'within_group') {
+          return grouped.results[0]?.result ?? null;
+        }
+        return grouped.result;
+      }
+      return calculateCompetitionResults(input);
+    } catch (e) {
+      console.error('Error calculating results:', e);
+      return null;
+    }
+  }, [comp, engineInputs, isWolf, gameDecisions]);
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h3 className="font-medium">{comp.name}</h3>
+          <Badge variant="outline" className="text-xs">
+            {FORMAT_TYPE_LABELS[
+              comp.formatType as CompetitionConfig['formatType']
+            ] ?? comp.formatType}
+          </Badge>
+          <Badge variant="secondary" className="text-xs">
+            {comp.competitionCategory === 'match'
+              ? 'Match'
+              : comp.competitionCategory === 'game'
+                ? 'Game'
+                : 'Bonus'}
+          </Badge>
+        </div>
+        {isCommissioner && isDraft && (
+          <div className="flex items-center gap-1">
+            <EditCompetitionDialog
+              comp={comp}
+              hasGroups={round.groups.length > 0}
+              onSaved={onChanged}
+            />
+            {comp.formatType === 'match_play' && (
+              <ConfigureMatchesDialog
+                comp={comp}
+                participants={round.participants}
+                groups={round.groups}
+                onSaved={onChanged}
+              />
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive h-7"
+              disabled={deletingId === comp.id}
+              onClick={() => onDelete(comp.id)}
+            >
+              {deletingId === comp.id ? '…' : '✕'}
+            </Button>
+          </div>
+        )}
+      </div>
+      {result ? (
+        <CompetitionResults
+          result={result}
+          participantTeamColours={participantTeamColours}
+          teamColours={teamColours}
+        />
+      ) : (
+        <p className="text-muted-foreground text-sm">
+          Unable to calculate results.
+        </p>
+      )}
+      <Separator className="mt-4" />
+    </div>
+  );
+}
 
 export function TeamCompetitionsSection({
   round,
@@ -191,11 +367,20 @@ export function TeamCompetitionsSection({
                 }
               />
 
+              <AddMatchDialog
+                tournamentId={round.tournamentId}
+                roundId={round.id}
+                competitions={competitions}
+                onSaved={onChanged}
+                disabled={
+                  !(isCommissioner && isDraft) || hasTeams || !hasEnoughPlayers
+                }
+              />
+
               <AddTeamCompDialog
                 tournamentId={round.tournamentId}
                 roundId={round.id}
                 round={round}
-                competitions={competitions}
                 onSaved={onChanged}
                 disabled={
                   !(isCommissioner && isDraft) || !hasTeams || !hasEnoughPlayers
@@ -236,95 +421,21 @@ export function TeamCompetitionsSection({
             </p>
           ) : (
             <div className="space-y-6">
-              {scoredComps.map((comp) => {
-                const config: CompetitionConfig = {
-                  formatType:
-                    comp.formatType as CompetitionConfig['formatType'],
-                  config: (comp.configJson ??
-                    {}) as CompetitionConfig['config'],
-                } as CompetitionConfig;
-
-                let result;
-                try {
-                  const groupScope = (comp.groupScope ?? 'all') as
-                    | 'all'
-                    | 'within_group';
-                  const input: CompetitionInput = {
-                    competition: {
-                      id: comp.id,
-                      name: comp.name,
-                      config,
-                      groupScope,
-                    },
-                    ...engineInputs,
-                  };
-
-                  result = calculateCompetitionResults(input);
-                } catch (e) {
-                  console.error('Error calculating results:', e);
-                  result = null;
-                }
-
-                return (
-                  <div key={comp.id}>
-                    <div className="mb-2 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">{comp.name}</h3>
-                        <Badge variant="outline" className="text-xs">
-                          {FORMAT_TYPE_LABELS[
-                            comp.formatType as CompetitionConfig['formatType']
-                          ] ?? comp.formatType}
-                        </Badge>
-                        <Badge variant="secondary" className="text-xs">
-                          {comp.competitionCategory === 'match'
-                            ? 'Match'
-                            : comp.competitionCategory === 'game'
-                              ? 'Game'
-                              : 'Bonus'}
-                        </Badge>
-                      </div>
-                      {isCommissioner && isDraft && (
-                        <div className="flex items-center gap-1">
-                          <EditCompetitionDialog
-                            comp={comp}
-                            hasGroups={round.groups.length > 0}
-                            onSaved={onChanged}
-                          />
-                          {comp.formatType === 'match_play' && (
-                            <ConfigureMatchesDialog
-                              comp={comp}
-                              participants={round.participants}
-                              groups={round.groups}
-                              onSaved={onChanged}
-                            />
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive h-7"
-                            disabled={deletingId === comp.id}
-                            onClick={() => handleDelete(comp.id)}
-                          >
-                            {deletingId === comp.id ? '…' : '✕'}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                    {result ? (
-                      <CompetitionResults
-                        result={result}
-                        participantTeamColours={participantTeamColours}
-                        teamColours={teamColours}
-                      />
-                    ) : (
-                      <p className="text-muted-foreground text-sm">
-                        Unable to calculate results.
-                      </p>
-                    )}
-                    <Separator className="mt-4" />
-                  </div>
-                );
-              })}
+              {scoredComps.map((comp) => (
+                <CompetitionEntry
+                  key={comp.id}
+                  comp={comp}
+                  engineInputs={engineInputs}
+                  participantTeamColours={participantTeamColours}
+                  teamColours={teamColours}
+                  isCommissioner={isCommissioner}
+                  isDraft={isDraft}
+                  deletingId={deletingId}
+                  round={round}
+                  onDelete={handleDelete}
+                  onChanged={onChanged}
+                />
+              ))}
 
               {bonusComps.length > 0 && (
                 <div>

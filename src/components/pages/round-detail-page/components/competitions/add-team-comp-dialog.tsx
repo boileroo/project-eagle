@@ -16,20 +16,18 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { TEAM_FORMATS } from '../constants';
-import type { RoundData, RoundCompetitionsData } from '../types';
+import type { RoundData } from '../types';
 import { PointsFields } from './competition-fields/points-fields';
 
 export function AddTeamCompDialog({
   tournamentId,
   roundId,
   round,
-  competitions,
   onSaved,
 }: {
   tournamentId: string;
   roundId: string;
   round: RoundData;
-  competitions: RoundCompetitionsData;
   onSaved: () => void;
   disabled?: boolean;
 }) {
@@ -40,14 +38,10 @@ export function AddTeamCompDialog({
   const [open, setOpen] = useState(false);
   const [createCompetition, { isPending: saving }] = useCreateCompetition();
   const [formatType, setFormatType] =
-    useState<CompetitionConfig['formatType']>('match_play');
+    useState<CompetitionConfig['formatType']>('best_ball');
 
   const [pointsPerWin, setPointsPerWin] = useState(1);
   const [pointsPerHalf, setPointsPerHalf] = useState(0.5);
-
-  const hasMatchPlayComp = competitions.some(
-    (c) => c.formatType === 'match_play',
-  );
 
   const getFormatLabel = () => {
     return (
@@ -56,7 +50,7 @@ export function AddTeamCompDialog({
   };
 
   const resetForm = () => {
-    setFormatType('match_play');
+    setFormatType('best_ball');
     setPointsPerWin(1);
     setPointsPerHalf(0.5);
   };
@@ -163,11 +157,6 @@ export function AddTeamCompDialog({
 
   const buildConfig = (): CompetitionConfig => {
     switch (formatType) {
-      case 'match_play':
-        return {
-          formatType: 'match_play',
-          config: { pointsPerWin, pointsPerHalf, pairings: [] },
-        };
       case 'best_ball':
         return {
           formatType: 'best_ball',
@@ -185,15 +174,14 @@ export function AddTeamCompDialog({
         };
       default:
         return {
-          formatType: 'match_play',
-          config: { pointsPerWin, pointsPerHalf, pairings: [] },
+          formatType: 'best_ball',
+          config: { pointsPerWin, pointsPerHalf, pairings: bestBallPairings },
         };
     }
   };
 
   const isDisabled = () => {
     if (saving) return true;
-    if (formatType === 'match_play' && hasMatchPlayComp) return true;
     if (formatType === 'best_ball' && validBestBallGroups === 0) return true;
     if (formatType === 'hi_lo' && validHiLoGroups === 0) return true;
     if (formatType === 'rumble' && validRumbleGroups === 0) return true;
@@ -270,27 +258,6 @@ export function AddTeamCompDialog({
               ))}
             </Select>
           </div>
-
-          {/* Match Play */}
-          {formatType === 'match_play' && (
-            <div className="space-y-3">
-              {hasMatchPlayComp && (
-                <p className="text-destructive text-xs">
-                  A Singles competition already exists for this round. Only one
-                  is allowed.
-                </p>
-              )}
-              <PointsFields
-                pointsPerWin={pointsPerWin}
-                pointsPerHalf={pointsPerHalf}
-                onPointsPerWinChange={setPointsPerWin}
-                onPointsPerHalfChange={setPointsPerHalf}
-              />
-              <p className="text-muted-foreground text-xs">
-                Pairings are configured in the Pairings tab.
-              </p>
-            </div>
-          )}
 
           {/* Best Ball */}
           {formatType === 'best_ball' && (

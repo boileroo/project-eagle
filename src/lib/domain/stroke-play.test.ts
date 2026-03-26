@@ -44,7 +44,7 @@ function makeInput(
       name: 'Test',
       config: {
         formatType: 'wolf',
-        config: {},
+        config: { scoringBasis: 'stableford' },
       },
       groupScope: 'all',
     },

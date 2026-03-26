@@ -1,20 +1,8 @@
-// ──────────────────────────────────────────────
-// Chair Scoring Engine
-//
-// Pure functions. No DB access.
-// Game format: 4 players per group (within_group).
-//
-// Rules:
-//   - Win a hole outright (best net stableford, no tie) → take the chair.
-//   - Tie on a hole → chair holder retains.
-//   - If no chair holder yet and the first hole is tied → no point awarded.
-//   - 1 point awarded per hole the chair is held at end of each hole.
-// ──────────────────────────────────────────────
-
 import { getStrokesOnHole } from '../handicaps';
 import { stablefordPoints, buildScoreLookup } from './stableford';
 import { assignRanks } from './rank';
 import type { CompetitionInput } from './index';
+import type { ChairConfig } from '../competition-config';
 
 // ──────────────────────────────────────────────
 // Types
@@ -22,7 +10,7 @@ import type { CompetitionInput } from './index';
 
 export interface ChairHoleResult {
   holeNumber: number;
-  playerStableford: { roundParticipantId: string; stableford: number }[];
+  playerScores: { roundParticipantId: string; score: number }[];
   /** null = no change / still vacant; string = playerId who took the chair */
   chairTakenBy: string | null;
   /** The chair holder after this hole (null if no one has won yet) */
@@ -51,20 +39,32 @@ export interface ChairResult {
 /**
  * Calculates chair (musical chairs) scores for a 4-player competition group.
  *
- * One player starts as the "chair holder". On each hole, the player with the
- * highest stableford score takes the chair. If the chair holder has the best
- * (or tied best) score, they earn a point and retain the chair. If another
- * player has the best score, they take the chair (no point is earned that hole).
- * Ties for best score result in no chair transfer and no point earned.
+ * On each hole the player with the best score (determined by `scoringBasis`)
+ * takes the chair. If the chair holder has the best (or tied best) score they
+ * earn a point and retain the chair. If another player has the outright best
+ * score they take the chair (no point is earned that hole). Ties for best score
+ * result in no chair transfer and no point earned.
+ *
+ * Scoring basis:
+ *  - `'stableford'` (default): highest stableford points wins the hole
+ *  - `'gross'`: lowest gross strokes wins the hole
+ *  - `'net'`: lowest net strokes (gross minus handicap strokes received) wins
  *
  * @throws {Error} If the input does not contain exactly 4 participants.
  */
-export function calculateChair(input: CompetitionInput): ChairResult {
+export function calculateChair(
+  input: CompetitionInput,
+  competitionConfig?: ChairConfig,
+): ChairResult {
   if (input.participants.length !== 4) {
     throw new Error(
       `Chair requires exactly 4 players per group, got ${input.participants.length}`,
     );
   }
+
+  const scoringBasis = competitionConfig?.config?.scoringBasis ?? 'stableford';
+  const lowerIsBetter = scoringBasis === 'gross' || scoringBasis === 'net';
+
   const scoreLookup = buildScoreLookup(input.scores);
   const sortedHoles = [...input.holes].sort(
     (a, b) => a.holeNumber - b.holeNumber,
@@ -72,7 +72,6 @@ export function calculateChair(input: CompetitionInput): ChairResult {
 
   const participants = input.participants;
 
-  // Per-player accumulators
   const playerPoints = new Map<string, number>();
   const playerHolesCompleted = new Map<string, number>();
   const playerHoleResults = new Map<string, ChairHoleResult[]>();
@@ -86,18 +85,16 @@ export function calculateChair(input: CompetitionInput): ChairResult {
   let chairHolderId: string | null = null;
 
   for (const hole of sortedHoles) {
-    // All participants need a score for this hole
     const allScored = participants.every((p) =>
       scoreLookup.has(`${p.roundParticipantId}:${hole.holeNumber}`),
     );
 
     if (!allScored) {
-      // Record unscored hole for all participants
       const holeResult: ChairHoleResult = {
         holeNumber: hole.holeNumber,
-        playerStableford: participants.map((p) => ({
+        playerScores: participants.map((p) => ({
           roundParticipantId: p.roundParticipantId,
-          stableford: 0,
+          score: 0,
         })),
         chairTakenBy: null,
         chairHolderId,
@@ -109,39 +106,40 @@ export function calculateChair(input: CompetitionInput): ChairResult {
       continue;
     }
 
-    // Calculate stableford per player
-    const playerStableford = participants.map((p) => {
+    const playerScores = participants.map((p) => {
       const key = `${p.roundParticipantId}:${hole.holeNumber}`;
       const strokes = scoreLookup.get(key)!;
-      const received = getStrokesOnHole(p.playingHandicap, hole.strokeIndex);
-      return {
-        roundParticipantId: p.roundParticipantId,
-        stableford: stablefordPoints(strokes, hole.par, received),
-      };
+      const handicapStrokes = getStrokesOnHole(
+        p.playingHandicap,
+        hole.strokeIndex,
+      );
+      let score: number;
+      if (scoringBasis === 'gross') {
+        score = strokes;
+      } else if (scoringBasis === 'net') {
+        score = strokes - handicapStrokes;
+      } else {
+        score = stablefordPoints(strokes, hole.par, handicapStrokes);
+      }
+      return { roundParticipantId: p.roundParticipantId, score };
     });
 
-    // Find best stableford
-    const maxStableford = Math.max(
-      ...playerStableford.map((ps) => ps.stableford),
-    );
-    const winners = playerStableford.filter(
-      (ps) => ps.stableford === maxStableford,
-    );
+    const bestScore = lowerIsBetter
+      ? Math.min(...playerScores.map((ps) => ps.score))
+      : Math.max(...playerScores.map((ps) => ps.score));
+
+    const winners = playerScores.filter((ps) => ps.score === bestScore);
 
     let chairTakenBy: string | null = null;
 
     if (winners.length === 1) {
-      // Outright winner takes the chair
       const newHolder = winners[0].roundParticipantId;
       if (newHolder !== chairHolderId) {
         chairTakenBy = newHolder;
         chairHolderId = newHolder;
       }
-      // else same player holds — no "taken" event
     }
-    // If tie: chair holder retains (chairHolderId unchanged)
 
-    // Award point only when the chair holder defended (no transfer this hole)
     const pointEarned = chairHolderId !== null && chairTakenBy === null;
     if (pointEarned) {
       playerPoints.set(
@@ -150,7 +148,6 @@ export function calculateChair(input: CompetitionInput): ChairResult {
       );
     }
 
-    // Increment holesCompleted for all players
     for (const p of participants) {
       playerHolesCompleted.set(
         p.roundParticipantId,
@@ -160,7 +157,7 @@ export function calculateChair(input: CompetitionInput): ChairResult {
 
     const holeResult: ChairHoleResult = {
       holeNumber: hole.holeNumber,
-      playerStableford,
+      playerScores,
       chairTakenBy,
       chairHolderId,
       pointEarned,
@@ -171,7 +168,6 @@ export function calculateChair(input: CompetitionInput): ChairResult {
     }
   }
 
-  // Build leaderboard
   const leaderboard: ChairPlayerResult[] = participants.map((p) => ({
     roundParticipantId: p.roundParticipantId,
     displayName: p.displayName,

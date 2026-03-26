@@ -51,6 +51,8 @@ type ScorecardProps = {
   editableParticipantIds?: Set<string>;
   /** Optional map of roundParticipantId → team hex colour for header colouring. */
   participantTeamColours?: Map<string, string>;
+  /** Optional map of holeNumber → roundParticipantId for the wolf on that hole. */
+  wolfParticipantIds?: Map<number, string>;
 };
 
 // ──────────────────────────────────────────────
@@ -65,6 +67,7 @@ export function Scorecard({
   onScoreClick,
   editableParticipantIds,
   participantTeamColours,
+  wolfParticipantIds,
 }: ScorecardProps) {
   const canEdit = roundStatus === 'open';
 
@@ -112,6 +115,7 @@ export function Scorecard({
     const cellEditable =
       canEdit &&
       (!editableParticipantIds || editableParticipantIds.has(participant.id));
+    const isWolf = wolfParticipantIds?.get(hole.holeNumber) === participant.id;
 
     const handleScoreActivate = () => {
       if (cellEditable) {
@@ -149,6 +153,11 @@ export function Scorecard({
           <span className="font-medium">{cell.strokes}</span>
         ) : (
           <span className="text-muted-foreground/40">–</span>
+        )}
+        {isWolf && (
+          <span className="text-primary absolute top-0.5 left-0.5 text-[9px] leading-none font-bold">
+            W
+          </span>
         )}
         {handicapAdjustment !== 0 && (
           <span

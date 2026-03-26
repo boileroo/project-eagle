@@ -2,6 +2,8 @@ import { Badge } from '@/components/ui/badge';
 
 interface MatchResultsProps {
   matches: Array<{
+    sideA: string;
+    sideB: string;
     groupId?: string | null;
     groupName?: string | null;
     winner?: 'A' | 'B' | 'halved' | null;
@@ -41,13 +43,13 @@ export function MatchResults({ matches }: MatchResultsProps) {
         <span
           className={`text-sm font-medium ${match.winner === 'A' ? 'text-primary' : ''}`}
         >
-          Team A
+          {match.sideA}
         </span>
         <span className="text-muted-foreground text-xs">vs</span>
         <span
           className={`text-sm font-medium ${match.winner === 'B' ? 'text-primary' : ''}`}
         >
-          Team B
+          {match.sideB}
         </span>
       </div>
       <div className="flex items-center gap-2">

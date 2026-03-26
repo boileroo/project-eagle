@@ -82,19 +82,23 @@ export const hiLoConfigSchema = z.object({
 
 export const wolfConfigSchema = z.object({
   formatType: z.literal('wolf'),
-  config: z.object({}),
+  config: z.object({
+    scoringBasis: z.enum(['stableford', 'gross', 'net']).default('stableford'),
+  }),
 });
 
 export const sixPointConfigSchema = z.object({
   formatType: z.literal('six_point'),
   config: z.object({
-    scoringBasis: z.enum(['stableford', 'gross']).default('stableford'),
+    scoringBasis: z.enum(['stableford', 'gross', 'net']).default('stableford'),
   }),
 });
 
 export const chairConfigSchema = z.object({
   formatType: z.literal('chair'),
-  config: z.object({}),
+  config: z.object({
+    scoringBasis: z.enum(['stableford', 'gross', 'net']).default('stableford'),
+  }),
 });
 
 export const competitionConfigSchema = z.discriminatedUnion('formatType', [

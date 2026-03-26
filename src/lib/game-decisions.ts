@@ -8,6 +8,7 @@ type SubmitGameDecisionVariables = {
   holeNumber: number;
   wolfPlayerId: string;
   partnerPlayerId: string | null;
+  isBlindLoneWolf?: boolean;
 };
 type SubmitGameDecisionResult = {
   id: string;

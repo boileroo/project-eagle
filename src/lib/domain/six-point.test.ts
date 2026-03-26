@@ -140,6 +140,32 @@ describe('calculateSixPoint', () => {
     result.leaderboard.forEach((r) => expect(r.totalPoints).toBe(2));
   });
 
+  it('net basis: lower net score is better', () => {
+    // Hole 1, par 4, strokeIndex 1
+    // p1: hc 10, gross 5 → receives 1 stroke → net 4
+    // p2: hc 5,  gross 4 → receives 1 stroke → net 3  ← winner
+    // p3: hc 0,  gross 4 → receives 0 strokes → net 4
+    const holes = makeHoles(1);
+    const p1Hc = makeParticipant('p1', 'Alice', 10);
+    const p2Hc = makeParticipant('p2', 'Bob', 5);
+    const p3Hc = makeParticipant('p3', 'Charlie', 0);
+    const scores = [
+      { roundParticipantId: 'p1', holeNumber: 1, strokes: 5 },
+      { roundParticipantId: 'p2', holeNumber: 1, strokes: 4 },
+      { roundParticipantId: 'p3', holeNumber: 1, strokes: 4 },
+    ];
+    const result = calculateSixPoint(
+      makeInput([p1Hc, p2Hc, p3Hc], scores, { scoringBasis: 'net' }, holes),
+      { scoringBasis: 'net' },
+    );
+    const pts = (id: string) =>
+      result.leaderboard.find((r) => r.roundParticipantId === id)!.totalPoints;
+    // p2 net 3 → 1st (4pts); p1 net 4 and p3 net 4 tie 2nd → 1pt each
+    expect(pts('p2')).toBe(4);
+    expect(pts('p1')).toBe(1);
+    expect(pts('p3')).toBe(1);
+  });
+
   it('gross basis: lower score is better', () => {
     const holes = makeHoles(1);
     // p1: 3 (lowest), p2: 4, p3: 5 (highest)

@@ -12,10 +12,13 @@
 //   - Player 3 is wolf on holes 3, 7, 11, 15
 //   - Player 4 is wolf on holes 4, 8, 12, 16
 //
-// Points (standard 2/4/2):
+// Points (2/6/9):
 //   - Wolf + partner win → 2 pts each (opposing 2 get 0)
-//   - Lone wolf wins → 4 pts (opposing 3 get 0)
+//   - Wolf + partner lose → 0 pts each (opposing 2 get 2 each)
+//   - Lone wolf wins → 6 pts (opposing 3 get 0)
 //   - Lone wolf loses → 0 pts for wolf, 2 pts each to other 3
+//   - Blind lone wolf wins → 9 pts (opposing 3 get 0)
+//   - Blind lone wolf loses → 0 pts for wolf, 3 pts each to other 3
 //   - Ties on any configuration → no points awarded for that hole
 //
 // Win/loss determination: best stableford from each side.
@@ -30,6 +33,7 @@ import { getStrokesOnHole } from '../handicaps';
 import { stablefordPoints, buildScoreLookup } from './stableford';
 import { assignRanks } from './rank';
 import type { CompetitionInput, GameDecisionData } from './index';
+import type { WolfConfig } from '../competitions';
 
 // ──────────────────────────────────────────────
 // Types
@@ -40,7 +44,9 @@ export interface WolfHoleResult {
   wolfPlayerId: string;
   partnerPlayerId: string | null;
   isLoneWolf: boolean;
-  playerStableford: { roundParticipantId: string; stableford: number }[];
+  isBlindLoneWolf: boolean;
+  /** Per-player score used for comparison (stableford pts, gross strokes, or net strokes) */
+  playerScores: { roundParticipantId: string; score: number }[];
   wolfSideBest: number;
   opposingSideBest: number;
   outcome: 'wolf_wins' | 'wolf_loses' | 'tie' | 'not_played';
@@ -66,8 +72,14 @@ export interface WolfResult {
 // Wolf rotation: which player index (0-based) is wolf on a given hole
 // ──────────────────────────────────────────────
 
-function wolfIndexForHole(holeNumber: number, playerCount: number): number {
-  // hole 1 → index 0, hole 2 → index 1, ...
+/**
+ * Returns the 0-based index of the wolf player for a given hole number.
+ * Hole 1 → index 0, hole 2 → index 1, etc. (wraps after playerCount).
+ */
+export function wolfIndexForHole(
+  holeNumber: number,
+  playerCount: number,
+): number {
   return (holeNumber - 1) % playerCount;
 }
 
@@ -80,14 +92,17 @@ function wolfIndexForHole(holeNumber: number, playerCount: number): number {
  *
  * Wolf is a 4-player per group game. On each hole the "wolf" (rotating by
  * hole number) may choose a partner or go lone wolf. The wolf side wins if
- * their best stableford beats the opposing side's best. Points are fixed
- * (4 for lone wolf win, 2 per player for partnered win; opponents receive
- * 2 each when the lone wolf loses). Ties award no points.
+ * their best score beats the opposing side's best (higher is better for
+ * stableford; lower is better for gross/net). Points are fixed (2 per player
+ * for partnered win; 6 for lone wolf win; 9 for blind lone wolf win).
+ * Ties award no points.
  *
+ * @param config - Wolf config (scoringBasis: stableford | gross | net).
  * @param gameDecisions - Player decisions (partner selections) per hole.
  */
 export function calculateWolf(
   input: CompetitionInput,
+  config: WolfConfig['config'],
   gameDecisions: GameDecisionData[],
 ): WolfResult {
   const scoreLookup = buildScoreLookup(input.scores);
@@ -123,6 +138,8 @@ export function calculateWolf(
 
     const decision = decisionMap.get(hole.holeNumber);
     const partnerPlayerId = decision?.partnerPlayerId ?? null;
+    const isBlindLoneWolf =
+      decision?.isBlindLoneWolf === true && partnerPlayerId === null;
 
     // Validate partner is in this group
     const validPartner =
@@ -144,9 +161,10 @@ export function calculateWolf(
         wolfPlayerId: wolf.roundParticipantId,
         partnerPlayerId: validPartner,
         isLoneWolf,
-        playerStableford: players.map((p) => ({
+        isBlindLoneWolf,
+        playerScores: players.map((p) => ({
           roundParticipantId: p.roundParticipantId,
-          stableford: 0,
+          score: 0,
         })),
         wolfSideBest: 0,
         opposingSideBest: 0,
@@ -162,42 +180,65 @@ export function calculateWolf(
       continue;
     }
 
-    // Calculate stableford for each player
-    const playerStableford = players.map((p) => {
+    // Calculate per-player score based on scoring basis
+    const scoringBasis = config.scoringBasis;
+    const playerScores = players.map((p) => {
       const key = `${p.roundParticipantId}:${hole.holeNumber}`;
       const strokes = scoreLookup.get(key)!;
-      const received = getStrokesOnHole(p.playingHandicap, hole.strokeIndex);
-      return {
-        roundParticipantId: p.roundParticipantId,
-        stableford: stablefordPoints(strokes, hole.par, received),
-      };
+      const handicapStrokes = getStrokesOnHole(
+        p.playingHandicap,
+        hole.strokeIndex,
+      );
+      let score: number;
+      if (scoringBasis === 'gross') {
+        score = strokes;
+      } else if (scoringBasis === 'net') {
+        score = strokes - handicapStrokes;
+      } else {
+        score = stablefordPoints(strokes, hole.par, handicapStrokes);
+      }
+      return { roundParticipantId: p.roundParticipantId, score };
     });
 
-    const stablefordMap = new Map(
-      playerStableford.map((ps) => [ps.roundParticipantId, ps.stableford]),
+    const scoreMap = new Map(
+      playerScores.map((ps) => [ps.roundParticipantId, ps.score]),
     );
 
     // Determine wolf side and opposing side
     const wolfSideIds = new Set<string>([wolf.roundParticipantId]);
     if (validPartner) wolfSideIds.add(validPartner);
 
-    const wolfSideStableford = [...wolfSideIds].map(
-      (id) => stablefordMap.get(id) ?? 0,
-    );
-    const opposingSideStableford = players
+    const wolfSideScores = [...wolfSideIds].map((id) => scoreMap.get(id) ?? 0);
+    const opposingSideScores = players
       .filter((p) => !wolfSideIds.has(p.roundParticipantId))
-      .map((p) => stablefordMap.get(p.roundParticipantId) ?? 0);
+      .map((p) => scoreMap.get(p.roundParticipantId) ?? 0);
 
-    const wolfSideBest = Math.max(...wolfSideStableford);
-    const opposingSideBest = Math.max(...opposingSideStableford);
+    // For gross/net: lower is better (use Math.min); for stableford: higher is better (use Math.max)
+    const lowerIsBetter = scoringBasis === 'gross' || scoringBasis === 'net';
+    const wolfSideBest = lowerIsBetter
+      ? Math.min(...wolfSideScores)
+      : Math.max(...wolfSideScores);
+    const opposingSideBest = lowerIsBetter
+      ? Math.min(...opposingSideScores)
+      : Math.max(...opposingSideScores);
 
     let outcome: WolfHoleResult['outcome'];
-    if (wolfSideBest > opposingSideBest) {
-      outcome = 'wolf_wins';
-    } else if (opposingSideBest > wolfSideBest) {
-      outcome = 'wolf_loses';
+    if (lowerIsBetter) {
+      if (wolfSideBest < opposingSideBest) {
+        outcome = 'wolf_wins';
+      } else if (opposingSideBest < wolfSideBest) {
+        outcome = 'wolf_loses';
+      } else {
+        outcome = 'tie';
+      }
     } else {
-      outcome = 'tie';
+      if (wolfSideBest > opposingSideBest) {
+        outcome = 'wolf_wins';
+      } else if (opposingSideBest > wolfSideBest) {
+        outcome = 'wolf_loses';
+      } else {
+        outcome = 'tie';
+      }
     }
 
     // Award points
@@ -206,16 +247,26 @@ export function calculateWolf(
     );
 
     if (outcome === 'wolf_wins') {
-      if (isLoneWolf) {
-        // Lone wolf wins → 4 pts for wolf
-        pointsMap.set(wolf.roundParticipantId, 4);
+      if (isBlindLoneWolf) {
+        // Blind lone wolf wins → 9 pts for wolf
+        pointsMap.set(wolf.roundParticipantId, 9);
+      } else if (isLoneWolf) {
+        // Lone wolf wins → 6 pts for wolf
+        pointsMap.set(wolf.roundParticipantId, 6);
       } else {
         // Wolf + partner win → 2 pts each
         pointsMap.set(wolf.roundParticipantId, 2);
         pointsMap.set(validPartner!, 2);
       }
     } else if (outcome === 'wolf_loses') {
-      if (isLoneWolf) {
+      if (isBlindLoneWolf) {
+        // Blind lone wolf loses → 3 pts each to other 3
+        for (const p of players) {
+          if (p.roundParticipantId !== wolf.roundParticipantId) {
+            pointsMap.set(p.roundParticipantId, 3);
+          }
+        }
+      } else if (isLoneWolf) {
         // Lone wolf loses → 2 pts each to other 3
         for (const p of players) {
           if (p.roundParticipantId !== wolf.roundParticipantId) {
@@ -250,7 +301,8 @@ export function calculateWolf(
       wolfPlayerId: wolf.roundParticipantId,
       partnerPlayerId: validPartner,
       isLoneWolf,
-      playerStableford,
+      isBlindLoneWolf,
+      playerScores,
       wolfSideBest,
       opposingSideBest,
       outcome,

@@ -63,6 +63,8 @@ export interface GameDecisionData {
   data: {
     wolfPlayerId: string;
     partnerPlayerId: string | null;
+    /** True when the wolf declared solo before seeing any tee shots */
+    isBlindLoneWolf?: boolean;
   };
 }
 
@@ -153,7 +155,7 @@ export function calculateCompetitionResults(
     case 'wolf':
       return {
         type: 'wolf',
-        result: calculateWolf(input, input.gameDecisions ?? []),
+        result: calculateWolf(input, config.config, input.gameDecisions ?? []),
       };
     case 'six_point':
       return {
@@ -163,7 +165,7 @@ export function calculateCompetitionResults(
     case 'chair':
       return {
         type: 'chair',
-        result: calculateChair(input),
+        result: calculateChair(input, config),
       };
     default:
       config satisfies never;

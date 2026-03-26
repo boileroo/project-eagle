@@ -1,14 +1,14 @@
 import { Label } from '@/components/ui/label';
 
 interface ScoringBasisRadioProps {
-  value: 'stableford' | 'gross';
-  onChange: (value: 'stableford' | 'gross') => void;
+  value: 'stableford' | 'gross' | 'net';
+  onChange: (value: 'stableford' | 'gross' | 'net') => void;
   /** HTML name attribute for the radio group — must be unique per page to avoid conflicts */
   name: string;
 }
 
 /**
- * Shared "Scoring Basis" radio group (Stableford vs Gross Strokes)
+ * Shared "Scoring Basis" radio group (Stableford, Gross Strokes, Net Score)
  * used in the six_point competition form.
  */
 export function ScoringBasisRadio({
@@ -24,6 +24,7 @@ export function ScoringBasisRadio({
           [
             { value: 'stableford', label: 'Stableford' },
             { value: 'gross', label: 'Gross Strokes' },
+            { value: 'net', label: 'Net Strokes' },
           ] as const
         ).map((opt) => (
           <label

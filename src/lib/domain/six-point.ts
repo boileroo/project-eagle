@@ -6,7 +6,10 @@
 // Revised rules (3-player format):
 //   - 3 players per group
 //   - Fixed point distribution: 1st = 4, 2nd = 2, 3rd = 0
-//   - Scoring basis: 'stableford' (higher is better) or 'gross' (lower is better)
+//   - Scoring basis:
+//       'stableford' (higher is better)
+//       'gross'      (lower is better)
+//       'net'        (gross minus handicap strokes; lower is better)
 //   - Tie-splitting per hole:
 //       Two tied 1st, one 3rd   → 3 / 3 / 0
 //       One 1st, two tied 2nd   → 4 / 1 / 1
@@ -27,7 +30,7 @@ export interface SixPointHoleScore {
   holeNumber: number;
   playerScores: {
     roundParticipantId: string;
-    /** Stableford points or gross strokes, depending on scoringBasis */
+    /** Stableford points, gross strokes, or net strokes, depending on scoringBasis */
     score: number;
     points: number;
   }[];
@@ -99,8 +102,8 @@ function distributePoints(
  * Calculates six-point scores for a 3-player competition group.
  *
  * On each hole, 6 points are distributed among the three players based on
- * their stableford or gross-stroke ranking. The player who places 1st
- * receives 3 points, 2nd receives 2 points, 3rd receives 1 point.
+ * their stableford, gross-stroke, or net-stroke ranking. The player who places
+ * 1st receives 4 points, 2nd receives 2 points, 3rd receives 0 points.
  * Ties split the points for those positions equally.
  *
  * @throws {Error} If the input does not contain exactly 3 participants.
@@ -162,6 +165,15 @@ export function calculateSixPoint(
           roundParticipantId: p.roundParticipantId,
           score: strokes,
         });
+      } else if (scoringBasis === 'net') {
+        const handicapStrokes = getStrokesOnHole(
+          p.playingHandicap,
+          hole.strokeIndex,
+        );
+        playerScores.push({
+          roundParticipantId: p.roundParticipantId,
+          score: strokes - handicapStrokes,
+        });
       } else {
         // stableford
         const received = getStrokesOnHole(p.playingHandicap, hole.strokeIndex);
@@ -184,9 +196,9 @@ export function calculateSixPoint(
       continue;
     }
 
-    // Sort: stableford → descending (higher is better); gross → ascending (lower is better)
+    // Sort: stableford → descending (higher is better); gross/net → ascending (lower is better)
     const sorted =
-      scoringBasis === 'gross'
+      scoringBasis === 'gross' || scoringBasis === 'net'
         ? [...playerScores].sort((a, b) => a.score - b.score)
         : [...playerScores].sort((a, b) => b.score - a.score);
 

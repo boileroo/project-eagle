@@ -16,6 +16,7 @@ export const submitGameDecisionFn = createServerFn({ method: 'POST' })
       holeNumber: z.number().int().min(1).max(18),
       wolfPlayerId: z.string().uuid(),
       partnerPlayerId: z.string().uuid().nullable(),
+      isBlindLoneWolf: z.boolean().optional(),
     }),
   )
   .handler(async ({ data }) => {
@@ -42,6 +43,7 @@ export const submitGameDecisionFn = createServerFn({ method: 'POST' })
         data: {
           wolfPlayerId: data.wolfPlayerId,
           partnerPlayerId: data.partnerPlayerId,
+          isBlindLoneWolf: data.isBlindLoneWolf ?? false,
         },
         recordedByUserId: user.id,
       })
