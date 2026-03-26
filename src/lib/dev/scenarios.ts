@@ -1,7 +1,7 @@
 import type { ScenarioPreset } from './types';
 
 /**
- * All 14 scenario presets (S1–S14) grouped by test phase.
+ * All 18 scenario presets (S1–S18) grouped by test phase.
  *
  * Player handicap assignments:
  *   Test A = 12, Test B = 18, Guest C = 5, Guest D = 24,
@@ -34,9 +34,9 @@ export const S1_STABLEFORD: ScenarioPreset = {
   ],
 };
 
-export const S3_MATCH_PLAY: ScenarioPreset = {
-  id: 's3-match-play',
-  label: 'S3 — Match Play',
+export const S2_MATCH_PLAY: ScenarioPreset = {
+  id: 's2-match-play',
+  label: 'S2 — Match Play',
   description: '4 players, 1 group, Match Play (within_group)',
   phase: 1,
   players: [
@@ -70,9 +70,9 @@ export const S3_MATCH_PLAY: ScenarioPreset = {
   ],
 };
 
-export const S4_SIX_POINT: ScenarioPreset = {
-  id: 's4-six-point',
-  label: 'S4 — Six Point',
+export const S3_SIX_POINT: ScenarioPreset = {
+  id: 's3-six-point',
+  label: 'S3 — Six Point',
   description: '3 players, 1 group, Six Point (within_group)',
   phase: 1,
   players: [
@@ -97,9 +97,9 @@ export const S4_SIX_POINT: ScenarioPreset = {
   ],
 };
 
-export const S5_WOLF: ScenarioPreset = {
-  id: 's5-wolf',
-  label: 'S5 — Wolf',
+export const S4_WOLF: ScenarioPreset = {
+  id: 's4-wolf',
+  label: 'S4 — Wolf',
   description: '4 players, 1 group, Wolf (within_group)',
   phase: 1,
   players: [
@@ -125,9 +125,9 @@ export const S5_WOLF: ScenarioPreset = {
   ],
 };
 
-export const S6_CHAIR: ScenarioPreset = {
-  id: 's6-chair',
-  label: 'S6 — Chair',
+export const S5_CHAIR: ScenarioPreset = {
+  id: 's5-chair',
+  label: 'S5 — Chair',
   description: '4 players, 1 group, Chair (within_group)',
   phase: 1,
   players: [
@@ -155,9 +155,9 @@ export const S6_CHAIR: ScenarioPreset = {
 
 // ── Phase 2: Multiple Groups & Scope ─────────────────────────
 
-export const S7_GROUPS: ScenarioPreset = {
-  id: 's7-groups',
-  label: 'S7 — Groups',
+export const S6_GROUPS: ScenarioPreset = {
+  id: 's6-groups',
+  label: 'S6 — Groups',
   description: '8 players, 2 groups of 4, no game competitions',
   phase: 2,
   players: [
@@ -182,11 +182,212 @@ export const S7_GROUPS: ScenarioPreset = {
   ],
 };
 
+export const S7_GROUPS_WOLF: ScenarioPreset = {
+  id: 's7-groups-wolf',
+  label: 'S7 — Groups + Wolf',
+  description: '8 players, 2 groups of 4, Wolf within each group',
+  phase: 2,
+  players: [
+    { slot: 'test_a', handicap: 12 },
+    { slot: 'test_b', handicap: 18 },
+    { slot: 'guest', guestName: 'Guest C', handicap: 5 },
+    { slot: 'guest', guestName: 'Guest D', handicap: 24 },
+    { slot: 'guest', guestName: 'Guest E', handicap: 15 },
+    { slot: 'guest', guestName: 'Guest F', handicap: 28 },
+    { slot: 'guest', guestName: 'Guest G', handicap: 8 },
+    { slot: 'guest', guestName: 'Guest H', handicap: 20 },
+  ],
+  rounds: [
+    {
+      courseIndex: 0,
+      groups: [
+        { playerIndices: [0, 2, 4, 6] },
+        { playerIndices: [1, 3, 5, 7] },
+      ],
+      competitions: [
+        {
+          name: 'Wolf',
+          competitionCategory: 'game',
+          groupScope: 'within_group',
+          formatType: 'wolf',
+          config: {},
+        },
+      ],
+    },
+  ],
+};
+
+export const S8_GROUPS_SIX_POINT: ScenarioPreset = {
+  id: 's8-groups-six-point',
+  label: 'S8 — Groups + Six Point',
+  description: '6 players, 2 groups of 3, Six Point within each group',
+  phase: 2,
+  players: [
+    { slot: 'test_a', handicap: 12 },
+    { slot: 'test_b', handicap: 18 },
+    { slot: 'guest', guestName: 'Guest C', handicap: 5 },
+    { slot: 'guest', guestName: 'Guest D', handicap: 24 },
+    { slot: 'guest', guestName: 'Guest E', handicap: 15 },
+    { slot: 'guest', guestName: 'Guest F', handicap: 28 },
+  ],
+  rounds: [
+    {
+      courseIndex: 0,
+      groups: [
+        { playerIndices: [0, 1, 2] },
+        { playerIndices: [3, 4, 5] },
+      ],
+      competitions: [
+        {
+          name: 'Six Point',
+          competitionCategory: 'game',
+          groupScope: 'within_group',
+          formatType: 'six_point',
+          config: { scoringBasis: 'stableford' },
+        },
+      ],
+    },
+  ],
+};
+
+export const S9_GROUPS_MATCH_PLAY: ScenarioPreset = {
+  id: 's9-groups-match-play',
+  label: 'S9 — Groups + Match Play',
+  description: '8 players, 2 groups of 4, Match Play within each group',
+  phase: 2,
+  players: [
+    { slot: 'test_a', handicap: 12 },
+    { slot: 'test_b', handicap: 18 },
+    { slot: 'guest', guestName: 'Guest C', handicap: 5 },
+    { slot: 'guest', guestName: 'Guest D', handicap: 24 },
+    { slot: 'guest', guestName: 'Guest E', handicap: 15 },
+    { slot: 'guest', guestName: 'Guest F', handicap: 28 },
+    { slot: 'guest', guestName: 'Guest G', handicap: 8 },
+    { slot: 'guest', guestName: 'Guest H', handicap: 20 },
+  ],
+  rounds: [
+    {
+      courseIndex: 0,
+      groups: [
+        { playerIndices: [0, 2, 4, 6] },
+        { playerIndices: [1, 3, 5, 7] },
+      ],
+      competitions: [
+        {
+          name: 'Match Play',
+          competitionCategory: 'match',
+          groupScope: 'within_group',
+          formatType: 'match_play',
+          config: {
+            pointsPerWin: 1,
+            pointsPerHalf: 0.5,
+            pairings: [
+              { playerA: 0, playerB: 2 },
+              { playerA: 4, playerB: 6 },
+              { playerA: 1, playerB: 3 },
+              { playerA: 5, playerB: 7 },
+            ],
+          },
+          requiresPairingResolution: true,
+        },
+      ],
+    },
+  ],
+};
+
+export const S10_GROUPS_MIXED: ScenarioPreset = {
+  id: 's10-groups-mixed',
+  label: 'S10 — Groups + Mixed',
+  description: '8 players, 2 groups of 4, Wolf (within_group) + NTP (all)',
+  phase: 2,
+  players: [
+    { slot: 'test_a', handicap: 12 },
+    { slot: 'test_b', handicap: 18 },
+    { slot: 'guest', guestName: 'Guest C', handicap: 5 },
+    { slot: 'guest', guestName: 'Guest D', handicap: 24 },
+    { slot: 'guest', guestName: 'Guest E', handicap: 15 },
+    { slot: 'guest', guestName: 'Guest F', handicap: 28 },
+    { slot: 'guest', guestName: 'Guest G', handicap: 8 },
+    { slot: 'guest', guestName: 'Guest H', handicap: 20 },
+  ],
+  rounds: [
+    {
+      courseIndex: 0,
+      groups: [
+        { playerIndices: [0, 2, 4, 6] },
+        { playerIndices: [1, 3, 5, 7] },
+      ],
+      competitions: [
+        {
+          name: 'Wolf',
+          competitionCategory: 'game',
+          groupScope: 'within_group',
+          formatType: 'wolf',
+          config: {},
+        },
+        {
+          name: 'NTP Hole 7',
+          competitionCategory: 'bonus',
+          groupScope: 'all',
+          formatType: 'nearest_pin',
+          config: {
+            holeNumber: 7,
+            bonusMode: 'contributor',
+            bonusPoints: 1,
+          },
+        },
+      ],
+    },
+  ],
+};
+
+export const S11_GROUPS_DIFFERENT_GAMES: ScenarioPreset = {
+  id: 's11-groups-different-games',
+  label: 'S11 — Groups + Different Games',
+  description: '8 players, 2 groups of 4, Wolf in group 1 and Chair in group 2',
+  phase: 2,
+  players: [
+    { slot: 'test_a', handicap: 12 },
+    { slot: 'test_b', handicap: 18 },
+    { slot: 'guest', guestName: 'Guest C', handicap: 5 },
+    { slot: 'guest', guestName: 'Guest D', handicap: 24 },
+    { slot: 'guest', guestName: 'Guest E', handicap: 15 },
+    { slot: 'guest', guestName: 'Guest F', handicap: 28 },
+    { slot: 'guest', guestName: 'Guest G', handicap: 8 },
+    { slot: 'guest', guestName: 'Guest H', handicap: 20 },
+  ],
+  rounds: [
+    {
+      courseIndex: 0,
+      groups: [
+        { playerIndices: [0, 2, 4, 6] },
+        { playerIndices: [1, 3, 5, 7] },
+      ],
+      competitions: [
+        {
+          name: 'Wolf',
+          competitionCategory: 'game',
+          groupScope: 'within_group',
+          formatType: 'wolf',
+          config: {},
+        },
+        {
+          name: 'Chair',
+          competitionCategory: 'game',
+          groupScope: 'within_group',
+          formatType: 'chair',
+          config: {},
+        },
+      ],
+    },
+  ],
+};
+
 // ── Phase 3: Team Formats ────────────────────────────────────
 
-export const S8_BEST_BALL: ScenarioPreset = {
-  id: 's8-best-ball',
-  label: 'S8 — Best Ball',
+export const S12_BEST_BALL: ScenarioPreset = {
+  id: 's12-best-ball',
+  label: 'S12 — Best Ball',
   description: '4 players, 2 teams, 1 group, Best Ball (within_group)',
   phase: 3,
   players: [
@@ -221,9 +422,9 @@ export const S8_BEST_BALL: ScenarioPreset = {
   ],
 };
 
-export const S9_HI_LO: ScenarioPreset = {
-  id: 's9-hi-lo',
-  label: 'S9 — Hi-Lo',
+export const S13_HI_LO: ScenarioPreset = {
+  id: 's13-hi-lo',
+  label: 'S13 — Hi-Lo',
   description: '4 players, 2 teams, 1 group, Hi-Lo (within_group)',
   phase: 3,
   players: [
@@ -256,9 +457,9 @@ export const S9_HI_LO: ScenarioPreset = {
   ],
 };
 
-export const S10_RUMBLE: ScenarioPreset = {
-  id: 's10-rumble',
-  label: 'S10 — Rumble',
+export const S14_RUMBLE: ScenarioPreset = {
+  id: 's14-rumble',
+  label: 'S14 — Rumble',
   description: '8 players, 2 teams, 2 groups, Rumble (within_group)',
   phase: 3,
   players: [
@@ -297,9 +498,9 @@ export const S10_RUMBLE: ScenarioPreset = {
 
 // ── Phase 4: Bonus Competitions ──────────────────────────────
 
-export const S11_BONUSES: ScenarioPreset = {
-  id: 's11-bonuses',
-  label: 'S11 — NTP + LD',
+export const S15_BONUSES: ScenarioPreset = {
+  id: 's15-bonuses',
+  label: 'S15 — NTP + LD',
   description: '4 players, 1 group, NTP + LD',
   phase: 4,
   players: [
@@ -342,9 +543,9 @@ export const S11_BONUSES: ScenarioPreset = {
 
 // ── Phase 5: Multi-Format Rounds ─────────────────────────────
 
-export const S12_MULTI_FORMAT: ScenarioPreset = {
-  id: 's12-multi-format',
-  label: 'S12 — Multi-Format',
+export const S16_MULTI_FORMAT: ScenarioPreset = {
+  id: 's16-multi-format',
+  label: 'S16 — Multi-Format',
   description: '4 players, 1 group, Wolf + NTP',
   phase: 5,
   players: [
@@ -383,9 +584,9 @@ export const S12_MULTI_FORMAT: ScenarioPreset = {
 
 // ── Phase 6: Tournament Lifecycle ────────────────────────────
 
-export const S13_TWO_ROUND_INDIVIDUAL: ScenarioPreset = {
-  id: 's13-two-round-individual',
-  label: 'S13 — Two-Round Individual',
+export const S17_TWO_ROUND_INDIVIDUAL: ScenarioPreset = {
+  id: 's17-two-round-individual',
+  label: 'S17 — Two-Round Individual',
   description: '6 players, 2 rounds, no game competitions',
   phase: 6,
   players: [
@@ -410,9 +611,9 @@ export const S13_TWO_ROUND_INDIVIDUAL: ScenarioPreset = {
   ],
 };
 
-export const S14_TWO_ROUND_TEAM: ScenarioPreset = {
-  id: 's14-two-round-team',
-  label: 'S14 — Two-Round Team',
+export const S18_TWO_ROUND_TEAM: ScenarioPreset = {
+  id: 's18-two-round-team',
+  label: 'S18 — Two-Round Team',
   description: '8 players, 2 teams, 2 rounds, Best Ball per round',
   phase: 6,
   players: [
@@ -477,18 +678,23 @@ export const S14_TWO_ROUND_TEAM: ScenarioPreset = {
 
 export const ALL_SCENARIOS: ScenarioPreset[] = [
   S1_STABLEFORD,
-  S3_MATCH_PLAY,
-  S4_SIX_POINT,
-  S5_WOLF,
-  S6_CHAIR,
-  S7_GROUPS,
-  S8_BEST_BALL,
-  S9_HI_LO,
-  S10_RUMBLE,
-  S11_BONUSES,
-  S12_MULTI_FORMAT,
-  S13_TWO_ROUND_INDIVIDUAL,
-  S14_TWO_ROUND_TEAM,
+  S2_MATCH_PLAY,
+  S3_SIX_POINT,
+  S4_WOLF,
+  S5_CHAIR,
+  S6_GROUPS,
+  S7_GROUPS_WOLF,
+  S8_GROUPS_SIX_POINT,
+  S9_GROUPS_MATCH_PLAY,
+  S10_GROUPS_MIXED,
+  S11_GROUPS_DIFFERENT_GAMES,
+  S12_BEST_BALL,
+  S13_HI_LO,
+  S14_RUMBLE,
+  S15_BONUSES,
+  S16_MULTI_FORMAT,
+  S17_TWO_ROUND_INDIVIDUAL,
+  S18_TWO_ROUND_TEAM,
 ];
 
 export const SCENARIOS_BY_PHASE: Record<number, ScenarioPreset[]> =

@@ -32,16 +32,7 @@ Work through the scenarios in order — each one builds on the last. Check off a
 - [ ] Scoreboard shows gross, net, and stableford for each player
 - [ ] Players ranked correctly by stableford (gross as tiebreaker)
 
-### S2 — Stroke Play
-
-**Setup:** Single round · 4 players · 1 group · Stroke Play
-
-Test gross, then swap to net (same setup, change scoring basis):
-
-- [ ] **Gross:** each player ranked by total gross strokes (lowest wins)
-- [ ] **Net:** each player ranked by gross − handicap strokes; verify each player's net total is correct
-
-### S3 — Match Play
+### S2 — Match Play
 
 **Setup:** Single round · 4 players · 1 group · Match Play (scope: within_group)
 
@@ -52,7 +43,7 @@ Test gross, then swap to net (same setup, change scoring basis):
 
 **Also:** 2 players · 1 group — explicit single pairing, verify same result logic
 
-### S4 — Six Point
+### S3 — Six Point
 
 **Setup:** Single round · 3 players · 1 group · Six Point (scope: within_group)
 
@@ -63,7 +54,7 @@ Test gross, then swap to net (same setup, change scoring basis):
 
 **Also test gross basis:** same setup, change scoring to gross strokes
 
-### S5 — Wolf
+### S4 — Wolf
 
 **Setup:** Single round · 4 players · 1 group · Wolf (scope: within_group)
 
@@ -73,7 +64,7 @@ Test gross, then swap to net (same setup, change scoring basis):
 - [ ] Lone wolf loses: each opponent gets 2 pts
 - [ ] Totals correct after 18 holes
 
-### S6 — Chair
+### S5 — Chair
 
 **Setup:** Single round · 4 players · 1 group · Chair (scope: within_group)
 
@@ -87,29 +78,60 @@ Test gross, then swap to net (same setup, change scoring basis):
 
 ## Phase 2: Multiple Groups & Scope
 
-### S7 — Groups
+### S6 — Groups
 
-**Setup:** Single round · 8 players · 2 groups of 4 · Stableford
-
-**a) Scope: all**
+**Setup:** Single round · 8 players · 2 groups of 4 · no game competitions
 
 - [ ] Auto-assign 8 players into 2 groups of 4 (even split)
-- [ ] Single leaderboard ranks all 8 players together
-
-**b) Scope: within_group**
-
-- [ ] Separate leaderboard per group — players in different groups do not compete against each other
-
-**Also verify:**
-
+- [ ] Single leaderboard (gross/net/stableford) ranks all 8 players together
 - [ ] Uneven auto-assign: 7 players → groups of 4 + 3
 - [ ] Different group compositions in R1 vs R2 of the same tournament work independently
+
+### S7 — Groups + Wolf
+
+**Setup:** Single round · 8 players · 2 groups of 4 · Wolf (scope: within_group)
+
+- [ ] Wolf runs independently inside each group — two separate Wolf results
+- [ ] Players in group 1 do not appear in group 2's Wolf leaderboard and vice versa
+- [ ] Points totals correct per group
+
+### S8 — Groups + Six Point
+
+**Setup:** Single round · 6 players · 2 groups of 3 · Six Point (scope: within_group)
+
+- [ ] Six Point runs independently inside each 3-player group
+- [ ] Each group produces its own separate result
+- [ ] Players in one group do not affect the other group's distribution
+
+### S9 — Groups + Match Play
+
+**Setup:** Single round · 8 players · 2 groups of 4 · Match Play (scope: within_group)
+
+- [ ] Two matches per group (4 matches total across the round)
+- [ ] Each group's matches are independent — results do not bleed across groups
+- [ ] Pairings within each group resolve correctly
+
+### S10 — Groups + Mixed
+
+**Setup:** Single round · 8 players · 2 groups of 4 · Wolf (within_group) + NTP hole 7 (all)
+
+- [ ] Wolf produces a separate result per group (within_group)
+- [ ] NTP produces a single result spanning all 8 players (all)
+- [ ] Both competitions coexist on the same round without interference
+
+### S11 — Groups + Different Games
+
+**Setup:** Single round · 8 players · 2 groups of 4 · Wolf in group 1, Chair in group 2 (both within_group)
+
+- [ ] Group 1 runs Wolf; group 2 runs Chair — different game types in the same round
+- [ ] Wolf result only covers group 1 players; Chair result only covers group 2 players
+- [ ] Neither game's result is influenced by the other group's scores
 
 ---
 
 ## Phase 3: Team Formats
 
-### S8 — Best Ball
+### S12 — Best Ball
 
 **Setup:** Single round · 4 players · 2 teams (2+2) · 1 group · Best Ball (scope: within_group)
 
@@ -119,7 +141,7 @@ Test gross, then swap to net (same setup, change scoring basis):
 - [ ] One team member missing a score on a hole: the other member's score counts
 - [ ] Both team members missing a score on a hole: hole is halved (0 vs 0)
 
-### S9 — Hi-Lo
+### S13 — Hi-Lo
 
 **Setup:** Single round · 4 players · 2 teams (2+2) · 1 group · Hi-Lo (scope: within_group)
 
@@ -128,7 +150,7 @@ Test gross, then swap to net (same setup, change scoring basis):
 - [ ] A sub-match where both sides tie: halved
 - [ ] Running totals and final result correct
 
-### S10 — Rumble
+### S14 — Rumble
 
 **Setup:** Single round · 8 players · 2 teams (4+4) · 2 groups of 4 · Rumble (scope: within_group)
 
@@ -142,7 +164,7 @@ Test gross, then swap to net (same setup, change scoring basis):
 
 ## Phase 4: Bonus Competitions
 
-### S11 — NTP and LD
+### S15 — NTP and LD
 
 Add these onto any existing round from above.
 
@@ -162,12 +184,11 @@ Add these onto any existing round from above.
 
 ## Phase 5: Multi-Format Rounds
 
-### S12 — Stacking Competitions
+### S16 — Multi-Format
 
-**Setup:** Single round · 4 players · 1 group · Stableford (all) + Wolf (within_group) + NTP contributor (hole 7)
+**Setup:** Single round · 4 players · 1 group · Wolf (within_group) + NTP contributor (hole 7)
 
-- [ ] All three competitions exist on the same round
-- [ ] Stableford scoreboard ranks all 4 players
+- [ ] Both competitions exist on the same round
 - [ ] Wolf operates independently within the group
 - [ ] NTP award adds correctly to the winner's stableford total
 - [ ] Scoreboard totals reflect the bonus
@@ -180,7 +201,7 @@ Add these onto any existing round from above.
 
 ## Phase 6: Tournament Lifecycle
 
-### S13 — Two-Round Individual Tournament
+### S17 — Two-Round Individual Tournament
 
 **Setup:** Tournament · 2 rounds · 6 players · No teams · Stableford per round · Aggregation: sum_stableford
 
@@ -203,7 +224,7 @@ Add these onto any existing round from above.
 - [ ] Players with incomplete scores in a round show as `incomplete`, excluded from that round's contribution
 - [ ] Leaderboard with only R1 finalized shows R2 as `pending`
 
-### S14 — Two-Round Team Tournament
+### S18 — Two-Round Team Tournament
 
 **Setup:** Tournament · 2 rounds · 8 players · 2 teams (4+4) · 2 groups of 4 per round (2 per team per group) · Stableford (all) + Best Ball (within_group) per round · Aggregation: match_wins (Best Ball) + sum_stableford (individual)
 
