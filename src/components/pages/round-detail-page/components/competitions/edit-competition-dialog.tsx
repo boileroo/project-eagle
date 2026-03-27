@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useUpdateCompetition } from '@/lib/competitions';
-import { FORMAT_TYPE_LABELS, isBonusFormat } from '@/lib/competitions';
+import { FORMAT_TYPE_LABELS } from '@/lib/competitions';
 import type { CompetitionConfig } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +35,6 @@ export function EditCompetitionDialog({
 
   const formatType = comp.formatType as CompetitionConfig['formatType'];
   const existingConfig = (comp.configJson ?? {}) as Record<string, unknown>;
-  const isBonus = isBonusFormat(formatType);
 
   const [name, setName] = useState(comp.name);
   const [groupScope, setGroupScope] = useState<'all' | 'within_group'>(
@@ -74,6 +73,13 @@ export function EditCompetitionDialog({
     'stableford' | 'gross' | 'net'
   >(
     (existingConfig.scoringBasis as 'stableford' | 'gross' | 'net') ??
+      'stableford',
+  );
+
+  const [rumbleScoringBasis, setRumbleScoringBasis] = useState<
+    'stableford' | 'net' | 'gross'
+  >(
+    (existingConfig.scoringBasis as 'stableford' | 'net' | 'gross') ??
       'stableford',
   );
 
@@ -136,7 +142,7 @@ export function EditCompetitionDialog({
       case 'rumble':
         return {
           formatType: 'rumble',
-          config: { pointsPerWin },
+          config: { pointsPerWin, scoringBasis: rumbleScoringBasis },
         };
       case 'nearest_pin':
         return {
@@ -230,27 +236,20 @@ export function EditCompetitionDialog({
             />
           </div>
 
-          {hasGroups &&
-            !isBonus &&
-            formatType !== 'wolf' &&
-            formatType !== 'six_point' &&
-            formatType !== 'chair' &&
-            formatType !== 'hi_lo' &&
-            formatType !== 'rumble' &&
-            formatType !== 'match_play' && (
-              <div className="space-y-2">
-                <Label>Scope</Label>
-                <Select
-                  value={groupScope}
-                  onChange={(e) =>
-                    setGroupScope(e.target.value as 'all' | 'within_group')
-                  }
-                >
-                  <option value="all">All players</option>
-                  <option value="within_group">Within each group</option>
-                </Select>
-              </div>
-            )}
+          {hasGroups && formatType === 'match_play' && (
+            <div className="space-y-2">
+              <Label>Scope</Label>
+              <Select
+                value={groupScope}
+                onChange={(e) =>
+                  setGroupScope(e.target.value as 'all' | 'within_group')
+                }
+              >
+                <option value="all">All players</option>
+                <option value="within_group">Within each group</option>
+              </Select>
+            </div>
+          )}
 
           {formatType === 'six_point' && (
             <div className="space-y-2">
@@ -326,6 +325,21 @@ export function EditCompetitionDialog({
                     setPointsPerWin(parseFloat(e.target.value) || 0)
                   }
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Scoring Basis</Label>
+                <Select
+                  value={rumbleScoringBasis}
+                  onChange={(e) =>
+                    setRumbleScoringBasis(
+                      e.target.value as 'stableford' | 'net' | 'gross',
+                    )
+                  }
+                >
+                  <option value="stableford">Stableford Points</option>
+                  <option value="net">Net Strokes</option>
+                  <option value="gross">Gross Strokes</option>
+                </Select>
               </div>
             </div>
           )}

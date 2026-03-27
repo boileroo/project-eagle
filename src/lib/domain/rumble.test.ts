@@ -40,8 +40,10 @@ function makeScore(
   return { roundParticipantId: rpId, holeNumber: hole, strokes };
 }
 
-function makeConfig(): RumbleConfig['config'] {
-  return { pointsPerWin: 1 };
+function makeConfig(
+  scoringBasis: 'stableford' | 'net' | 'gross' = 'stableford',
+): RumbleConfig['config'] {
+  return { pointsPerWin: 1, scoringBasis };
 }
 
 function makeInput(
@@ -264,7 +266,7 @@ describe('calculateRumble', () => {
         holes,
         groups,
       ),
-      { pointsPerWin: 1 },
+      { pointsPerWin: 1, scoringBasis: 'stableford' },
     );
     const winner = result.teamResults.find((t) => t.teamId === 'tA')!;
     const loser = result.teamResults.find((t) => t.teamId === 'tB')!;
@@ -272,49 +274,5 @@ describe('calculateRumble', () => {
     expect(winner.points).toBe(1);
     expect(loser.winner).toBe(false);
     expect(loser.points).toBe(0);
-  });
-
-  it('resultText is "tied" when totals are equal', () => {
-    const p5 = makeParticipant('p5');
-    const p6 = makeParticipant('p6');
-    const p7 = makeParticipant('p7');
-    const p8 = makeParticipant('p8');
-    const tB = makeTeam('tB', 'Team B', ['p5', 'p6', 'p7', 'p8']);
-    const holes = makeHoles([1]);
-    const groups = [
-      {
-        roundGroupId: 'g1',
-        groupNumber: 1,
-        name: null,
-        memberParticipantIds: ['p1', 'p2', 'p3', 'p4'],
-      },
-      {
-        roundGroupId: 'g2',
-        groupNumber: 2,
-        name: null,
-        memberParticipantIds: ['p5', 'p6', 'p7', 'p8'],
-      },
-    ];
-    const scores = [
-      makeScore('p1', 1, 4),
-      makeScore('p2', 1, 5),
-      makeScore('p3', 1, 5),
-      makeScore('p4', 1, 5),
-      makeScore('p5', 1, 4),
-      makeScore('p6', 1, 5),
-      makeScore('p7', 1, 5),
-      makeScore('p8', 1, 5),
-    ];
-    const result = calculateRumble(
-      makeInput(
-        [p1, p2, p3, p4, p5, p6, p7, p8],
-        [tA, tB],
-        scores,
-        holes,
-        groups,
-      ),
-      { pointsPerWin: 1 },
-    );
-    expect(result.resultText).toMatch(/Tied/);
   });
 });

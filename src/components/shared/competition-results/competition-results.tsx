@@ -31,6 +31,8 @@ export function CompetitionResults({
             ...m,
             sideA: m.teamA.name,
             sideB: m.teamB.name,
+            teamAPlayers: m.teamAPlayers,
+            teamBPlayers: m.teamBPlayers,
           }))}
         />
       );
@@ -38,7 +40,6 @@ export function CompetitionResults({
       return (
         <RumbleResults
           teamResults={result.result.teamResults}
-          resultText={result.result.resultText}
           teamColours={teamColours}
         />
       );

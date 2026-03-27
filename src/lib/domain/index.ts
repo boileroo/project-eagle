@@ -234,7 +234,7 @@ export function calculateGroupedResults(
       groupParticipantIds.has(s.roundParticipantId),
     );
     const groupTeams = input.teams?.filter((t) =>
-      t.memberParticipantIds.every((id) => groupParticipantIds.has(id)),
+      t.memberParticipantIds.some((id) => groupParticipantIds.has(id)),
     );
 
     const groupDecisions = input.gameDecisions?.filter(

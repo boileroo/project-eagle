@@ -70,7 +70,7 @@ export function BonusCompRow({
     bonusPoints?: number;
   } | null;
   const isContributor = config?.bonusMode === 'contributor';
-  const canEdit = roundStatus === 'open';
+  const isDraft = roundStatus === 'draft';
 
   return (
     <div className="flex items-center justify-between rounded-md border px-3 py-2">
@@ -89,19 +89,19 @@ export function BonusCompRow({
         </span>
       </div>
       <div className="flex items-center gap-2">
-        {isCommissioner && (
+        {isCommissioner && isDraft && (
           <EditCompetitionDialog
             comp={comp}
             hasGroups={hasGroups}
             onSaved={onChanged}
           />
         )}
-        {award ? (
+        {award && (
           <>
             <Badge variant="default">
               🏆 {award.roundParticipant?.person?.displayName ?? 'Unknown'}
             </Badge>
-            {isCommissioner && canEdit && (
+            {isCommissioner && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -113,7 +113,8 @@ export function BonusCompRow({
               </Button>
             )}
           </>
-        ) : canEdit ? (
+        )}
+        {!award && isCommissioner && (
           <Select
             className="h-8 px-2 text-sm"
             value=""
@@ -129,7 +130,8 @@ export function BonusCompRow({
               </option>
             ))}
           </Select>
-        ) : (
+        )}
+        {!award && !isCommissioner && (
           <span className="text-muted-foreground text-sm">—</span>
         )}
       </div>

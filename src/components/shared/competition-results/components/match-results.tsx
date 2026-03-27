@@ -11,6 +11,8 @@ interface MatchResultsProps {
     isDecided: boolean;
     holesCompleted: number;
     totalHoles: number;
+    teamAPlayers?: Array<{ displayName: string }>;
+    teamBPlayers?: Array<{ displayName: string }>;
   }>;
 }
 
@@ -39,18 +41,32 @@ export function MatchResults({ matches }: MatchResultsProps) {
       key={key}
       className="flex items-center justify-between rounded-md border px-4 py-3"
     >
-      <div className="flex flex-1 items-center gap-3">
-        <span
-          className={`text-sm font-medium ${match.winner === 'A' ? 'text-primary' : ''}`}
-        >
-          {match.sideA}
-        </span>
+      <div className="flex flex-1 items-center gap-4">
+        <div className="flex-1">
+          <div
+            className={`text-sm font-medium ${match.winner === 'A' ? 'text-primary' : ''}`}
+          >
+            {match.sideA}
+          </div>
+          {match.teamAPlayers && match.teamAPlayers.length > 0 && (
+            <div className="text-muted-foreground mt-1 text-xs">
+              {match.teamAPlayers.map((p) => p.displayName).join(', ')}
+            </div>
+          )}
+        </div>
         <span className="text-muted-foreground text-xs">vs</span>
-        <span
-          className={`text-sm font-medium ${match.winner === 'B' ? 'text-primary' : ''}`}
-        >
-          {match.sideB}
-        </span>
+        <div className="flex-1">
+          <div
+            className={`text-sm font-medium ${match.winner === 'B' ? 'text-primary' : ''}`}
+          >
+            {match.sideB}
+          </div>
+          {match.teamBPlayers && match.teamBPlayers.length > 0 && (
+            <div className="text-muted-foreground mt-1 text-xs">
+              {match.teamBPlayers.map((p) => p.displayName).join(', ')}
+            </div>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <Badge variant={match.isDecided ? 'default' : 'secondary'}>

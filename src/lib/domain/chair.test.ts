@@ -48,10 +48,10 @@ const p3 = makeParticipant('p3', 'Charlie');
 const p4 = makeParticipant('p4', 'Dave');
 
 describe('calculateChair', () => {
-  it('throws when participant count is not 4', () => {
-    expect(() =>
-      calculateChair(makeInput([p1, p2, p3], [], makeHoles(1))),
-    ).toThrow('Chair requires exactly 4 players');
+  it('throws when participant count is less than 2', () => {
+    expect(() => calculateChair(makeInput([p1], [], makeHoles(1)))).toThrow(
+      'Chair requires at least 2 players',
+    );
   });
 
   it('no points on first hole when all tied (chair vacant)', () => {

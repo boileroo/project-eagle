@@ -15,13 +15,11 @@ interface RumbleResultsProps {
     teamTotal: number;
     winner?: boolean;
   }>;
-  resultText?: string;
   teamColours?: Map<string, string>;
 }
 
 export function RumbleResults({
   teamResults,
-  resultText,
   teamColours,
 }: RumbleResultsProps) {
   if (teamResults.length === 0) {
@@ -31,15 +29,11 @@ export function RumbleResults({
   }
 
   return (
-    <div className="space-y-3">
-      {resultText && (
-        <div className="text-muted-foreground text-xs">{resultText}</div>
-      )}
+    <div>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Team</TableHead>
-            <TableHead className="text-center">Groups</TableHead>
             <TableHead className="text-center font-bold">Total</TableHead>
           </TableRow>
         </TableHeader>
@@ -57,9 +51,6 @@ export function RumbleResults({
                   }
                 >
                   {team.teamName}
-                </TableCell>
-                <TableCell className="text-muted-foreground text-center">
-                  {team.groupResults.length}
                 </TableCell>
                 <TableCell className="text-center text-lg font-bold">
                   {team.teamTotal}

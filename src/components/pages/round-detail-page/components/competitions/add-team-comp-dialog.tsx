@@ -48,6 +48,9 @@ export function AddTeamCompDialog({
 
   const [pointsPerWin, setPointsPerWin] = useState(1);
   const [pointsPerHalf, setPointsPerHalf] = useState(0.5);
+  const [rumbleScoringBasis, setRumbleScoringBasis] = useState<
+    'stableford' | 'net' | 'gross'
+  >('stableford');
 
   const getFormatLabel = () => {
     return (
@@ -59,6 +62,7 @@ export function AddTeamCompDialog({
     setFormatType('best_ball');
     setPointsPerWin(1);
     setPointsPerHalf(0.5);
+    setRumbleScoringBasis('stableford');
   };
 
   const bestBallPairings = useMemo(() => {
@@ -176,7 +180,7 @@ export function AddTeamCompDialog({
       case 'rumble':
         return {
           formatType: 'rumble',
-          config: { pointsPerWin },
+          config: { pointsPerWin, scoringBasis: rumbleScoringBasis },
         };
       case 'match_play':
         return {
@@ -201,11 +205,7 @@ export function AddTeamCompDialog({
   };
 
   const groupScope = (): 'all' | 'within_group' => {
-    if (
-      formatType === 'best_ball' ||
-      formatType === 'hi_lo' ||
-      formatType === 'rumble'
-    )
+    if (formatType === 'best_ball' || formatType === 'hi_lo')
       return 'within_group';
     return 'all';
   };
@@ -340,6 +340,21 @@ export function AddTeamCompDialog({
                     setPointsPerWin(parseFloat(e.target.value) || 0)
                   }
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Scoring Basis</Label>
+                <Select
+                  value={rumbleScoringBasis}
+                  onChange={(e) =>
+                    setRumbleScoringBasis(
+                      e.target.value as 'stableford' | 'net' | 'gross',
+                    )
+                  }
+                >
+                  <option value="stableford">Stableford Points</option>
+                  <option value="net">Net Strokes</option>
+                  <option value="gross">Gross Strokes</option>
+                </Select>
               </div>
               {validRumbleGroups > 0 ? (
                 <p className="text-muted-foreground text-xs">

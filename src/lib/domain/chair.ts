@@ -37,7 +37,7 @@ export interface ChairResult {
 // ──────────────────────────────────────────────
 
 /**
- * Calculates chair (musical chairs) scores for a 4-player competition group.
+ * Calculates chair (musical chairs) scores for a competition group.
  *
  * On each hole the player with the best score (determined by `scoringBasis`)
  * takes the chair. If the chair holder has the best (or tied best) score they
@@ -50,15 +50,15 @@ export interface ChairResult {
  *  - `'gross'`: lowest gross strokes wins the hole
  *  - `'net'`: lowest net strokes (gross minus handicap strokes received) wins
  *
- * @throws {Error} If the input does not contain exactly 4 participants.
+ * @throws {Error} If the input contains fewer than 2 participants.
  */
 export function calculateChair(
   input: CompetitionInput,
   competitionConfig?: ChairConfig,
 ): ChairResult {
-  if (input.participants.length !== 4) {
+  if (input.participants.length < 2) {
     throw new Error(
-      `Chair requires exactly 4 players per group, got ${input.participants.length}`,
+      `Chair requires at least 2 players per group, got ${input.participants.length}`,
     );
   }
 

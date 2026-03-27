@@ -98,8 +98,8 @@ export interface IndividualScoreboardResult {
  *
  * Produces one row per participant containing gross strokes, net strokes,
  * stableford points, contributor bonus points, standalone badge counts,
- * a combined total, and a rank. Players are ranked by total descending
- * with stableford as a tiebreaker and gross strokes as a second tiebreaker.
+ * a combined total, and a rank. Players are ranked by total (stableford +
+ * contributor bonuses) descending, with gross strokes as a tiebreaker.
  */
 export function calculateIndividualScoreboard(
   input: IndividualScoreboardInput,
@@ -189,9 +189,9 @@ export function calculateIndividualScoreboard(
     };
   });
 
-  // Sort by stableford descending (primary), then gross ascending (tiebreak)
+  // Sort by total (stableford + contributor bonuses) descending, then gross ascending (tiebreak)
   rows.sort((a, b) => {
-    if (b.stableford !== a.stableford) return b.stableford - a.stableford;
+    if (b.total !== a.total) return b.total - a.total;
     return a.grossStrokes - b.grossStrokes;
   });
 
@@ -202,7 +202,7 @@ export function calculateIndividualScoreboard(
       const prev = rows[i - 1];
       const curr = rows[i];
       if (
-        curr.stableford !== prev.stableford ||
+        curr.total !== prev.total ||
         curr.grossStrokes !== prev.grossStrokes
       ) {
         rank = i + 1;

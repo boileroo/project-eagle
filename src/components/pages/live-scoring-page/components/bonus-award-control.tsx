@@ -28,7 +28,6 @@ export function BonusAwardControl({
   competitions,
   holeNumber,
   participants,
-  canAward,
   canRemove,
   onChanged,
 }: BonusAwardControlProps) {
@@ -116,7 +115,7 @@ export function BonusAwardControl({
                     </Button>
                   )}
                 </>
-              ) : canAward ? (
+              ) : (
                 <select
                   className="border-input bg-background rounded-md border px-2 py-1 text-sm disabled:opacity-50"
                   value=""
@@ -132,10 +131,6 @@ export function BonusAwardControl({
                     </option>
                   ))}
                 </select>
-              ) : (
-                <span className="text-muted-foreground text-xs">
-                  Not awarded
-                </span>
               )}
             </div>
           </div>

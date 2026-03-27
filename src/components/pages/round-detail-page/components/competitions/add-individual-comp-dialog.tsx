@@ -21,7 +21,6 @@ import type { RoundData } from '../types';
 const REQUIRED_GROUP_SIZE: Record<string, number> = {
   wolf: 4,
   six_point: 3,
-  chair: 4,
 };
 
 export function AddIndividualCompDialog({

@@ -62,7 +62,7 @@ export function ParticipantsSection({
     disabled?: boolean;
   }[] = [];
   if (hasTournament) tabs.push({ id: 'players', label: 'Players' });
-  if (hasTournament && !(isPastSetup && !hasTeamsConfigured))
+  if (hasTournament && (!round || hasTeamsConfigured))
     tabs.push({ id: 'teams', label: 'Teams', disabled: teamsTabDisabled });
   if (hasGroups && !(isPastSetup && !hasGroupsConfigured))
     tabs.push({ id: 'groups', label: 'Groups' });

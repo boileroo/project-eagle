@@ -285,25 +285,32 @@ export const createRoundFn = createServerFn({ method: 'POST' })
           );
         }
 
-        // Create default Group 1 and assign all participants
+        // Create groups and assign all participants
         if (tpList.length >= 1) {
-          const [defaultGroup] = await tx
-            .insert(roundGroups)
-            .values({
-              roundId: round.id,
-              groupNumber: 1,
-              name: 'Group 1',
-            })
-            .returning();
+          const numGroups = Math.ceil(tpList.length / 4);
+          const createdGroups: (typeof roundGroups.$inferSelect)[] = [];
 
-          for (const tp of tpList) {
+          for (let i = 0; i < numGroups; i++) {
+            const [group] = await tx
+              .insert(roundGroups)
+              .values({
+                roundId: round.id,
+                groupNumber: i + 1,
+                name: `Group ${i + 1}`,
+              })
+              .returning();
+            createdGroups.push(group);
+          }
+
+          for (let i = 0; i < tpList.length; i++) {
+            const groupIdx = i % numGroups;
             await tx
               .update(roundParticipants)
-              .set({ roundGroupId: defaultGroup.id })
+              .set({ roundGroupId: createdGroups[groupIdx].id })
               .where(
                 and(
                   eq(roundParticipants.roundId, round.id),
-                  eq(roundParticipants.personId, tp.personId),
+                  eq(roundParticipants.personId, tpList[i].personId),
                 ),
               );
           }

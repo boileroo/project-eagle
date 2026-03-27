@@ -69,6 +69,7 @@ export const rumbleConfigSchema = z.object({
   formatType: z.literal('rumble'),
   config: z.object({
     pointsPerWin: z.number().min(0).default(1),
+    scoringBasis: z.enum(['stableford', 'net', 'gross']).default('stableford'),
   }),
 });
 

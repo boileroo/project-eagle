@@ -32,7 +32,55 @@ import { AddTeamCompDialog } from './add-team-comp-dialog';
 import { AddBonusCompDialog } from './add-bonus-comp-dialog';
 import { BonusCompRow } from './bonus-comp-row';
 import { CompetitionsExplainerDialog } from './components/competitions-explainer-dialog';
+import { TeamStandingsBanner } from './components/team-standings-banner';
 import type { RoundData, ScorecardData, RoundCompetitionsData } from '../types';
+
+type TeamPointsEntry = { teamId: string; teamName: string; points: number };
+
+function collectTeamPoints(
+  result: ReturnType<typeof calculateCompetitionResults>,
+  teams: TeamData[],
+): TeamPointsEntry[] {
+  const totals = new Map<string, TeamPointsEntry>();
+
+  const addPoints = (teamId: string, teamName: string, points: number) => {
+    const existing = totals.get(teamId) ?? { teamId, teamName, points: 0 };
+    existing.points += points;
+    totals.set(teamId, existing);
+  };
+
+  const playerTeamMap = new Map<string, { teamId: string; teamName: string }>();
+  for (const team of teams) {
+    for (const memberId of team.memberParticipantIds) {
+      playerTeamMap.set(memberId, { teamId: team.teamId, teamName: team.name });
+    }
+  }
+
+  switch (result.type) {
+    case 'match_play':
+      for (const match of result.result.matches) {
+        const teamA = playerTeamMap.get(match.playerA.roundParticipantId);
+        const teamB = playerTeamMap.get(match.playerB.roundParticipantId);
+        if (teamA) addPoints(teamA.teamId, teamA.teamName, match.pointsA);
+        if (teamB) addPoints(teamB.teamId, teamB.teamName, match.pointsB);
+      }
+      break;
+    case 'best_ball':
+    case 'hi_lo':
+      for (const match of result.result.matches) {
+        addPoints(match.teamA.teamId, match.teamA.name, match.pointsA);
+        addPoints(match.teamB.teamId, match.teamB.name, match.pointsB);
+      }
+      break;
+    case 'rumble':
+      for (const teamResult of result.result.teamResults) {
+        addPoints(teamResult.teamId, teamResult.teamName, teamResult.points);
+      }
+      break;
+  }
+
+  return [...totals.values()];
+}
 
 type EngineInputs = {
   holes: HoleData[];
@@ -123,7 +171,11 @@ function CompetitionEntry({
       formatType: comp.formatType as CompetitionConfig['formatType'],
       config: (comp.configJson ?? {}) as CompetitionConfig['config'],
     } as CompetitionConfig;
-    const groupScope = (comp.groupScope ?? 'all') as 'all' | 'within_group';
+    // Rumble handles all groups internally; force 'all' regardless of stored value
+    const groupScope =
+      comp.formatType === 'rumble'
+        ? 'all'
+        : ((comp.groupScope ?? 'all') as 'all' | 'within_group');
     const input: CompetitionInput = {
       competition: {
         id: comp.id,
@@ -205,9 +257,6 @@ function CompetitionEntry({
         <div className="space-y-4">
           {groupedResult.results.map((gr) => (
             <div key={gr.groupId}>
-              <p className="text-muted-foreground mb-1 text-xs font-medium">
-                {gr.groupName ?? `Group ${gr.groupNumber}`}
-              </p>
               <CompetitionResults
                 result={gr.result}
                 participantTeamColours={participantTeamColours}
@@ -383,6 +432,70 @@ export function TeamCompetitionsSection({
     isBonusFormat(c.formatType as CompetitionConfig['formatType']),
   );
 
+  const teamStandings = useMemo(() => {
+    const isActive = round.status === 'open' || round.status === 'finalized';
+    if (!isActive || engineInputs.teams.length < 2) return null;
+
+    const TEAM_APPLICABLE = new Set(['best_ball', 'hi_lo', 'match_play']);
+    // Include rumble only when round is finalized (for winner banner)
+    if (round.status === 'finalized') {
+      TEAM_APPLICABLE.add('rumble');
+    }
+
+    const totals = new Map<string, TeamPointsEntry>();
+    const mergePoints = (entries: TeamPointsEntry[]) => {
+      for (const entry of entries) {
+        const existing = totals.get(entry.teamId) ?? {
+          teamId: entry.teamId,
+          teamName: entry.teamName,
+          points: 0,
+        };
+        existing.points += entry.points;
+        totals.set(entry.teamId, existing);
+      }
+    };
+
+    for (const comp of scoredComps) {
+      if (!TEAM_APPLICABLE.has(comp.formatType)) continue;
+
+      const config: CompetitionConfig = {
+        formatType: comp.formatType as CompetitionConfig['formatType'],
+        config: (comp.configJson ?? {}) as CompetitionConfig['config'],
+      } as CompetitionConfig;
+      const groupScope =
+        comp.formatType === 'rumble'
+          ? 'all'
+          : ((comp.groupScope ?? 'all') as 'all' | 'within_group');
+      const input = {
+        competition: {
+          id: comp.id,
+          name: comp.name,
+          config,
+          groupScope,
+          roundGroupId:
+            (comp as { roundGroupId?: string | null }).roundGroupId ?? null,
+        },
+        ...engineInputs,
+      };
+
+      try {
+        const grouped = calculateGroupedResults(input);
+        if (grouped.scope === 'all') {
+          mergePoints(collectTeamPoints(grouped.result, engineInputs.teams));
+        } else {
+          for (const gr of grouped.results) {
+            mergePoints(collectTeamPoints(gr.result, engineInputs.teams));
+          }
+        }
+      } catch {
+        // ignore individual calculation errors
+      }
+    }
+
+    if (totals.size < 2) return null;
+    return [...totals.values()].sort((a, b) => b.points - a.points);
+  }, [round.status, engineInputs, scoredComps]);
+
   return (
     <div className="space-y-4">
       <Card>
@@ -457,6 +570,13 @@ export function TeamCompetitionsSection({
             </p>
           ) : (
             <div className="space-y-6">
+              {teamStandings && (
+                <TeamStandingsBanner
+                  standings={teamStandings}
+                  roundStatus={round.status as 'open' | 'finalized'}
+                  teamColours={teamColours}
+                />
+              )}
               {scoredComps.map((comp) => (
                 <CompetitionEntry
                   key={comp.id}
@@ -491,7 +611,7 @@ export function TeamCompetitionsSection({
                           holeNumber={holeNumber}
                           award={award}
                           participants={round.participants}
-                          isCommissioner={isCommissioner && isDraft}
+                          isCommissioner={isCommissioner}
                           roundStatus={round.status}
                           hasGroups={round.groups.length > 1}
                           onChanged={onChanged}

@@ -51,8 +51,6 @@ export interface RumbleTeamResult {
 
 export interface RumbleResult {
   teamResults: RumbleTeamResult[];
-  /** Text description of the outcome */
-  resultText: string;
 }
 
 // ──────────────────────────────────────────────
@@ -74,6 +72,7 @@ function scoreGroup(
   members: ParticipantData[],
   holes: HoleData[],
   scoreLookup: Map<string, number>,
+  scoringBasis: 'stableford' | 'net' | 'gross',
 ): { holeScores: RumbleHoleScore[]; groupTotal: number } {
   const sortedHoles = [...holes].sort((a, b) => a.holeNumber - b.holeNumber);
   let groupTotal = 0;
@@ -86,9 +85,17 @@ function scoreGroup(
         return { roundParticipantId: p.roundParticipantId, points: 0 };
       }
       const received = getStrokesOnHole(p.playingHandicap, hole.strokeIndex);
+      let points: number;
+      if (scoringBasis === 'gross') {
+        points = strokes;
+      } else if (scoringBasis === 'net') {
+        points = strokes - received;
+      } else {
+        points = stablefordPoints(strokes, hole.par, received);
+      }
       return {
         roundParticipantId: p.roundParticipantId,
-        points: stablefordPoints(strokes, hole.par, received),
+        points,
       };
     });
 
@@ -107,8 +114,11 @@ function scoreGroup(
     }
 
     const count = countForHole(hole.holeNumber);
-    // Sort descending, take top N
-    const sorted = [...playerPoints].sort((a, b) => b.points - a.points);
+    // For stableford, higher is better; for strokes, lower is better
+    const isScoringBasis = scoringBasis === 'stableford';
+    const sorted = [...playerPoints].sort((a, b) =>
+      isScoringBasis ? b.points - a.points : a.points - b.points,
+    );
     const topN = sorted.slice(0, count);
     const groupContribution = topN.reduce((s, p) => s + p.points, 0);
     groupTotal += groupContribution;
@@ -132,9 +142,10 @@ function scoreGroup(
  * Calculates rumble results for a competition.
  *
  * Rumble is a team format where each group contributes a score derived from
- * the top-N stableford scores per hole (1 on holes 1–6, 2 on 7–12,
- * 3 on 13–17, all 4 on hole 18). Group totals are summed per team.
- * The team with the highest total wins.
+ * the top-N scores per hole (1 on holes 1–6, 2 on 7–12,
+ * 3 on 13–17, all 4 on hole 18), based on the configured scoring basis
+ * (stableford points, net strokes, or gross strokes). Group totals are summed
+ * per team. The team with the highest total wins.
  */
 export function calculateRumble(
   input: CompetitionInput,
@@ -146,6 +157,7 @@ export function calculateRumble(
   );
   const teams = input.teams ?? [];
   const groups = input.groups ?? [];
+  const scoringBasis = config.scoringBasis ?? 'stableford';
 
   // Build team totals across all their groups
   const teamResultMap = new Map<
@@ -180,6 +192,7 @@ export function calculateRumble(
       members,
       input.holes,
       scoreLookup,
+      scoringBasis,
     );
 
     const groupResult: RumbleGroupResult = {
@@ -222,18 +235,5 @@ export function calculateRumble(
     winner: t.teamTotal === maxTotal,
   }));
 
-  let resultText: string;
-  if (teamTotals.length === 0) {
-    resultText = 'No teams';
-  } else if (isTie) {
-    resultText = `Tied — ${winners.map((w) => w.teamName).join(' & ')} (${maxTotal} pts each)`;
-  } else {
-    const winner = winners[0];
-    const loser = teamTotals.find((t) => t.teamId !== winner.teamId);
-    resultText = loser
-      ? `${winner.teamName} wins ${winner.teamTotal}–${loser.teamTotal}`
-      : `${winner.teamName} wins ${winner.teamTotal}`;
-  }
-
-  return { teamResults, resultText };
+  return { teamResults };
 }

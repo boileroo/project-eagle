@@ -13,7 +13,6 @@ import type {
   CompetitionInput,
   CompetitionResult,
   GameDecisionData,
-  GroupCompetitionResult,
   HoleData,
   ParticipantData,
   ResolvedScore,
@@ -233,11 +232,16 @@ function summariseSingleResult(
         detail: details.join(' | '),
       };
     }
-    case 'rumble':
+    case 'rumble': {
+      const winners = result.result.teamResults.filter((t) => t.winner);
+      if (winners.length === 0) return null;
+      const names = joinNames(winners.map((t) => t.teamName));
+      const points = winners[0]?.points ?? 0;
       return {
-        headline: result.result.resultText,
-        detail: `${prefix}${result.result.resultText}`,
+        headline: `${names} on ${points} pts`,
+        detail: `${prefix}${names} on ${points} pts`,
       };
+    }
     case 'wolf': {
       const leaders = result.result.leaderboard.filter((row) => row.rank === 1);
       if (leaders.length === 0) return null;
@@ -267,84 +271,92 @@ function summariseSingleResult(
   }
 }
 
-function summariseCompetition(
-  competition: {
-    id: string;
-    name: string;
-    formatType: CompetitionConfig['formatType'];
-  },
-  groupedResults:
-    | { scope: 'all'; result: CompetitionResult }
-    | { scope: 'within_group'; results: GroupCompetitionResult[] },
+function combineCompetitionSummaries(
+  formatType: string,
+  inputs: CompetitionInput[],
   teams: TeamData[],
 ): {
-  summary: CompetitionOutcomeSummary | null;
+  summary: CompetitionOutcomeSummary;
   teamPoints: TeamPointsEntry[];
-} {
+} | null {
+  const ft = formatType as CompetitionConfig['formatType'];
   const category: OutcomeCategory =
-    isTeamFormat(competition.formatType) ||
-    (competition.formatType === 'match_play' && teams.length > 0)
+    isTeamFormat(ft) || (ft === 'match_play' && teams.length > 0)
       ? 'team'
       : 'individual';
 
-  if (groupedResults.scope === 'all') {
-    const summaryBits = summariseSingleResult(groupedResults.result);
-    return {
-      summary: summaryBits
-        ? {
-            competitionId: competition.id,
-            competitionName: competition.name,
-            formatLabel: FORMAT_TYPE_LABELS[competition.formatType],
-            category,
-            headline: summaryBits.headline,
-            details: [summaryBits.detail],
-          }
-        : null,
-      teamPoints:
-        category === 'team'
-          ? collectTeamPoints(groupedResults.result, teams)
-          : [],
-    };
-  }
-
-  const details = groupedResults.results
-    .map((groupResult) =>
-      summariseSingleResult(groupResult.result, {
-        groupNumber: groupResult.groupNumber,
-        groupName: groupResult.groupName,
-      }),
-    )
-    .filter((value): value is NonNullable<typeof value> => value !== null);
-
+  const allDetails: string[] = [];
   const teamPointsMap = new Map<string, TeamPointsEntry>();
-  if (category === 'team') {
-    for (const groupResult of groupedResults.results) {
-      for (const entry of collectTeamPoints(groupResult.result, teams)) {
-        const existing = teamPointsMap.get(entry.teamId) ?? {
-          ...entry,
-          points: 0,
-        };
-        existing.points += entry.points;
-        teamPointsMap.set(entry.teamId, existing);
+
+  for (const input of inputs) {
+    const groupedResults = calculateGroupedResults(input);
+
+    if (groupedResults.scope === 'all') {
+      const summaryBits = summariseSingleResult(groupedResults.result);
+      if (summaryBits) {
+        allDetails.push(summaryBits.detail);
+      }
+      if (category === 'team') {
+        for (const entry of collectTeamPoints(groupedResults.result, teams)) {
+          const existing = teamPointsMap.get(entry.teamId) ?? {
+            ...entry,
+            points: 0,
+          };
+          existing.points += entry.points;
+          teamPointsMap.set(entry.teamId, existing);
+        }
+      }
+    } else {
+      for (const groupResult of groupedResults.results) {
+        const summaryBits = summariseSingleResult(groupResult.result, {
+          groupNumber: groupResult.groupNumber,
+          groupName: groupResult.groupName,
+        });
+        if (summaryBits) {
+          allDetails.push(summaryBits.detail);
+        }
+      }
+      if (category === 'team') {
+        for (const groupResult of groupedResults.results) {
+          for (const entry of collectTeamPoints(groupResult.result, teams)) {
+            const existing = teamPointsMap.get(entry.teamId) ?? {
+              ...entry,
+              points: 0,
+            };
+            existing.points += entry.points;
+            teamPointsMap.set(entry.teamId, existing);
+          }
+        }
       }
     }
   }
 
+  if (allDetails.length === 0) {
+    return null;
+  }
+
+  const formatLabel =
+    FORMAT_TYPE_LABELS[formatType as keyof typeof FORMAT_TYPE_LABELS] ??
+    formatType;
+  const competitionName =
+    inputs.length === 1
+      ? inputs[0].competition.name
+      : `${formatLabel} (${inputs.length} groups)`;
+
+  const headline =
+    allDetails.length === 1
+      ? allDetails[0]
+      : `${allDetails.length} groups completed`;
+
   return {
-    summary:
-      details.length > 0
-        ? {
-            competitionId: competition.id,
-            competitionName: competition.name,
-            formatLabel: FORMAT_TYPE_LABELS[competition.formatType],
-            category,
-            headline:
-              details.length === 1
-                ? details[0].headline
-                : `${details.length} grouped results`,
-            details: details.map((detail) => detail.detail),
-          }
-        : null,
+    summary: {
+      competitionId: inputs.map((i) => i.competition.id).join('+'),
+      competitionName,
+      formatLabel,
+      category,
+      headline,
+      details: allDetails,
+    },
     teamPoints: [...teamPointsMap.values()],
   };
 }
@@ -397,6 +409,7 @@ type RoundCompetitionSource = {
     formatType: string;
     configJson: Record<string, unknown> | null;
     groupScope: 'all' | 'within_group' | null;
+    roundGroupId: string | null;
     gameDecisions: Array<{
       holeNumber: number;
       roundGroupId: string | null;
@@ -463,6 +476,7 @@ function buildRoundCompetitionInput(args: {
           config: competition.configJson ?? {},
         } as CompetitionConfig,
         groupScope: (competition.groupScope ?? 'all') as 'all' | 'within_group',
+        roundGroupId: competition.roundGroupId ?? null,
       },
       holes,
       participants,
@@ -756,50 +770,55 @@ export const getTournamentLeaderboardFn = createServerFn({ method: 'GET' })
         scoreboardRows: scoreboardResult.rows,
       });
 
-      const competitionSummaries = competitionInputs
-        .map((input) => {
-          const { summary, teamPoints } = summariseCompetition(
-            {
-              id: input.competition.id,
-              name: input.competition.name,
-              formatType: input.competition.config.formatType,
-            },
-            calculateGroupedResults(input),
-            teams,
-          );
+      const competitionInputsByFormat = new Map<string, CompetitionInput[]>();
+      for (const input of competitionInputs) {
+        const formatType = input.competition.config.formatType;
+        const existing = competitionInputsByFormat.get(formatType) ?? [];
+        existing.push(input);
+        competitionInputsByFormat.set(formatType, existing);
+      }
 
-          if (teamPoints.length > 0 && round.status === 'finalized') {
-            for (const teamPoint of teamPoints) {
-              const existing = teamRowsMap.get(teamPoint.teamId) ?? {
-                teamId: teamPoint.teamId,
-                teamName: teamPoint.teamName,
-                totalPoints: 0,
-                rank: 0,
-                roundPoints: [],
-              };
+      const competitionSummaries: CompetitionOutcomeSummary[] = [];
+      const allTeamPoints: TeamPointsEntry[] = [];
 
-              existing.totalPoints += teamPoint.points;
-              const roundEntry = existing.roundPoints.find(
-                (entry) => entry.roundId === round.id,
-              );
-              if (roundEntry) {
-                roundEntry.points = (roundEntry.points ?? 0) + teamPoint.points;
-              } else {
-                existing.roundPoints.push({
-                  roundId: round.id,
-                  roundName: `Round ${round.roundNumber}`,
-                  points: teamPoint.points,
-                });
-              }
-              teamRowsMap.set(teamPoint.teamId, existing);
-            }
-          }
-
-          return summary;
-        })
-        .filter(
-          (summary): summary is CompetitionOutcomeSummary => summary !== null,
+      for (const [formatType, inputs] of competitionInputsByFormat) {
+        const combinedSummary = combineCompetitionSummaries(
+          formatType,
+          inputs,
+          teams,
         );
+
+        if (combinedSummary) {
+          competitionSummaries.push(combinedSummary.summary);
+          allTeamPoints.push(...combinedSummary.teamPoints);
+        }
+      }
+
+      for (const teamPoint of allTeamPoints) {
+        if (round.status !== 'finalized') continue;
+        const existing = teamRowsMap.get(teamPoint.teamId) ?? {
+          teamId: teamPoint.teamId,
+          teamName: teamPoint.teamName,
+          totalPoints: 0,
+          rank: 0,
+          roundPoints: [],
+        };
+
+        existing.totalPoints += teamPoint.points;
+        const roundEntry = existing.roundPoints.find(
+          (entry) => entry.roundId === round.id,
+        );
+        if (roundEntry) {
+          roundEntry.points = (roundEntry.points ?? 0) + teamPoint.points;
+        } else {
+          existing.roundPoints.push({
+            roundId: round.id,
+            roundName: `Round ${round.roundNumber}`,
+            points: teamPoint.points,
+          });
+        }
+        teamRowsMap.set(teamPoint.teamId, existing);
+      }
 
       if (competitionSummaries.length > 0) {
         roundOutcomeSections.push({

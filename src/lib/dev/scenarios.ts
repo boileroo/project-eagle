@@ -220,7 +220,8 @@ export const S7_GROUPS_WOLF: ScenarioPreset = {
 export const S8_GROUPS_SIX_POINT: ScenarioPreset = {
   id: 's8-groups-six-point',
   label: 'S8 — Groups + Six Point',
-  description: '6 players, 2 groups of 3, Six Point within each group',
+  description:
+    '6 players, 2 groups of 3, Six Point in each group (combined into 1 competition on leaderboard)',
   phase: 2,
   players: [
     { slot: 'test_a', handicap: 12 },
@@ -348,7 +349,8 @@ export const S10_GROUPS_MIXED: ScenarioPreset = {
 export const S11_GROUPS_DIFFERENT_GAMES: ScenarioPreset = {
   id: 's11-groups-different-games',
   label: 'S11 — Groups + Different Games',
-  description: '8 players, 2 groups of 4, Wolf in group 1 and Chair in group 2',
+  description:
+    '8 players, 2 groups of 4, Wolf in group 1 and Chair in group 2 (shown as 2 separate competitions)',
   phase: 2,
   players: [
     { slot: 'test_a', handicap: 12 },
