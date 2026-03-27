@@ -100,7 +100,7 @@ export function AddMatchDialog({
             onPointsPerHalfChange={setPointsPerHalf}
           />
           <p className="text-muted-foreground text-xs">
-            Pairings are configured in the Pairings tab after creation.
+            Pairings are configured using Configure Matches after creation.
           </p>
         </div>
         <DialogFooter>

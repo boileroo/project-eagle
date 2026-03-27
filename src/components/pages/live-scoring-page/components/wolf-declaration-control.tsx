@@ -36,11 +36,16 @@ export function WolfDeclarationControl({
   // Find Wolf competition for this round (within_group)
   const wolfComp = competitions.find((c) => c.formatType === 'wolf');
 
+  // Get the roundGroupId from the first participant (all in the group should have the same)
+  const roundGroupId = groupParticipants[0]?.roundGroupId || '';
+
   // Query current decisions for this Wolf competition
   const { data: decisions } = useQuery({
-    queryKey: ['game-decisions', wolfComp?.id],
+    queryKey: ['game-decisions', wolfComp?.id, roundGroupId],
     queryFn: () =>
-      getGameDecisionsFn({ data: { competitionId: wolfComp!.id } }),
+      getGameDecisionsFn({
+        data: { competitionId: wolfComp!.id, roundGroupId },
+      }),
     enabled: wolfComp != null,
     staleTime: 30_000,
   });
@@ -85,6 +90,7 @@ export function WolfDeclarationControl({
       variables: {
         competitionId: wolfComp.id,
         roundId: round.id,
+        roundGroupId,
         holeNumber,
         wolfPlayerId: wolfParticipant.id,
         partnerPlayerId,

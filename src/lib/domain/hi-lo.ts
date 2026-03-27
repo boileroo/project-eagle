@@ -191,13 +191,15 @@ function calculateHiLoMatch(
 
   if (isComplete || holesCompleted > 0) {
     if (totalPointsA > totalPointsB) {
-      winner = 'A';
-      pointsA = pointsPerWin;
-      resultText = `${teamAInfo.name} wins ${totalPointsA}–${totalPointsB}`;
+      winner = isComplete ? 'A' : null;
+      if (isComplete) pointsA = pointsPerWin;
+      const verb = isComplete ? 'wins' : 'leads';
+      resultText = `${teamAInfo.name} ${verb} ${totalPointsA}–${totalPointsB}`;
     } else if (totalPointsB > totalPointsA) {
-      winner = 'B';
-      pointsB = pointsPerWin;
-      resultText = `${teamBInfo.name} wins ${totalPointsB}–${totalPointsA}`;
+      winner = isComplete ? 'B' : null;
+      if (isComplete) pointsB = pointsPerWin;
+      const verb = isComplete ? 'wins' : 'leads';
+      resultText = `${teamBInfo.name} ${verb} ${totalPointsB}–${totalPointsA}`;
     } else {
       winner = isComplete ? 'halved' : null;
       if (isComplete) {
@@ -213,12 +215,7 @@ function calculateHiLoMatch(
     resultText = 'Not started';
   }
 
-  // Suppress winner if match is still in progress
-  if (!isComplete && winner !== null) {
-    winner = null;
-    pointsA = 0;
-    pointsB = 0;
-  }
+  // Winner is only set if match is complete (already handled above)
 
   return {
     teamA: teamAInfo,

@@ -15,7 +15,7 @@ import {
   type GameDecisionData,
 } from '@/lib/domain';
 import { useQuery } from '@tanstack/react-query';
-import { getGameDecisionsFn } from '@/lib/game-decisions.server';
+import { getAllGameDecisionsFn } from '@/lib/game-decisions.server';
 import { resolveEffectiveHandicap, getPlayingHandicap } from '@/lib/handicaps';
 import { buildTeamColourMap } from '@/lib/team-colours';
 import { CompetitionResults } from '@/components/shared/competition-results';
@@ -69,7 +69,7 @@ function CompetitionEntry({
 
   const { data: rawDecisions } = useQuery({
     queryKey: ['game-decisions', comp.id],
-    queryFn: () => getGameDecisionsFn({ data: { competitionId: comp.id } }),
+    queryFn: () => getAllGameDecisionsFn({ data: { competitionId: comp.id } }),
     enabled: isWolf,
     staleTime: 30_000,
   });
@@ -79,7 +79,7 @@ function CompetitionEntry({
     return rawDecisions
       .filter(
         (
-          d,
+          d: any,
         ): d is typeof d & {
           data: {
             wolfPlayerId: string;
@@ -89,8 +89,9 @@ function CompetitionEntry({
         } =>
           typeof (d.data as Record<string, unknown>)?.wolfPlayerId === 'string',
       )
-      .map((d) => ({
+      .map((d: any) => ({
         holeNumber: d.holeNumber,
+        roundGroupId: (d.roundGroupId as string | null) ?? null,
         data: {
           wolfPlayerId: (
             d.data as {
@@ -117,27 +118,33 @@ function CompetitionEntry({
       }));
   }, [isWolf, rawDecisions]);
 
-  const result = useMemo(() => {
+  const groupedResult = useMemo(() => {
     const config: CompetitionConfig = {
       formatType: comp.formatType as CompetitionConfig['formatType'],
       config: (comp.configJson ?? {}) as CompetitionConfig['config'],
     } as CompetitionConfig;
     const groupScope = (comp.groupScope ?? 'all') as 'all' | 'within_group';
     const input: CompetitionInput = {
-      competition: { id: comp.id, name: comp.name, config, groupScope },
+      competition: {
+        id: comp.id,
+        name: comp.name,
+        config,
+        groupScope,
+        roundGroupId:
+          (comp as { roundGroupId?: string | null }).roundGroupId ?? null,
+      },
       ...engineInputs,
       gameDecisions: isWolf ? gameDecisions : undefined,
     };
 
     try {
       if (groupScope === 'within_group' && engineInputs.groups.length > 0) {
-        const grouped = calculateGroupedResults(input);
-        if (grouped.scope === 'within_group') {
-          return grouped.results[0]?.result ?? null;
-        }
-        return grouped.result;
+        return calculateGroupedResults(input);
       }
-      return calculateCompetitionResults(input);
+      return {
+        scope: 'all' as const,
+        result: calculateCompetitionResults(input),
+      };
     } catch (e) {
       console.error('Error calculating results:', e);
       return null;
@@ -166,7 +173,7 @@ function CompetitionEntry({
           <div className="flex items-center gap-1">
             <EditCompetitionDialog
               comp={comp}
-              hasGroups={round.groups.length > 0}
+              hasGroups={round.groups.length > 1}
               onSaved={onChanged}
             />
             {comp.formatType === 'match_play' && (
@@ -189,16 +196,44 @@ function CompetitionEntry({
           </div>
         )}
       </div>
-      {result ? (
-        <CompetitionResults
-          result={result}
-          participantTeamColours={participantTeamColours}
-          teamColours={teamColours}
-        />
-      ) : (
+      {groupedResult === null ? (
         <p className="text-muted-foreground text-sm">
           Unable to calculate results.
         </p>
+      ) : groupedResult.scope === 'within_group' &&
+        groupedResult.results.length > 1 ? (
+        <div className="space-y-4">
+          {groupedResult.results.map((gr) => (
+            <div key={gr.groupId}>
+              <p className="text-muted-foreground mb-1 text-xs font-medium">
+                {gr.groupName ?? `Group ${gr.groupNumber}`}
+              </p>
+              <CompetitionResults
+                result={gr.result}
+                participantTeamColours={participantTeamColours}
+                teamColours={teamColours}
+              />
+            </div>
+          ))}
+        </div>
+      ) : groupedResult.scope === 'within_group' ? (
+        groupedResult.results[0] ? (
+          <CompetitionResults
+            result={groupedResult.results[0].result}
+            participantTeamColours={participantTeamColours}
+            teamColours={teamColours}
+          />
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            Unable to calculate results.
+          </p>
+        )
+      ) : (
+        <CompetitionResults
+          result={groupedResult.result}
+          participantTeamColours={participantTeamColours}
+          teamColours={teamColours}
+        />
       )}
       <Separator className="mt-4" />
     </div>
@@ -381,6 +416,7 @@ export function TeamCompetitionsSection({
                 tournamentId={round.tournamentId}
                 roundId={round.id}
                 round={round}
+                competitions={competitions}
                 onSaved={onChanged}
                 disabled={
                   !(isCommissioner && isDraft) || !hasTeams || !hasEnoughPlayers
@@ -457,7 +493,7 @@ export function TeamCompetitionsSection({
                           participants={round.participants}
                           isCommissioner={isCommissioner && isDraft}
                           roundStatus={round.status}
-                          hasGroups={round.groups.length > 0}
+                          hasGroups={round.groups.length > 1}
                           onChanged={onChanged}
                         />
                       );

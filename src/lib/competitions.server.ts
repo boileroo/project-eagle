@@ -119,6 +119,7 @@ export const createCompetitionFn = createServerFn({ method: 'POST' })
       .values({
         tournamentId: data.tournamentId,
         roundId: data.roundId,
+        roundGroupId: data.roundGroupId ?? null,
         name: data.name,
         competitionCategory: data.competitionCategory,
         groupScope: data.groupScope ?? 'all',

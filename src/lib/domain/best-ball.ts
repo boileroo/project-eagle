@@ -194,6 +194,7 @@ function calculateBestBallMatch(
   let matchScore = 0;
   let holesCompleted = 0;
   let decidedAt: number | null = null;
+  let matchScoreAtDecision: number | null = null;
 
   for (const hole of holes) {
     if (teamAMembers.length === 0 || teamBMembers.length === 0) {
@@ -267,6 +268,7 @@ function calculateBestBallMatch(
     const holesRemaining = totalHoles - holesCompleted;
     if (decidedAt === null && Math.abs(matchScore) > holesRemaining) {
       decidedAt = holesCompleted;
+      matchScoreAtDecision = matchScore;
     }
   }
 
@@ -281,21 +283,22 @@ function calculateBestBallMatch(
     if (matchScore > 0) {
       winner = 'A';
       pointsA = pointsPerWin;
+      const decidedScore = matchScoreAtDecision ?? matchScore;
       const holesRemaining = totalHoles - (decidedAt ?? totalHoles);
       if (holesRemaining > 0) {
-        resultText = `${teamAInfo.name} wins ${matchScore}&${holesRemaining}`;
+        resultText = `${teamAInfo.name} wins ${decidedScore}&${holesRemaining}`;
       } else {
-        resultText = `${teamAInfo.name} wins ${matchScore} UP`;
+        resultText = `${teamAInfo.name} wins ${decidedScore} UP`;
       }
     } else if (matchScore < 0) {
       winner = 'B';
       pointsB = pointsPerWin;
-      const absScore = Math.abs(matchScore);
+      const decidedScore = Math.abs(matchScoreAtDecision ?? matchScore);
       const holesRemaining = totalHoles - (decidedAt ?? totalHoles);
       if (holesRemaining > 0) {
-        resultText = `${teamBInfo.name} wins ${absScore}&${holesRemaining}`;
+        resultText = `${teamBInfo.name} wins ${decidedScore}&${holesRemaining}`;
       } else {
-        resultText = `${teamBInfo.name} wins ${absScore} UP`;
+        resultText = `${teamBInfo.name} wins ${decidedScore} UP`;
       }
     } else {
       winner = 'halved';

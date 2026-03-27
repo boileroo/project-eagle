@@ -198,6 +198,38 @@ describe('calculateMatch (unit)', () => {
     expect(result.holeResults[0].holeWinner).toBe('halved');
   });
 
+  it('result text uses score at decision point, not post-decision score', () => {
+    // 5-hole match: A wins holes 1-3 (leads 3&2), B wins holes 4-5 (claws back to 1 up)
+    // Result should be "Alice wins 3&2", not "Alice wins 1 UP"
+    const lookup = makeLookup([
+      ['A:1', 3],
+      ['B:1', 5], // A wins
+      ['A:2', 3],
+      ['B:2', 5], // A wins
+      ['A:3', 3],
+      ['B:3', 5], // A wins → 3 up, 2 remaining → decided here
+      ['A:4', 5],
+      ['B:4', 3], // B wins
+      ['A:5', 5],
+      ['B:5', 3], // B wins
+    ]);
+    const result = calculateMatch(
+      'A',
+      'Alice',
+      0,
+      'B',
+      'Bob',
+      0,
+      makeHoles(5),
+      lookup,
+      1,
+      0,
+    );
+    expect(result.isDecided).toBe(true);
+    expect(result.winner).toBe('A');
+    expect(result.resultText).toBe('Alice wins 3&2');
+  });
+
   it('in-progress result text shows "X N UP"', () => {
     // 3-hole match, only hole 1 played, A leads 1 up
     const lookup = makeLookup([
@@ -319,5 +351,88 @@ describe('calculateMatchPlay (dispatcher)', () => {
       { pointsPerWin: 1, pointsPerHalf: 0, pairings: [] },
     );
     expect(result.matches).toHaveLength(1);
+  });
+
+  it('scope=all with groups present uses explicit pairings, not group order', () => {
+    const participants = [
+      {
+        roundParticipantId: 'p1',
+        personId: 'person-p1',
+        displayName: 'Alice',
+        effectiveHandicap: 0,
+        playingHandicap: 0,
+        roundGroupId: 'g1',
+      },
+      {
+        roundParticipantId: 'p2',
+        personId: 'person-p2',
+        displayName: 'Bob',
+        effectiveHandicap: 0,
+        playingHandicap: 0,
+        roundGroupId: 'g1',
+      },
+      {
+        roundParticipantId: 'p3',
+        personId: 'person-p3',
+        displayName: 'Carol',
+        effectiveHandicap: 0,
+        playingHandicap: 0,
+        roundGroupId: 'g1',
+      },
+      {
+        roundParticipantId: 'p4',
+        personId: 'person-p4',
+        displayName: 'Dave',
+        effectiveHandicap: 0,
+        playingHandicap: 0,
+        roundGroupId: 'g1',
+      },
+    ];
+    const groups = [
+      {
+        roundGroupId: 'g1',
+        groupNumber: 1,
+        name: 'Group 1',
+        memberParticipantIds: ['p1', 'p2', 'p3', 'p4'],
+      },
+    ];
+    // Explicit pairings: p1 vs p3, p2 vs p4 (cross-group, not sequential)
+    const result = calculateMatchPlay(
+      {
+        competition: {
+          id: 'c1',
+          name: 'Test',
+          config: {
+            formatType: 'match_play',
+            config: {
+              pointsPerWin: 1,
+              pointsPerHalf: 0,
+              pairings: [
+                { playerA: 'p1', playerB: 'p3' },
+                { playerA: 'p2', playerB: 'p4' },
+              ],
+            },
+          },
+          groupScope: 'all',
+        },
+        holes: [HOLE],
+        participants,
+        scores: [],
+        groups,
+      },
+      {
+        pointsPerWin: 1,
+        pointsPerHalf: 0,
+        pairings: [
+          { playerA: 'p1', playerB: 'p3' },
+          { playerA: 'p2', playerB: 'p4' },
+        ],
+      },
+    );
+    expect(result.matches).toHaveLength(2);
+    expect(result.matches[0].playerA.roundParticipantId).toBe('p1');
+    expect(result.matches[0].playerB.roundParticipantId).toBe('p3');
+    expect(result.matches[1].playerA.roundParticipantId).toBe('p2');
+    expect(result.matches[1].playerB.roundParticipantId).toBe('p4');
   });
 });

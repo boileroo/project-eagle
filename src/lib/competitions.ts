@@ -17,6 +17,7 @@ type CreateCompetitionVariables = {
   name: string;
   competitionCategory: 'match' | 'game' | 'bonus';
   groupScope?: 'all' | 'within_group';
+  roundGroupId?: string | null;
   competitionConfig: CompetitionConfig;
 };
 type CreateCompetitionResult = Awaited<ReturnType<typeof createCompetitionFn>>;

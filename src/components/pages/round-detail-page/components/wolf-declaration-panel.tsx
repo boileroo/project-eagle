@@ -28,9 +28,15 @@ export function WolfDeclarationPanel({
   const [submitGameDecision, { isPending: submitting }] =
     useSubmitGameDecision();
 
+  // Get the roundGroupId from the first participant (all in the group should have the same)
+  const roundGroupId = groupParticipants[0]?.roundGroupId || '';
+
   const { data: decisions } = useQuery({
-    queryKey: ['game-decisions', wolfComp.id],
-    queryFn: () => getGameDecisionsFn({ data: { competitionId: wolfComp.id } }),
+    queryKey: ['game-decisions', wolfComp.id, roundGroupId],
+    queryFn: () =>
+      getGameDecisionsFn({
+        data: { competitionId: wolfComp.id, roundGroupId },
+      }),
     staleTime: 30_000,
   });
 
@@ -45,6 +51,7 @@ export function WolfDeclarationPanel({
       variables: {
         competitionId: wolfComp.id,
         roundId: round.id,
+        roundGroupId,
         holeNumber,
         wolfPlayerId: wolfParticipantId,
         partnerPlayerId,

@@ -51,8 +51,6 @@ export function ScorecardSections({
   const groups = round.groups ?? [];
   const ungrouped = round.participants.filter((rp) => !rp.roundGroupId);
 
-  const wolfComp = competitions.find((c) => c.formatType === 'wolf') ?? null;
-
   const sections: {
     label: string;
     participants: typeof round.participants;
@@ -86,6 +84,25 @@ export function ScorecardSections({
             (g) => (g.name ?? `Group ${g.groupNumber}`) === section.label,
           )?.id ?? 'ungrouped';
         const pairings = matchPairingsForGroups.get(sectionGroupId) ?? [];
+
+        // Find Wolf competition for this section
+        // Prefer a Wolf competition scoped to this group, fall back to one scoped to all groups
+        const wolfComp =
+          sectionGroupId !== 'ungrouped'
+            ? (competitions.find(
+                (c) =>
+                  c.formatType === 'wolf' &&
+                  ((c as { roundGroupId?: string | null }).roundGroupId ??
+                    null) === sectionGroupId,
+              ) ??
+              competitions.find(
+                (c) =>
+                  c.formatType === 'wolf' &&
+                  ((c as { roundGroupId?: string | null }).roundGroupId ??
+                    null) === null,
+              ) ??
+              null)
+            : (competitions.find((c) => c.formatType === 'wolf') ?? null);
 
         const quickScoreButton =
           sectionIdx === 0 && quickScoreProps ? (

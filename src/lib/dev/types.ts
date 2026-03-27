@@ -23,6 +23,11 @@ export interface CompetitionSetup {
   /** Raw config object matching the format's Zod schema config field */
   config: Record<string, unknown>;
   /**
+   * If set, this competition is scoped to the group at this index (0-based)
+   * rather than all groups. The index is resolved to a roundGroupId at setup time.
+   */
+  groupIndex?: number;
+  /**
    * If true, pairings/team references in config will be resolved at setup
    * time using actual round participant or team IDs.
    * Used for match_play (player pairings) and best_ball/hi_lo (team pairings).

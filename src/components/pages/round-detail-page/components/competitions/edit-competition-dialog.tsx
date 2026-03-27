@@ -178,7 +178,7 @@ export function EditCompetitionDialog({
       variables: {
         id: comp.id,
         name: name.trim(),
-        groupScope,
+        groupScope: formatType === 'match_play' ? 'all' : groupScope,
         competitionConfig: buildConfig(),
       },
       onSuccess: () => {
@@ -236,7 +236,8 @@ export function EditCompetitionDialog({
             formatType !== 'six_point' &&
             formatType !== 'chair' &&
             formatType !== 'hi_lo' &&
-            formatType !== 'rumble' && (
+            formatType !== 'rumble' &&
+            formatType !== 'match_play' && (
               <div className="space-y-2">
                 <Label>Scope</Label>
                 <Select

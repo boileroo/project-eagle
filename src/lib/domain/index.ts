@@ -60,6 +60,8 @@ export interface ResolvedScore {
 /** Wolf per-hole game decision (latest per holeNumber wins) */
 export interface GameDecisionData {
   holeNumber: number;
+  /** The group this decision belongs to (null for unscoped decisions) */
+  roundGroupId: string | null;
   data: {
     wolfPlayerId: string;
     partnerPlayerId: string | null;
@@ -74,6 +76,8 @@ export interface CompetitionInput {
     name: string;
     config: CompetitionConfig;
     groupScope: 'all' | 'within_group';
+    /** When set, restricts within_group processing to this specific group */
+    roundGroupId?: string | null;
   };
   holes: HoleData[];
   participants: ParticipantData[];
@@ -214,9 +218,13 @@ export function calculateGroupedResults(
     return { scope: 'all', result: calculateCompetitionResults(input) };
   }
 
+  const targetGroups = competition.roundGroupId
+    ? groups.filter((g) => g.roundGroupId === competition.roundGroupId)
+    : groups;
+
   const groupResults: GroupCompetitionResult[] = [];
 
-  for (const group of groups) {
+  for (const group of targetGroups) {
     const groupParticipantIds = new Set(group.memberParticipantIds);
 
     const groupParticipants = input.participants.filter((p) =>
@@ -229,12 +237,17 @@ export function calculateGroupedResults(
       t.memberParticipantIds.every((id) => groupParticipantIds.has(id)),
     );
 
+    const groupDecisions = input.gameDecisions?.filter(
+      (d) => d.roundGroupId === group.roundGroupId || d.roundGroupId === null,
+    );
+
     const groupInput: CompetitionInput = {
       ...input,
       participants: groupParticipants,
       scores: groupScores,
       teams: groupTeams,
       groups: [group],
+      gameDecisions: groupDecisions,
     };
 
     groupResults.push({

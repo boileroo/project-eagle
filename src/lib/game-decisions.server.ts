@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
 import { gameDecisions, competitions } from '@/db/schema';
@@ -13,6 +13,7 @@ export const submitGameDecisionFn = createServerFn({ method: 'POST' })
     z.object({
       competitionId: z.string().uuid(),
       roundId: z.string().uuid(),
+      roundGroupId: z.string().uuid(),
       holeNumber: z.number().int().min(1).max(18),
       wolfPlayerId: z.string().uuid(),
       partnerPlayerId: z.string().uuid().nullable(),
@@ -39,6 +40,7 @@ export const submitGameDecisionFn = createServerFn({ method: 'POST' })
       .values({
         competitionId: data.competitionId,
         roundId: data.roundId,
+        roundGroupId: data.roundGroupId,
         holeNumber: data.holeNumber,
         data: {
           wolfPlayerId: data.wolfPlayerId,
@@ -53,6 +55,41 @@ export const submitGameDecisionFn = createServerFn({ method: 'POST' })
   });
 
 export const getGameDecisionsFn = createServerFn({ method: 'GET' })
+  .inputValidator(
+    z.object({
+      competitionId: z.string().uuid(),
+      roundGroupId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const user = await requireAuth();
+
+    const comp = await db.query.competitions.findFirst({
+      where: eq(competitions.id, data.competitionId),
+      columns: { tournamentId: true },
+    });
+    if (!comp) throw new Error('Competition not found');
+    await verifyTournamentMembership(user.id, comp.tournamentId);
+
+    const allDecisions = await db.query.gameDecisions.findMany({
+      where: and(
+        eq(gameDecisions.competitionId, data.competitionId),
+        eq(gameDecisions.roundGroupId, data.roundGroupId),
+      ),
+      orderBy: [desc(gameDecisions.createdAt)],
+    });
+
+    const seen = new Set<number>();
+    const latest = allDecisions.filter((d) => {
+      if (seen.has(d.holeNumber)) return false;
+      seen.add(d.holeNumber);
+      return true;
+    });
+
+    return latest;
+  });
+
+export const getAllGameDecisionsFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ competitionId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const user = await requireAuth();
@@ -69,10 +106,13 @@ export const getGameDecisionsFn = createServerFn({ method: 'GET' })
       orderBy: [desc(gameDecisions.createdAt)],
     });
 
-    const seen = new Set<number>();
+    const seen = new Map<string | null, Set<number>>();
     const latest = allDecisions.filter((d) => {
-      if (seen.has(d.holeNumber)) return false;
-      seen.add(d.holeNumber);
+      const groupId = d.roundGroupId ?? null;
+      if (!seen.has(groupId)) seen.set(groupId, new Set());
+      const groupSeen = seen.get(groupId)!;
+      if (groupSeen.has(d.holeNumber)) return false;
+      groupSeen.add(d.holeNumber);
       return true;
     });
 

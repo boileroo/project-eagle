@@ -82,9 +82,9 @@ export function calculateMatchPlay(
     input.participants.map((p) => [p.roundParticipantId, p]),
   );
 
-  // If groups are provided, auto-detect pairings from groups (within_group mode)
+  // Within-group mode: auto-detect pairings from group membership order
   const groups = input.groups ?? [];
-  if (groups.length > 0) {
+  if (groups.length > 0 && input.competition.groupScope === 'within_group') {
     const matches: MatchResult[] = [];
 
     for (const group of groups) {
@@ -179,6 +179,7 @@ export function calculateMatch(
   let matchScore = 0; // positive = A leads
   let holesCompleted = 0;
   let decidedAt: number | null = null;
+  let matchScoreAtDecision: number | null = null;
 
   for (const hole of holes) {
     const aKey = `${playerAId}:${hole.holeNumber}`;
@@ -220,6 +221,7 @@ export function calculateMatch(
     const holesRemaining = totalHoles - holesCompleted;
     if (decidedAt === null && Math.abs(matchScore) > holesRemaining) {
       decidedAt = holesCompleted;
+      matchScoreAtDecision = matchScore;
     }
   }
 
@@ -234,21 +236,22 @@ export function calculateMatch(
     if (matchScore > 0) {
       winner = 'A';
       pointsA = pointsPerWin;
+      const decidedScore = matchScoreAtDecision ?? matchScore;
       const holesRemaining = totalHoles - (decidedAt ?? totalHoles);
       if (holesRemaining > 0) {
-        resultText = `${playerAName} wins ${matchScore}&${holesRemaining}`;
+        resultText = `${playerAName} wins ${decidedScore}&${holesRemaining}`;
       } else {
-        resultText = `${playerAName} wins ${matchScore} UP`;
+        resultText = `${playerAName} wins ${decidedScore} UP`;
       }
     } else if (matchScore < 0) {
       winner = 'B';
       pointsB = pointsPerWin;
-      const absScore = Math.abs(matchScore);
+      const decidedScore = Math.abs(matchScoreAtDecision ?? matchScore);
       const holesRemaining = totalHoles - (decidedAt ?? totalHoles);
       if (holesRemaining > 0) {
-        resultText = `${playerBName} wins ${absScore}&${holesRemaining}`;
+        resultText = `${playerBName} wins ${decidedScore}&${holesRemaining}`;
       } else {
-        resultText = `${playerBName} wins ${absScore} UP`;
+        resultText = `${playerBName} wins ${decidedScore} UP`;
       }
     } else {
       winner = 'halved';

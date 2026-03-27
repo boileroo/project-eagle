@@ -10,6 +10,7 @@ export const createCompetitionSchema = z.object({
   name: z.string().min(1, 'Competition name is required').max(150),
   competitionCategory: z.enum(['match', 'game', 'bonus']),
   groupScope: z.enum(['all', 'within_group']).default('all'),
+  roundGroupId: z.string().uuid().nullish(),
   competitionConfig: competitionConfigSchema,
 });
 export type CreateCompetitionInput = z.infer<typeof createCompetitionSchema>;

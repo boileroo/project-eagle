@@ -175,4 +175,42 @@ describe('calculateBestBall', () => {
     expect(result.matches[0].isDecided).toBe(true);
     expect(result.matches[0].winner).toBe('A');
   });
+
+  it('uses score at decision time, not final score, in result text', () => {
+    // 18-hole match: Team A wins holes 1-10 (up 10-0 after hole 10, 8 remaining, 10 > 8 = DECIDED)
+    // Then Team A continues winning to final 18-0 (but should show 10&8)
+    const holes = makeHoles(18);
+    const scores = [];
+
+    // Holes 1-10: Team A wins (after hole 10, A up 10-0, 8 remaining, 10 > 8? YES - DECIDED at hole 10)
+    for (let hole = 1; hole <= 10; hole++) {
+      scores.push(
+        { roundParticipantId: 'a1', holeNumber: hole, strokes: 3 }, // birdie
+        { roundParticipantId: 'a2', holeNumber: hole, strokes: 3 },
+        { roundParticipantId: 'b1', holeNumber: hole, strokes: 5 }, // bogey
+        { roundParticipantId: 'b2', holeNumber: hole, strokes: 5 },
+      );
+    }
+
+    // Holes 11-18: Team A continues winning (final 18-0, but decided at 10&8)
+    for (let hole = 11; hole <= 18; hole++) {
+      scores.push(
+        { roundParticipantId: 'a1', holeNumber: hole, strokes: 3 },
+        { roundParticipantId: 'a2', holeNumber: hole, strokes: 3 },
+        { roundParticipantId: 'b1', holeNumber: hole, strokes: 5 },
+        { roundParticipantId: 'b2', holeNumber: hole, strokes: 5 },
+      );
+    }
+
+    const result = calculateBestBall(
+      makeInput([a1, a2, b1, b2], [tA, tB], scores, holes),
+      makeConfig(),
+    );
+
+    // Should show "Team A wins 10&8" (10 up at decision with 8 holes remaining)
+    // NOT "Team A wins 18&0" (final score with 0 holes remaining)
+    expect(result.matches[0].resultText).toBe('Team A wins 10&8');
+    expect(result.matches[0].isDecided).toBe(true);
+    expect(result.matches[0].winner).toBe('A');
+  });
 });

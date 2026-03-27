@@ -80,6 +80,7 @@ function getGroupLabel(group: {
 function getLatestGameDecisions(
   decisions: Array<{
     holeNumber: number;
+    roundGroupId: string | null;
     data: Record<string, unknown>;
     createdAt: Date;
   }>,
@@ -87,15 +88,19 @@ function getLatestGameDecisions(
   const latest = [...decisions].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
-  const seen = new Set<number>();
+  const seen = new Map<string, Set<number>>();
 
   return latest.flatMap((decision) => {
-    if (seen.has(decision.holeNumber)) return [];
-    seen.add(decision.holeNumber);
+    const groupKey = decision.roundGroupId ?? '__null__';
+    if (!seen.has(groupKey)) seen.set(groupKey, new Set());
+    const seenHoles = seen.get(groupKey)!;
+    if (seenHoles.has(decision.holeNumber)) return [];
+    seenHoles.add(decision.holeNumber);
 
     return [
       {
         holeNumber: decision.holeNumber,
+        roundGroupId: decision.roundGroupId,
         data: {
           wolfPlayerId: String(decision.data.wolfPlayerId ?? ''),
           partnerPlayerId:
@@ -394,6 +399,7 @@ type RoundCompetitionSource = {
     groupScope: 'all' | 'within_group' | null;
     gameDecisions: Array<{
       holeNumber: number;
+      roundGroupId: string | null;
       data: Record<string, unknown>;
       createdAt: Date;
     }>;

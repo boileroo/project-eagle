@@ -158,6 +158,7 @@ const scenarioPresetSchema = z.object({
           groupScope: z.enum(['all', 'within_group']),
           formatType: z.string(),
           config: z.record(z.string(), z.unknown()),
+          groupIndex: z.number().int().nonnegative().optional(),
           requiresPairingResolution: z.boolean().optional(),
         }),
       ),
@@ -431,9 +432,16 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
             }
           }
 
+          const resolvedGroupId =
+            compSetup.groupIndex !== undefined
+              ? (groupRecords.find((g) => g.groupIndex === compSetup.groupIndex)
+                  ?.groupId ?? null)
+              : null;
+
           await tx.insert(competitions).values({
             tournamentId: tournament.id,
             roundId: round.id,
+            roundGroupId: resolvedGroupId,
             name: compSetup.name,
             competitionCategory: compSetup.competitionCategory,
             groupScope: compSetup.groupScope,

@@ -392,6 +392,9 @@ export const competitions = pgTable('competitions', {
   roundId: uuid('round_id')
     .references(() => rounds.id, { onDelete: 'cascade' })
     .notNull(),
+  roundGroupId: uuid('round_group_id').references(() => roundGroups.id, {
+    onDelete: 'set null',
+  }),
   name: text('name').notNull(),
   competitionCategory: competitionCategoryEnum(
     'competition_category',
@@ -466,6 +469,9 @@ export const gameDecisions = pgTable('game_decisions', {
   roundId: uuid('round_id')
     .references(() => rounds.id, { onDelete: 'cascade' })
     .notNull(),
+  roundGroupId: uuid('round_group_id').references(() => roundGroups.id, {
+    onDelete: 'cascade',
+  }),
   holeNumber: integer('hole_number').notNull(),
   /** Format-specific data. Wolf: { wolfPlayerId, partnerPlayerId | null } */
   data: jsonb('data').$type<Record<string, JsonValue>>().notNull(),
@@ -645,6 +651,10 @@ export const competitionsRelations = relations(
     round: one(rounds, {
       fields: [competitions.roundId],
       references: [rounds.id],
+    }),
+    roundGroup: one(roundGroups, {
+      fields: [competitions.roundGroupId],
+      references: [roundGroups.id],
     }),
     bonusAwards: many(bonusAwards),
     gameDecisions: many(gameDecisions),

@@ -174,6 +174,35 @@ describe('calculateHiLo', () => {
     expect(result.matches[0].winner).toBeNull();
   });
 
+  it('result text says "leads" when match is still in progress', () => {
+    // Only 4 of 18 holes played, each hole has 2 points (high + low), so Team A leads 8-0
+    const holes = makeHoles(18);
+    const scores = [
+      { roundParticipantId: 'a1', holeNumber: 1, strokes: 3 },
+      { roundParticipantId: 'a2', holeNumber: 1, strokes: 3 },
+      { roundParticipantId: 'b1', holeNumber: 1, strokes: 5 },
+      { roundParticipantId: 'b2', holeNumber: 1, strokes: 5 },
+      { roundParticipantId: 'a1', holeNumber: 2, strokes: 3 },
+      { roundParticipantId: 'a2', holeNumber: 2, strokes: 3 },
+      { roundParticipantId: 'b1', holeNumber: 2, strokes: 5 },
+      { roundParticipantId: 'b2', holeNumber: 2, strokes: 5 },
+      { roundParticipantId: 'a1', holeNumber: 3, strokes: 3 },
+      { roundParticipantId: 'a2', holeNumber: 3, strokes: 3 },
+      { roundParticipantId: 'b1', holeNumber: 3, strokes: 5 },
+      { roundParticipantId: 'b2', holeNumber: 3, strokes: 5 },
+      { roundParticipantId: 'a1', holeNumber: 4, strokes: 3 },
+      { roundParticipantId: 'a2', holeNumber: 4, strokes: 3 },
+      { roundParticipantId: 'b1', holeNumber: 4, strokes: 5 },
+      { roundParticipantId: 'b2', holeNumber: 4, strokes: 5 },
+    ];
+    const result = calculateHiLo(
+      makeInput([a1, a2, b1, b2], [tA, tB], scores, holes, [group]),
+      makeConfig(),
+    );
+    expect(result.matches[0].resultText).toBe('Team A leads 8–0');
+    expect(result.matches[0].winner).toBeNull();
+  });
+
   it('reports winner once all holes are complete', () => {
     const holes = makeHoles(1);
     const scores = [

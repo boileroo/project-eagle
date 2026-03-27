@@ -5,6 +5,7 @@ import type { MutationCallOptions, MutationHookReturn } from '@/lib/mutation';
 type SubmitGameDecisionVariables = {
   competitionId: string;
   roundId: string;
+  roundGroupId: string;
   holeNumber: number;
   wolfPlayerId: string;
   partnerPlayerId: string | null;
@@ -14,6 +15,7 @@ type SubmitGameDecisionResult = {
   id: string;
   competitionId: string;
   roundId: string;
+  roundGroupId: string | null;
   holeNumber: number;
   data: Record<string, unknown>;
   recordedByUserId: string;

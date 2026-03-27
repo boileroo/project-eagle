@@ -60,6 +60,10 @@ export function AddIndividualCompDialog({
     'stableford' | 'gross' | 'net'
   >('stableford');
 
+  const [selectedGroupId, setSelectedGroupId] = useState<string | 'all'>('all');
+
+  const hasMultipleGroups = (round.groups ?? []).length > 1;
+
   const groupSizeValidation = useMemo(() => {
     const groups = round.groups ?? [];
     const required = REQUIRED_GROUP_SIZE[formatType];
@@ -72,8 +76,13 @@ export function AddIndividualCompDialog({
       };
     }
 
+    const groupsToCheck =
+      selectedGroupId === 'all'
+        ? groups
+        : groups.filter((g) => g.id === selectedGroupId);
+
     const invalidGroups: { groupNumber: number; size: number }[] = [];
-    for (const g of groups) {
+    for (const g of groupsToCheck) {
       const size = round.participants.filter(
         (rp) => rp.roundGroupId === g.id,
       ).length;
@@ -94,7 +103,7 @@ export function AddIndividualCompDialog({
     }
 
     return { valid: true, message: null };
-  }, [formatType, round.groups, round.participants]);
+  }, [formatType, round.groups, round.participants, selectedGroupId]);
 
   const getFormatLabel = () => {
     return (
@@ -108,6 +117,7 @@ export function AddIndividualCompDialog({
     setSixPointScoringBasis('stableford');
     setWolfScoringBasis('stableford');
     setChairScoringBasis('stableford');
+    setSelectedGroupId('all');
   };
 
   const buildConfig = (): CompetitionConfig => {
@@ -139,6 +149,7 @@ export function AddIndividualCompDialog({
         name: getFormatLabel(),
         competitionCategory: 'game',
         groupScope: 'within_group',
+        roundGroupId: selectedGroupId === 'all' ? null : selectedGroupId,
         roundId,
         competitionConfig: buildConfig(),
       },
@@ -192,6 +203,24 @@ export function AddIndividualCompDialog({
               ))}
             </Select>
           </div>
+
+          {hasMultipleGroups && (
+            <div className="space-y-2">
+              <Label htmlFor="game-group">Group</Label>
+              <Select
+                id="game-group"
+                value={selectedGroupId}
+                onChange={(e) => setSelectedGroupId(e.target.value)}
+              >
+                <option value="all">All groups</option>
+                {(round.groups ?? []).map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name ?? `Group ${g.groupNumber}`}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
 
           {formatType === 'wolf' && (
             <div className="space-y-3">

@@ -178,6 +178,39 @@ export const S18_R2_SCORES: ScoreSet = [
   [5, 5, 4, 6, 5, 5, 4, 5, 4, 5, 4, 6, 5, 5, 6, 3, 4, 5], // H: gross 91
 ];
 
+// ── S19 — Best Ball (2 groups) (Hawk's Ridge, par 72) ────────
+// Group 1: Alpha A(HC12)+C(HC5) vs Bravo B(HC18)+D(HC24) → Alpha wins
+// Group 2: Alpha E(HC15)+G(HC8) vs Bravo F(HC28)+H(HC20) → Bravo wins
+// Player order: A(0), C(1), E(2), G(3), B(4), D(5), F(6), H(7)
+export const S19_SCORES: ScoreSet = [
+  //  H1  H2  H3  H4  H5  H6  H7  H8  H9  H10 H11 H12 H13 H14 H15 H16 H17 H18
+  [5, 3, 6, 4, 5, 4, 3, 5, 4, 4, 5, 3, 5, 4, 4, 5, 3, 5], // A (HC12): gross 82
+  [4, 3, 5, 4, 4, 4, 3, 5, 4, 5, 5, 3, 4, 4, 5, 5, 3, 4], // C (HC5):  gross 78
+  [5, 3, 6, 5, 5, 5, 4, 6, 5, 5, 5, 4, 5, 5, 5, 6, 3, 5], // E (HC15): gross 91
+  [4, 3, 5, 4, 5, 4, 3, 5, 4, 4, 5, 3, 5, 4, 4, 5, 3, 4], // G (HC8):  gross 79
+  [5, 4, 6, 5, 5, 5, 4, 6, 5, 5, 6, 4, 5, 5, 5, 6, 4, 5], // B (HC18): gross 94
+  [6, 4, 7, 5, 6, 5, 4, 7, 5, 6, 7, 4, 6, 6, 5, 7, 4, 6], // D (HC24): gross 100
+  [5, 4, 6, 5, 5, 4, 4, 6, 5, 5, 6, 3, 5, 5, 5, 6, 3, 5], // F (HC28): gross 92
+  [6, 5, 7, 6, 6, 5, 5, 7, 5, 6, 7, 4, 6, 6, 6, 7, 4, 6], // H (HC20): gross 104
+];
+
+// ── S20 — Hi-Lo (2 groups) (Hawk's Ridge, par 72) ─────────────
+// Group 1: Alpha A(HC12)+C(HC5) vs Bravo B(HC18)+D(HC24)
+// Group 2: Alpha E(HC15)+G(HC8) vs Bravo F(HC28)+H(HC20)
+// Varied scores so hi (best net) and lo (worst net) matchups differ per group.
+// Player order: A(0), C(1), E(2), G(3), B(4), D(5), F(6), H(7)
+export const S20_SCORES: ScoreSet = [
+  //  H1  H2  H3  H4  H5  H6  H7  H8  H9  H10 H11 H12 H13 H14 H15 H16 H17 H18
+  [4, 3, 6, 4, 5, 5, 3, 5, 5, 5, 5, 3, 5, 4, 5, 5, 3, 4], // A (HC12): gross 83
+  [4, 3, 5, 5, 4, 4, 4, 5, 4, 4, 5, 3, 5, 4, 4, 6, 3, 4], // C (HC5):  gross 80
+  [5, 3, 6, 5, 5, 4, 4, 6, 5, 5, 5, 4, 5, 5, 5, 6, 3, 5], // E (HC15): gross 90
+  [4, 3, 5, 4, 4, 4, 3, 5, 4, 5, 5, 3, 4, 4, 4, 5, 3, 4], // G (HC8):  gross 77
+  [5, 4, 6, 5, 5, 4, 4, 6, 4, 5, 6, 4, 5, 5, 5, 6, 4, 5], // B (HC18): gross 92
+  [6, 4, 7, 6, 6, 5, 5, 7, 5, 6, 6, 4, 6, 5, 6, 7, 4, 5], // D (HC24): gross 98
+  [6, 5, 7, 6, 6, 5, 5, 7, 6, 6, 7, 4, 6, 6, 6, 7, 4, 6], // F (HC28): gross 105
+  [5, 4, 6, 5, 5, 5, 4, 6, 5, 5, 6, 4, 5, 5, 6, 6, 4, 5], // H (HC20): gross 96
+];
+
 /**
  * Map of scenario ID → per-round score sets.
  * Multi-round scenarios have multiple entries.
@@ -196,6 +229,8 @@ export const DETERMINISTIC_SCORES: Record<string, ScoreSet[]> = {
   's11-groups-different-games': [S6_TO_S11_SCORES],
   's12-best-ball': [S12_SCORES],
   's13-hi-lo': [S13_SCORES],
+  's19-best-ball-two-groups': [S19_SCORES],
+  's20-hi-lo-two-groups': [S20_SCORES],
   's14-rumble': [S14_SCORES],
   's15-bonuses': [S15_S16_SCORES],
   's16-multi-format': [S15_S16_SCORES],

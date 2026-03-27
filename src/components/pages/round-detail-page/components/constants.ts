@@ -53,6 +53,7 @@ export const TEAM_FORMATS: {
   { value: 'best_ball', label: 'Best Ball' },
   { value: 'hi_lo', label: 'Hi-Lo' },
   { value: 'rumble', label: 'Rumble' },
+  { value: 'match_play', label: 'Singles' },
 ];
 
 export const BONUS_FORMATS: {
