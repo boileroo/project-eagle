@@ -150,7 +150,19 @@ Work through the scenarios in order — each one builds on the last. Check off a
 - [ ] A sub-match where both sides tie: halved
 - [ ] Running totals and final result correct
 
-### S14 — Rumble
+### S14 — Singles Match Play
+
+**Setup:** Single round · 4 players · 2 teams (2+2) · 1 group · Match Play (scope: within_group) · cross-team pairings
+
+> Each pair is drawn across teams: player 1 (Team A) vs player 3 (Team B), player 2 (Team A) vs player 4 (Team B).
+
+- [ ] Two cross-team singles matches run independently within the group
+- [ ] Each match resolves hole-by-hole net scores correctly
+- [ ] Hole status updates correctly (e.g. "A/S", "1 up")
+- [ ] Final result shows correct outcome per match (e.g. 2&1, 1 up)
+- [ ] Points from each singles match contribute correctly to team totals
+
+### S15 — Rumble
 
 **Setup:** Single round · 8 players · 2 teams (4+4) · 2 groups of 4 · Rumble (scope: within_group)
 
@@ -164,7 +176,7 @@ Work through the scenarios in order — each one builds on the last. Check off a
 
 ## Phase 4: Bonus Competitions
 
-### S15 — NTP and LD
+### S16 — NTP and LD
 
 Add these onto any existing round from above.
 
@@ -184,7 +196,7 @@ Add these onto any existing round from above.
 
 ## Phase 5: Multi-Format Rounds
 
-### S16 — Multi-Format
+### S17 — Multi-Format
 
 **Setup:** Single round · 4 players · 1 group · Wolf (within_group) + NTP contributor (hole 7)
 
@@ -201,7 +213,7 @@ Add these onto any existing round from above.
 
 ## Phase 6: Tournament Lifecycle
 
-### S17 — Two-Round Individual Tournament
+### S18 — Two-Round Individual Tournament
 
 **Setup:** Tournament · 2 rounds · 6 players · No teams · Stableford per round · Aggregation: sum_stableford
 
@@ -224,7 +236,7 @@ Add these onto any existing round from above.
 - [ ] Players with incomplete scores in a round show as `incomplete`, excluded from that round's contribution
 - [ ] Leaderboard with only R1 finalized shows R2 as `pending`
 
-### S18 — Two-Round Team Tournament
+### S19 — Two-Round Team Tournament
 
 **Setup:** Tournament · 2 rounds · 8 players · 2 teams (4+4) · 2 groups of 4 per round (2 per team per group) · Stableford (all) + Best Ball (within_group) per round · Aggregation: match_wins (Best Ball) + sum_stableford (individual)
 

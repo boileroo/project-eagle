@@ -1,7 +1,7 @@
 import type { ScenarioPreset } from './types';
 
 /**
- * All 18 scenario presets (S1–S18) grouped by test phase.
+ * All 19 scenario presets (S1–S19) grouped by test phase.
  *
  * Player handicap assignments:
  *   Test A = 12, Test B = 18, Guest C = 5, Guest D = 24,
@@ -457,9 +457,49 @@ export const S13_HI_LO: ScenarioPreset = {
   ],
 };
 
-export const S14_RUMBLE: ScenarioPreset = {
-  id: 's14-rumble',
-  label: 'S14 — Rumble',
+export const S14_SINGLES_MATCH_PLAY: ScenarioPreset = {
+  id: 's14-singles-match-play',
+  label: 'S14 — Singles Match Play',
+  description: '4 players, 2 teams, 1 group, singles Match Play (within_group)',
+  phase: 3,
+  players: [
+    { slot: 'test_a', handicap: 12 },
+    { slot: 'guest', guestName: 'Guest C', handicap: 5 },
+    { slot: 'test_b', handicap: 18 },
+    { slot: 'guest', guestName: 'Guest D', handicap: 24 },
+  ],
+  teams: [
+    { name: 'Team Alpha', memberIndices: [0, 1] },
+    { name: 'Team Bravo', memberIndices: [2, 3] },
+  ],
+  rounds: [
+    {
+      courseIndex: 0,
+      groups: [{ playerIndices: [0, 1, 2, 3] }],
+      competitions: [
+        {
+          name: 'Singles Match Play',
+          competitionCategory: 'match',
+          groupScope: 'within_group',
+          formatType: 'match_play',
+          config: {
+            pointsPerWin: 1,
+            pointsPerHalf: 0.5,
+            pairings: [
+              { playerA: 0, playerB: 2 },
+              { playerA: 1, playerB: 3 },
+            ],
+          },
+          requiresPairingResolution: true,
+        },
+      ],
+    },
+  ],
+};
+
+export const S15_RUMBLE: ScenarioPreset = {
+  id: 's15-rumble',
+  label: 'S15 — Rumble',
   description: '8 players, 2 teams, 2 groups, Rumble (within_group)',
   phase: 3,
   players: [
@@ -498,9 +538,9 @@ export const S14_RUMBLE: ScenarioPreset = {
 
 // ── Phase 4: Bonus Competitions ──────────────────────────────
 
-export const S15_BONUSES: ScenarioPreset = {
-  id: 's15-bonuses',
-  label: 'S15 — NTP + LD',
+export const S16_BONUSES: ScenarioPreset = {
+  id: 's16-bonuses',
+  label: 'S16 — NTP + LD',
   description: '4 players, 1 group, NTP + LD',
   phase: 4,
   players: [
@@ -543,9 +583,9 @@ export const S15_BONUSES: ScenarioPreset = {
 
 // ── Phase 5: Multi-Format Rounds ─────────────────────────────
 
-export const S16_MULTI_FORMAT: ScenarioPreset = {
-  id: 's16-multi-format',
-  label: 'S16 — Multi-Format',
+export const S17_MULTI_FORMAT: ScenarioPreset = {
+  id: 's17-multi-format',
+  label: 'S17 — Multi-Format',
   description: '4 players, 1 group, Wolf + NTP',
   phase: 5,
   players: [
@@ -584,9 +624,9 @@ export const S16_MULTI_FORMAT: ScenarioPreset = {
 
 // ── Phase 6: Tournament Lifecycle ────────────────────────────
 
-export const S17_TWO_ROUND_INDIVIDUAL: ScenarioPreset = {
-  id: 's17-two-round-individual',
-  label: 'S17 — Two-Round Individual',
+export const S18_TWO_ROUND_INDIVIDUAL: ScenarioPreset = {
+  id: 's18-two-round-individual',
+  label: 'S18 — Two-Round Individual',
   description: '6 players, 2 rounds, no game competitions',
   phase: 6,
   players: [
@@ -611,9 +651,9 @@ export const S17_TWO_ROUND_INDIVIDUAL: ScenarioPreset = {
   ],
 };
 
-export const S18_TWO_ROUND_TEAM: ScenarioPreset = {
-  id: 's18-two-round-team',
-  label: 'S18 — Two-Round Team',
+export const S19_TWO_ROUND_TEAM: ScenarioPreset = {
+  id: 's19-two-round-team',
+  label: 'S19 — Two-Round Team',
   description: '8 players, 2 teams, 2 rounds, Best Ball per round',
   phase: 6,
   players: [
@@ -690,11 +730,12 @@ export const ALL_SCENARIOS: ScenarioPreset[] = [
   S11_GROUPS_DIFFERENT_GAMES,
   S12_BEST_BALL,
   S13_HI_LO,
-  S14_RUMBLE,
-  S15_BONUSES,
-  S16_MULTI_FORMAT,
-  S17_TWO_ROUND_INDIVIDUAL,
-  S18_TWO_ROUND_TEAM,
+  S14_SINGLES_MATCH_PLAY,
+  S15_RUMBLE,
+  S16_BONUSES,
+  S17_MULTI_FORMAT,
+  S18_TWO_ROUND_INDIVIDUAL,
+  S19_TWO_ROUND_TEAM,
 ];
 
 export const SCENARIOS_BY_PHASE: Record<number, ScenarioPreset[]> =
