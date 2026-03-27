@@ -1,7 +1,7 @@
 import type { ScenarioPreset } from './types';
 
 /**
- * All 18 scenario presets (S1–S18) grouped by test phase.
+ * All 21 scenario presets (S1–S21) grouped by test phase.
  *
  * Player handicap assignments:
  *   Test A = 12, Test B = 18, Guest C = 5, Guest D = 24,
@@ -461,9 +461,49 @@ export const S13_HI_LO: ScenarioPreset = {
   ],
 };
 
-export const S19_BEST_BALL_TWO_GROUPS: ScenarioPreset = {
-  id: 's19-best-ball-two-groups',
-  label: 'S19 — Best Ball (2 groups)',
+export const S14_SINGLES_MATCH_PLAY: ScenarioPreset = {
+  id: 's14-singles-match-play',
+  label: 'S14 — Singles Match Play',
+  description: '4 players, 2 teams, 1 group, singles Match Play (within_group)',
+  phase: 3,
+  players: [
+    { slot: 'test_a', handicap: 12 },
+    { slot: 'guest', guestName: 'Guest C', handicap: 5 },
+    { slot: 'test_b', handicap: 18 },
+    { slot: 'guest', guestName: 'Guest D', handicap: 24 },
+  ],
+  teams: [
+    { name: 'Team Alpha', memberIndices: [0, 1] },
+    { name: 'Team Bravo', memberIndices: [2, 3] },
+  ],
+  rounds: [
+    {
+      courseIndex: 0,
+      groups: [{ playerIndices: [0, 1, 2, 3] }],
+      competitions: [
+        {
+          name: 'Singles Match Play',
+          competitionCategory: 'match',
+          groupScope: 'within_group',
+          formatType: 'match_play',
+          config: {
+            pointsPerWin: 1,
+            pointsPerHalf: 0.5,
+            pairings: [
+              { playerA: 0, playerB: 2 },
+              { playerA: 1, playerB: 3 },
+            ],
+          },
+          requiresPairingResolution: true,
+        },
+      ],
+    },
+  ],
+};
+
+export const S15_BEST_BALL_TWO_GROUPS: ScenarioPreset = {
+  id: 's15-best-ball-two-groups',
+  label: 'S15 — Best Ball (2 groups)',
   description: '8 players, 2 teams, 2 groups, Best Ball (within_group)',
   phase: 3,
   players: [
@@ -505,9 +545,9 @@ export const S19_BEST_BALL_TWO_GROUPS: ScenarioPreset = {
   ],
 };
 
-export const S20_HI_LO_TWO_GROUPS: ScenarioPreset = {
-  id: 's20-hi-lo-two-groups',
-  label: 'S20 — Hi-Lo (2 groups)',
+export const S16_HI_LO_TWO_GROUPS: ScenarioPreset = {
+  id: 's16-hi-lo-two-groups',
+  label: 'S16 — Hi-Lo (2 groups)',
   description: '8 players, 2 teams, 2 groups, Hi-Lo (within_group)',
   phase: 3,
   players: [
@@ -547,9 +587,9 @@ export const S20_HI_LO_TWO_GROUPS: ScenarioPreset = {
   ],
 };
 
-export const S14_RUMBLE: ScenarioPreset = {
-  id: 's14-rumble',
-  label: 'S14 — Rumble',
+export const S17_RUMBLE: ScenarioPreset = {
+  id: 's17-rumble',
+  label: 'S17 — Rumble',
   description: '8 players, 2 teams, 2 groups, Rumble (within_group)',
   phase: 3,
   players: [
@@ -588,9 +628,9 @@ export const S14_RUMBLE: ScenarioPreset = {
 
 // ── Phase 4: Bonus Competitions ──────────────────────────────
 
-export const S15_BONUSES: ScenarioPreset = {
-  id: 's15-bonuses',
-  label: 'S15 — NTP + LD',
+export const S18_BONUSES: ScenarioPreset = {
+  id: 's18-bonuses',
+  label: 'S18 — NTP + LD',
   description: '4 players, 1 group, NTP + LD',
   phase: 4,
   players: [
@@ -633,9 +673,9 @@ export const S15_BONUSES: ScenarioPreset = {
 
 // ── Phase 5: Multi-Format Rounds ─────────────────────────────
 
-export const S16_MULTI_FORMAT: ScenarioPreset = {
-  id: 's16-multi-format',
-  label: 'S16 — Multi-Format',
+export const S19_MULTI_FORMAT: ScenarioPreset = {
+  id: 's19-multi-format',
+  label: 'S19 — Multi-Format',
   description: '4 players, 1 group, Wolf + NTP',
   phase: 5,
   players: [
@@ -674,9 +714,9 @@ export const S16_MULTI_FORMAT: ScenarioPreset = {
 
 // ── Phase 6: Tournament Lifecycle ────────────────────────────
 
-export const S17_TWO_ROUND_INDIVIDUAL: ScenarioPreset = {
-  id: 's17-two-round-individual',
-  label: 'S17 — Two-Round Individual',
+export const S20_TWO_ROUND_INDIVIDUAL: ScenarioPreset = {
+  id: 's20-two-round-individual',
+  label: 'S20 — Two-Round Individual',
   description: '6 players, 2 rounds, no game competitions',
   phase: 6,
   players: [
@@ -701,9 +741,9 @@ export const S17_TWO_ROUND_INDIVIDUAL: ScenarioPreset = {
   ],
 };
 
-export const S18_TWO_ROUND_TEAM: ScenarioPreset = {
-  id: 's18-two-round-team',
-  label: 'S18 — Two-Round Team',
+export const S21_TWO_ROUND_TEAM: ScenarioPreset = {
+  id: 's21-two-round-team',
+  label: 'S21 — Two-Round Team',
   description: '8 players, 2 teams, 2 rounds, Best Ball per round',
   phase: 6,
   players: [
@@ -780,13 +820,14 @@ export const ALL_SCENARIOS: ScenarioPreset[] = [
   S11_GROUPS_DIFFERENT_GAMES,
   S12_BEST_BALL,
   S13_HI_LO,
-  S19_BEST_BALL_TWO_GROUPS,
-  S20_HI_LO_TWO_GROUPS,
-  S14_RUMBLE,
-  S15_BONUSES,
-  S16_MULTI_FORMAT,
-  S17_TWO_ROUND_INDIVIDUAL,
-  S18_TWO_ROUND_TEAM,
+  S14_SINGLES_MATCH_PLAY,
+  S15_BEST_BALL_TWO_GROUPS,
+  S16_HI_LO_TWO_GROUPS,
+  S17_RUMBLE,
+  S18_BONUSES,
+  S19_MULTI_FORMAT,
+  S20_TWO_ROUND_INDIVIDUAL,
+  S21_TWO_ROUND_TEAM,
 ];
 
 export const SCENARIOS_BY_PHASE: Record<number, ScenarioPreset[]> =

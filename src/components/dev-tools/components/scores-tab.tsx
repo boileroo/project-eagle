@@ -44,11 +44,12 @@ function detectScenarioId(tournamentName: string): string | null {
     s11: 's11-groups-different-games',
     s12: 's12-best-ball',
     s13: 's13-hi-lo',
-    s14: 's14-rumble',
-    s15: 's15-bonuses',
-    s16: 's16-multi-format',
-    s17: 's17-two-round-individual',
-    s18: 's18-two-round-team',
+    s14: 's14-singles-match-play',
+    s15: 's15-rumble',
+    s16: 's16-bonuses',
+    s17: 's17-multi-format',
+    s18: 's18-two-round-individual',
+    s19: 's19-two-round-team',
   };
   return idMap[prefix] ?? null;
 }

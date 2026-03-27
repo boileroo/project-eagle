@@ -5,7 +5,7 @@
  * (matching the player order in the scenario's `players` array).
  *
  * Scores are designed for Hawk's Ridge GC (course 0, par 72) unless noted.
- * S17 R2 and S18 R2 use Falcon Creek CC (course 1, par 71).
+ * S20 R2 and S21 R2 use Falcon Creek CC (course 1, par 71).
  *
  * Hawk's Ridge pars:  [4,3,5,4,4,4,3,5,4, 4,5,3,4,4,4,5,3,4]  = 72
  * Falcon Creek pars:  [4,4,3,5,4,4,3,4,4, 4,3,5,4,4,5,3,4,4]  = 71
@@ -115,9 +115,20 @@ export const S13_SCORES: ScoreSet = [
   [6, 4, 7, 6, 6, 5, 5, 7, 5, 6, 6, 4, 6, 5, 6, 7, 4, 5], // D: gross 98
 ];
 
-// ── S14 — Rumble (Hawk's Ridge, par 72) ──────────────────────
-// 8 players. Group 1: Alpha (A, C, E, G). Group 2: Bravo (B, D, F, H).
+// ── S14 — Singles Match Play (Hawk's Ridge, par 72) ──────────
+// Team Alpha: A(HC12) + C(HC5), Team Bravo: B(HC18) + D(HC24)
+// Cross-team singles: A(0) v B(2), C(1) v D(3)
 export const S14_SCORES: ScoreSet = [
+  //  H1  H2  H3  H4  H5  H6  H7  H8  H9  H10 H11 H12 H13 H14 H15 H16 H17 H18
+  [5, 3, 6, 4, 5, 5, 3, 5, 4, 5, 6, 3, 5, 4, 5, 5, 3, 5], // A (HC12): gross 81
+  [4, 3, 5, 4, 5, 4, 3, 5, 4, 4, 5, 4, 5, 4, 4, 5, 3, 4], // C (HC5):  gross 75
+  [5, 4, 7, 5, 5, 5, 4, 6, 5, 5, 6, 4, 5, 5, 5, 6, 4, 5], // B (HC18): gross 91
+  [6, 4, 7, 5, 6, 5, 4, 7, 5, 6, 7, 4, 6, 5, 6, 7, 4, 5], // D (HC24): gross 99
+];
+
+// ── S15 — Rumble (Hawk's Ridge, par 72) ──────────────────────
+// 8 players. Group 1: Alpha (A, C, E, G). Group 2: Bravo (B, D, F, H).
+export const S15_SCORES: ScoreSet = [
   [5, 3, 5, 4, 5, 4, 3, 6, 4, 5, 5, 3, 5, 4, 5, 5, 3, 5], // A: gross 83
   [4, 3, 5, 4, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 5, 3, 4], // C: gross 76
   [5, 3, 6, 5, 5, 5, 4, 6, 5, 5, 5, 4, 5, 5, 5, 6, 3, 5], // E: gross 91
@@ -128,14 +139,14 @@ export const S14_SCORES: ScoreSet = [
   [5, 4, 6, 5, 5, 5, 4, 6, 5, 6, 6, 4, 5, 5, 5, 6, 4, 5], // H: gross 96
 ];
 
-// ── S15 + S16 — Bonuses / Multi-Format (Hawk's Ridge, par 72) ─
+// ── S16 + S17 — Bonuses / Multi-Format (Hawk's Ridge, par 72) ─
 // Reuse S1 scores. Bonus/Wolf competitions evaluated alongside stableford.
-export const S15_S16_SCORES: ScoreSet = S1_SCORES;
+export const S16_S17_SCORES: ScoreSet = S1_SCORES;
 
-// ── S17 — Two-Round Individual ────────────────────────────────
+// ── S18 — Two-Round Individual ────────────────────────────────
 // R1: Hawk's Ridge (par 72), R2: Falcon Creek (par 71)
 // 6 players.
-export const S17_R1_SCORES: ScoreSet = [
+export const S18_R1_SCORES: ScoreSet = [
   [5, 3, 6, 4, 5, 4, 4, 5, 4, 5, 5, 3, 5, 4, 5, 5, 3, 5], // A: gross 84
   [5, 4, 6, 5, 5, 5, 4, 6, 5, 5, 6, 4, 5, 5, 5, 6, 4, 5], // B: gross 94
   [4, 3, 5, 4, 4, 4, 3, 5, 4, 4, 5, 3, 5, 4, 4, 5, 3, 4], // C: gross 78
@@ -144,7 +155,7 @@ export const S17_R1_SCORES: ScoreSet = [
   [6, 5, 7, 6, 6, 5, 5, 7, 5, 6, 7, 4, 6, 6, 6, 7, 4, 6], // F: gross 104
 ];
 
-export const S17_R2_SCORES: ScoreSet = [
+export const S18_R2_SCORES: ScoreSet = [
   [4, 4, 4, 6, 5, 4, 3, 5, 4, 5, 3, 6, 4, 5, 6, 3, 5, 4], // A: gross 84
   [5, 5, 4, 6, 5, 5, 4, 5, 5, 5, 4, 6, 5, 5, 6, 3, 5, 5], // B: gross 93
   [4, 4, 3, 5, 4, 4, 3, 4, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4], // C: gross 75
@@ -153,10 +164,10 @@ export const S17_R2_SCORES: ScoreSet = [
   [6, 5, 5, 7, 6, 5, 4, 6, 5, 6, 4, 7, 6, 5, 6, 4, 5, 5], // F: gross 97
 ];
 
-// ── S18 — Two-Round Team ──────────────────────────────────────
+// ── S19 — Two-Round Team ──────────────────────────────────────
 // R1: Hawk's Ridge, R2: Falcon Creek
 // 8 players. Alpha: A(0), C(1), E(2), G(3). Bravo: B(4), D(5), F(6), H(7).
-export const S18_R1_SCORES: ScoreSet = [
+export const S19_R1_SCORES: ScoreSet = [
   [5, 3, 5, 4, 5, 4, 3, 6, 4, 5, 5, 3, 5, 4, 5, 5, 3, 5], // A: gross 83
   [4, 3, 5, 4, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 5, 3, 4], // C: gross 76
   [5, 3, 6, 5, 5, 5, 4, 6, 5, 5, 5, 4, 5, 5, 5, 6, 3, 5], // E: gross 91
@@ -167,7 +178,7 @@ export const S18_R1_SCORES: ScoreSet = [
   [5, 4, 6, 5, 5, 5, 4, 6, 5, 6, 6, 4, 5, 5, 5, 6, 4, 5], // H: gross 96
 ];
 
-export const S18_R2_SCORES: ScoreSet = [
+export const S19_R2_SCORES: ScoreSet = [
   [4, 5, 3, 6, 4, 5, 3, 4, 5, 5, 3, 5, 5, 4, 6, 3, 5, 4], // A: gross 83
   [4, 4, 3, 5, 4, 4, 3, 4, 4, 4, 3, 5, 5, 4, 5, 3, 4, 4], // C: gross 76
   [5, 5, 4, 6, 5, 4, 4, 5, 4, 5, 3, 6, 5, 5, 5, 3, 4, 5], // E: gross 87
@@ -229,11 +240,12 @@ export const DETERMINISTIC_SCORES: Record<string, ScoreSet[]> = {
   's11-groups-different-games': [S6_TO_S11_SCORES],
   's12-best-ball': [S12_SCORES],
   's13-hi-lo': [S13_SCORES],
-  's19-best-ball-two-groups': [S19_SCORES],
-  's20-hi-lo-two-groups': [S20_SCORES],
-  's14-rumble': [S14_SCORES],
-  's15-bonuses': [S15_S16_SCORES],
-  's16-multi-format': [S15_S16_SCORES],
-  's17-two-round-individual': [S17_R1_SCORES, S17_R2_SCORES],
-  's18-two-round-team': [S18_R1_SCORES, S18_R2_SCORES],
+  's14-singles-match-play': [S14_SCORES],
+  's15-best-ball-two-groups': [S19_SCORES],
+  's16-hi-lo-two-groups': [S20_SCORES],
+  's17-rumble': [S15_SCORES],
+  's18-bonuses': [S16_S17_SCORES],
+  's19-multi-format': [S16_S17_SCORES],
+  's20-two-round-individual': [S18_R1_SCORES, S18_R2_SCORES],
+  's21-two-round-team': [S19_R1_SCORES, S19_R2_SCORES],
 };
