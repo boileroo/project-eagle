@@ -44,6 +44,7 @@ export const INDIVIDUAL_FORMATS: {
   { value: 'wolf', label: 'Wolf' },
   { value: 'six_point', label: 'Six Point' },
   { value: 'chair', label: 'Chair' },
+  { value: 'match_play', label: 'Singles Match Play' },
 ];
 
 export const TEAM_FORMATS: {

@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner';
 import { INDIVIDUAL_FORMATS } from '../constants';
 import { ScoringBasisRadio } from './competition-fields/scoring-basis-radio';
+import { PointsFields } from './competition-fields/points-fields';
 import type { RoundData } from '../types';
 
 const REQUIRED_GROUP_SIZE: Record<string, number> = {
@@ -28,20 +29,15 @@ export function AddIndividualCompDialog({
   roundId,
   round,
   onSaved,
+  disabled,
 }: {
   tournamentId: string;
   roundId: string;
   round: RoundData;
-  /** Kept for API compatibility but no longer used */
   hasTeams?: boolean;
   disabled?: boolean;
   onSaved: () => void;
 }) {
-  // allow parent to render the trigger disabled when appropriate
-  // (e.g. non-commissioner or wrong round status)
-  // keep this prop optional for backward compatibility
-
-  const disabledProp = (arguments[0] as any).disabled as boolean | undefined;
   const [open, setOpen] = useState(false);
   const [createCompetition, { isPending }] = useCreateCompetition();
   const [formatType, setFormatType] =
@@ -59,50 +55,54 @@ export function AddIndividualCompDialog({
     'stableford' | 'gross' | 'net'
   >('stableford');
 
-  const [selectedGroupId, setSelectedGroupId] = useState<string | 'all'>('all');
+  const [pointsPerWin, setPointsPerWin] = useState(1);
+  const [pointsPerHalf, setPointsPerHalf] = useState(0.5);
 
-  const hasMultipleGroups = (round.groups ?? []).length > 1;
+  const [matchPlayScoringBasis, setMatchPlayScoringBasis] = useState<
+    'stableford' | 'gross' | 'net'
+  >('stableford');
+
+  const groups = round.groups ?? [];
+  const hasMultipleGroups = groups.length > 1;
+
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(
+    groups.length === 1 ? (groups[0]?.id ?? '') : '',
+  );
+
+  const selectedGroupPlayerCount = useMemo(() => {
+    if (!selectedGroupId) return 0;
+    return round.participants.filter(
+      (rp) => rp.roundGroupId === selectedGroupId,
+    ).length;
+  }, [selectedGroupId, round.participants]);
 
   const groupSizeValidation = useMemo(() => {
-    const groups = round.groups ?? [];
+    if (!selectedGroupId) return { valid: true, message: null };
+
     const required = REQUIRED_GROUP_SIZE[formatType];
     if (!required) return { valid: true, message: null };
 
-    if (groups.length === 0) {
+    if (selectedGroupPlayerCount !== required) {
+      const formatLabel =
+        INDIVIDUAL_FORMATS.find((f) => f.value === formatType)?.label ??
+        formatType;
       return {
         valid: false,
-        message: `${formatType === 'six_point' ? 'Six Point' : formatType === 'wolf' ? 'Wolf' : 'Chair'} requires groups of exactly ${required} players. No groups have been created yet.`,
-      };
-    }
-
-    const groupsToCheck =
-      selectedGroupId === 'all'
-        ? groups
-        : groups.filter((g) => g.id === selectedGroupId);
-
-    const invalidGroups: { groupNumber: number; size: number }[] = [];
-    for (const g of groupsToCheck) {
-      const size = round.participants.filter(
-        (rp) => rp.roundGroupId === g.id,
-      ).length;
-      if (size !== required) {
-        invalidGroups.push({ groupNumber: g.groupNumber, size });
-      }
-    }
-
-    if (invalidGroups.length > 0) {
-      const label =
-        invalidGroups.length === 1
-          ? `Group ${invalidGroups[0].groupNumber} has ${invalidGroups[0].size} player${invalidGroups[0].size === 1 ? '' : 's'}`
-          : `${invalidGroups.length} groups have incorrect sizes`;
-      return {
-        valid: false,
-        message: `${formatType === 'six_point' ? 'Six Point' : formatType === 'wolf' ? 'Wolf' : 'Chair'} requires exactly ${required} players per group. ${label}.`,
+        message: `${formatLabel} requires exactly ${required} players. The selected group has ${selectedGroupPlayerCount}.`,
       };
     }
 
     return { valid: true, message: null };
-  }, [formatType, round.groups, round.participants, selectedGroupId]);
+  }, [formatType, selectedGroupId, selectedGroupPlayerCount]);
+
+  const availableFormats = useMemo(() => {
+    if (!selectedGroupId) return INDIVIDUAL_FORMATS;
+    return INDIVIDUAL_FORMATS.filter((f) => {
+      const required = REQUIRED_GROUP_SIZE[f.value];
+      if (!required) return true;
+      return selectedGroupPlayerCount === required;
+    });
+  }, [selectedGroupId, selectedGroupPlayerCount]);
 
   const getFormatLabel = () => {
     return (
@@ -116,7 +116,10 @@ export function AddIndividualCompDialog({
     setSixPointScoringBasis('stableford');
     setWolfScoringBasis('stableford');
     setChairScoringBasis('stableford');
-    setSelectedGroupId('all');
+    setMatchPlayScoringBasis('stableford');
+    setPointsPerWin(1);
+    setPointsPerHalf(0.5);
+    setSelectedGroupId(groups.length === 1 ? (groups[0]?.id ?? '') : '');
   };
 
   const buildConfig = (): CompetitionConfig => {
@@ -136,10 +139,26 @@ export function AddIndividualCompDialog({
           formatType: 'chair',
           config: { scoringBasis: chairScoringBasis },
         };
+      case 'match_play':
+        return {
+          formatType: 'match_play',
+          config: {
+            scoringBasis: matchPlayScoringBasis,
+            pointsPerWin,
+            pointsPerHalf,
+            pairings: [],
+          },
+        };
       default:
         return { formatType: 'wolf', config: { scoringBasis: 'stableford' } };
     }
   };
+
+  const canSubmit =
+    !isPending &&
+    groupSizeValidation.valid &&
+    selectedGroupId !== '' &&
+    (formatType !== 'match_play' || selectedGroupPlayerCount >= 2);
 
   const handleSave = async () => {
     await createCompetition({
@@ -147,8 +166,7 @@ export function AddIndividualCompDialog({
         tournamentId,
         name: getFormatLabel(),
         competitionCategory: 'game',
-        groupScope: 'within_group',
-        roundGroupId: selectedGroupId === 'all' ? null : selectedGroupId,
+        roundGroupId: selectedGroupId || null,
         roundId,
         competitionConfig: buildConfig(),
       },
@@ -173,7 +191,7 @@ export function AddIndividualCompDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" disabled={disabledProp}>
+        <Button variant="outline" size="sm" disabled={disabled}>
           + Game
         </Button>
       </DialogTrigger>
@@ -181,10 +199,31 @@ export function AddIndividualCompDialog({
         <DialogHeader>
           <DialogTitle>Add Game</DialogTitle>
           <DialogDescription>
-            Create a within-group game (Wolf, Six Point, or Chair).
+            Create a within-group game. Each group can have at most one game.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {hasMultipleGroups && (
+            <div className="space-y-2">
+              <Label htmlFor="game-group">Group</Label>
+              <Select
+                id="game-group"
+                value={selectedGroupId}
+                onChange={(e) => setSelectedGroupId(e.target.value)}
+                autoFocus
+              >
+                <option value="" disabled>
+                  Select a group…
+                </option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name ?? `Group ${g.groupNumber}`}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="game-format">Format</Label>
             <Select
@@ -193,33 +232,15 @@ export function AddIndividualCompDialog({
               onChange={(e) =>
                 setFormatType(e.target.value as CompetitionConfig['formatType'])
               }
-              autoFocus
+              autoFocus={!hasMultipleGroups}
             >
-              {INDIVIDUAL_FORMATS.map((ft) => (
+              {availableFormats.map((ft) => (
                 <option key={ft.value} value={ft.value}>
                   {ft.label}
                 </option>
               ))}
             </Select>
           </div>
-
-          {hasMultipleGroups && (
-            <div className="space-y-2">
-              <Label htmlFor="game-group">Group</Label>
-              <Select
-                id="game-group"
-                value={selectedGroupId}
-                onChange={(e) => setSelectedGroupId(e.target.value)}
-              >
-                <option value="all">All groups</option>
-                {(round.groups ?? []).map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name ?? `Group ${g.groupNumber}`}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          )}
 
           {formatType === 'wolf' && (
             <div className="space-y-3">
@@ -264,6 +285,26 @@ export function AddIndividualCompDialog({
             </div>
           )}
 
+          {formatType === 'match_play' && (
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-xs">
+                Head-to-head match play. Pairings are configured after creation
+                using Configure Matches.
+              </p>
+              <ScoringBasisRadio
+                value={matchPlayScoringBasis}
+                onChange={setMatchPlayScoringBasis}
+                name="match-play-basis"
+              />
+              <PointsFields
+                pointsPerWin={pointsPerWin}
+                pointsPerHalf={pointsPerHalf}
+                onPointsPerWinChange={setPointsPerWin}
+                onPointsPerHalfChange={setPointsPerHalf}
+              />
+            </div>
+          )}
+
           {!groupSizeValidation.valid && (
             <p className="text-destructive text-xs font-medium">
               {groupSizeValidation.message}
@@ -274,10 +315,7 @@ export function AddIndividualCompDialog({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isPending || !groupSizeValidation.valid}
-          >
+          <Button onClick={handleSave} disabled={!canSubmit}>
             {isPending ? 'Creating…' : 'Create'}
           </Button>
         </DialogFooter>

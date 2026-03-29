@@ -23,11 +23,9 @@ import { ScoringBasisRadio } from './competition-fields/scoring-basis-radio';
 
 export function EditCompetitionDialog({
   comp,
-  hasGroups,
   onSaved,
 }: {
   comp: RoundCompetitionsData[number];
-  hasGroups: boolean;
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -37,9 +35,6 @@ export function EditCompetitionDialog({
   const existingConfig = (comp.configJson ?? {}) as Record<string, unknown>;
 
   const [name, setName] = useState(comp.name);
-  const [groupScope, setGroupScope] = useState<'all' | 'within_group'>(
-    (comp.groupScope as 'all' | 'within_group') ?? 'all',
-  );
   const [pointsPerWin, setPointsPerWin] = useState<number>(
     (existingConfig.pointsPerWin as number) ?? 1,
   );
@@ -85,7 +80,6 @@ export function EditCompetitionDialog({
 
   const resetForm = () => {
     setName(comp.name);
-    setGroupScope((comp.groupScope as 'all' | 'within_group') ?? 'all');
     setPointsPerWin((existingConfig.pointsPerWin as number) ?? 1);
     setPointsPerHalf((existingConfig.pointsPerHalf as number) ?? 0.5);
     setHoleNumber((existingConfig.holeNumber as number) ?? 1);
@@ -114,6 +108,9 @@ export function EditCompetitionDialog({
         return {
           formatType: 'match_play',
           config: {
+            scoringBasis:
+              (existingConfig.scoringBasis as 'stableford' | 'gross' | 'net') ??
+              'stableford',
             pointsPerWin,
             pointsPerHalf,
             pairings:
@@ -184,7 +181,6 @@ export function EditCompetitionDialog({
       variables: {
         id: comp.id,
         name: name.trim(),
-        groupScope: formatType === 'match_play' ? 'all' : groupScope,
         competitionConfig: buildConfig(),
       },
       onSuccess: () => {
@@ -219,7 +215,7 @@ export function EditCompetitionDialog({
           <DialogDescription>
             {formatLabel} ·{' '}
             {comp.competitionCategory === 'match'
-              ? 'Match'
+              ? 'Team Match'
               : comp.competitionCategory === 'game'
                 ? 'Game'
                 : 'Bonus'}
@@ -235,21 +231,6 @@ export function EditCompetitionDialog({
               autoFocus
             />
           </div>
-
-          {hasGroups && formatType === 'match_play' && (
-            <div className="space-y-2">
-              <Label>Scope</Label>
-              <Select
-                value={groupScope}
-                onChange={(e) =>
-                  setGroupScope(e.target.value as 'all' | 'within_group')
-                }
-              >
-                <option value="all">All players</option>
-                <option value="within_group">Within each group</option>
-              </Select>
-            </div>
-          )}
 
           {formatType === 'six_point' && (
             <div className="space-y-2">

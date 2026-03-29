@@ -33,6 +33,7 @@ import {
   isTeamFormat,
   type CompetitionConfig,
 } from './competition-config';
+import { collectTeamPoints, type TeamPointsEntry } from './domain/team-points';
 
 type OutcomeCategory = 'individual' | 'team';
 
@@ -43,12 +44,6 @@ type CompetitionOutcomeSummary = {
   category: OutcomeCategory;
   headline: string;
   details: string[];
-};
-
-type TeamPointsEntry = {
-  teamId: string;
-  teamName: string;
-  points: number;
 };
 
 type TeamLeaderboardRowSummary = {
@@ -151,53 +146,6 @@ function buildRoundTeams(
   }));
 }
 
-function collectTeamPoints(
-  result: CompetitionResult,
-  teams: TeamData[],
-): TeamPointsEntry[] {
-  const totals = new Map<string, TeamPointsEntry>();
-
-  const addPoints = (teamId: string, teamName: string, points: number) => {
-    const existing = totals.get(teamId) ?? { teamId, teamName, points: 0 };
-    existing.points += points;
-    totals.set(teamId, existing);
-  };
-
-  const playerTeamMap = new Map<string, { teamId: string; teamName: string }>();
-  for (const team of teams) {
-    for (const memberId of team.memberParticipantIds) {
-      playerTeamMap.set(memberId, { teamId: team.teamId, teamName: team.name });
-    }
-  }
-
-  switch (result.type) {
-    case 'match_play':
-      for (const match of result.result.matches) {
-        const teamA = playerTeamMap.get(match.playerA.roundParticipantId);
-        const teamB = playerTeamMap.get(match.playerB.roundParticipantId);
-        if (teamA) addPoints(teamA.teamId, teamA.teamName, match.pointsA);
-        if (teamB) addPoints(teamB.teamId, teamB.teamName, match.pointsB);
-      }
-      break;
-    case 'best_ball':
-    case 'hi_lo':
-      for (const match of result.result.matches) {
-        addPoints(match.teamA.teamId, match.teamA.name, match.pointsA);
-        addPoints(match.teamB.teamId, match.teamB.name, match.pointsB);
-      }
-      break;
-    case 'rumble':
-      for (const teamResult of result.result.teamResults) {
-        addPoints(teamResult.teamId, teamResult.teamName, teamResult.points);
-      }
-      break;
-    default:
-      break;
-  }
-
-  return [...totals.values()];
-}
-
 function summariseSingleResult(
   result: CompetitionResult,
   context?: { groupNumber: number; groupName: string | null },
@@ -287,11 +235,14 @@ function combineCompetitionSummaries(
 
   const allDetails: string[] = [];
   const teamPointsMap = new Map<string, TeamPointsEntry>();
+  let groupCount = 0;
+  let combinedHeadline: string | null = null;
 
   for (const input of inputs) {
     const groupedResults = calculateGroupedResults(input);
 
     if (groupedResults.scope === 'all') {
+      groupCount++;
       const summaryBits = summariseSingleResult(groupedResults.result);
       if (summaryBits) {
         allDetails.push(summaryBits.detail);
@@ -307,6 +258,7 @@ function combineCompetitionSummaries(
         }
       }
     } else {
+      groupCount += groupedResults.results.length;
       for (const groupResult of groupedResults.results) {
         const summaryBits = summariseSingleResult(groupResult.result, {
           groupNumber: groupResult.groupNumber,
@@ -314,6 +266,13 @@ function combineCompetitionSummaries(
         });
         if (summaryBits) {
           allDetails.push(summaryBits.detail);
+        }
+      }
+      if (groupedResults.combined && groupedResults.results.length > 1) {
+        const combinedBits = summariseSingleResult(groupedResults.combined);
+        if (combinedBits) {
+          allDetails.push(`Combined: ${combinedBits.headline}`);
+          combinedHeadline = combinedBits.headline;
         }
       }
       if (category === 'team') {
@@ -346,7 +305,9 @@ function combineCompetitionSummaries(
   const headline =
     allDetails.length === 1
       ? allDetails[0]
-      : `${allDetails.length} groups completed`;
+      : combinedHeadline
+        ? `${groupCount} groups — ${combinedHeadline}`
+        : `${groupCount} groups completed`;
 
   return {
     summary: {
@@ -475,7 +436,9 @@ function buildRoundCompetitionInput(args: {
           formatType: competition.formatType as CompetitionConfig['formatType'],
           config: competition.configJson ?? {},
         } as CompetitionConfig,
-        groupScope: (competition.groupScope ?? 'all') as 'all' | 'within_group',
+        groupScope: (competition.formatType === 'rumble'
+          ? 'all'
+          : (competition.groupScope ?? 'all')) as 'all' | 'within_group',
         roundGroupId: competition.roundGroupId ?? null,
       },
       holes,

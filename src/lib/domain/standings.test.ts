@@ -235,6 +235,7 @@ describe('calculateStandings — match_wins', () => {
             config: {
               formatType: 'match_play',
               config: {
+                scoringBasis: 'stableford',
                 pointsPerWin: 2,
                 pointsPerHalf: 1,
                 pairings: [{ playerA: 'rp1', playerB: 'rp2' }],

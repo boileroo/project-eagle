@@ -18,13 +18,13 @@ export interface TeamSetup {
 export interface CompetitionSetup {
   name: string;
   competitionCategory: 'match' | 'game' | 'bonus';
-  groupScope: 'all' | 'within_group';
   formatType: string;
   /** Raw config object matching the format's Zod schema config field */
   config: Record<string, unknown>;
   /**
    * If set, this competition is scoped to the group at this index (0-based)
    * rather than all groups. The index is resolved to a roundGroupId at setup time.
+   * Required for game competitions when groups exist.
    */
   groupIndex?: number;
   /**

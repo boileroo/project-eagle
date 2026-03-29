@@ -18,7 +18,6 @@ export type CreateCompetitionInput = z.infer<typeof createCompetitionSchema>;
 export const updateCompetitionSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1, 'Competition name is required').max(150).optional(),
-  groupScope: z.enum(['all', 'within_group']).optional(),
   competitionConfig: competitionConfigSchema.optional(),
 });
 export type UpdateCompetitionInput = z.infer<typeof updateCompetitionSchema>;

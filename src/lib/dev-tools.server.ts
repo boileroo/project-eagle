@@ -155,7 +155,6 @@ const scenarioPresetSchema = z.object({
         z.object({
           name: z.string(),
           competitionCategory: z.enum(['match', 'game', 'bonus']),
-          groupScope: z.enum(['all', 'within_group']),
           formatType: z.string(),
           config: z.record(z.string(), z.unknown()),
           groupIndex: z.number().int().nonnegative().optional(),
@@ -390,7 +389,7 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
 
         // Create competitions
         for (const compSetup of roundSetup.competitions) {
-          let configJson: Record<string, JsonValue> = {
+          const configJson: Record<string, JsonValue> = {
             ...compSetup.config,
           } as Record<string, JsonValue>;
 
@@ -444,7 +443,10 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
             roundGroupId: resolvedGroupId,
             name: compSetup.name,
             competitionCategory: compSetup.competitionCategory,
-            groupScope: compSetup.groupScope,
+            groupScope:
+              compSetup.competitionCategory === 'bonus'
+                ? 'all'
+                : 'within_group',
             formatType: compSetup.formatType,
             configJson,
           });

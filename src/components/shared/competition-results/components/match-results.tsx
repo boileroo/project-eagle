@@ -14,9 +14,10 @@ interface MatchResultsProps {
     teamAPlayers?: Array<{ displayName: string }>;
     teamBPlayers?: Array<{ displayName: string }>;
   }>;
+  hideGroupHeaders?: boolean;
 }
 
-export function MatchResults({ matches }: MatchResultsProps) {
+export function MatchResults({ matches, hideGroupHeaders }: MatchResultsProps) {
   if (matches.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">No matches configured.</p>
@@ -85,9 +86,11 @@ export function MatchResults({ matches }: MatchResultsProps) {
     <div className="space-y-4">
       {Array.from(groupedMatches.entries()).map(([groupId, groupMatches]) => (
         <div key={groupId}>
-          <h4 className="text-muted-foreground mb-2 text-sm font-medium">
-            {groupMatches[0]?.groupName ?? `Group ${groupId.slice(0, 8)}`}
-          </h4>
+          {!hideGroupHeaders && (
+            <h4 className="text-muted-foreground mb-2 text-sm font-medium">
+              {groupMatches[0]?.groupName ?? `Group ${groupId.slice(0, 8)}`}
+            </h4>
+          )}
           <div className="space-y-2">
             {groupMatches.map((match, i) =>
               renderMatch(match, `${groupId}-${i}`),

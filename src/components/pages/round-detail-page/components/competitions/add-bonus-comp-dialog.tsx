@@ -79,7 +79,6 @@ export function AddBonusCompDialog({
         tournamentId,
         name: getFormatLabel(),
         competitionCategory: 'bonus',
-        groupScope: 'all',
         roundId,
         competitionConfig: buildConfig(),
       },

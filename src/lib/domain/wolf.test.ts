@@ -156,7 +156,11 @@ describe('calculateWolf', () => {
   it('partnered wolf wins: 2 pts each for wolf and partner, 0 for others', () => {
     const holes = makeHoles([1]);
     const decisions: GameDecisionData[] = [
-      { holeNumber: 1, data: { wolfPlayerId: 'p1', partnerPlayerId: 'p2' } },
+      {
+        holeNumber: 1,
+        roundGroupId: null,
+        data: { wolfPlayerId: 'p1', partnerPlayerId: 'p2' },
+      },
     ];
     const scores = [
       makeScore('p1', 1, 3), // birdie
@@ -244,6 +248,7 @@ describe('calculateWolf', () => {
     const decisions: GameDecisionData[] = [
       {
         holeNumber: 1,
+        roundGroupId: null,
         data: {
           wolfPlayerId: 'p1',
           partnerPlayerId: null,
@@ -283,6 +288,7 @@ describe('calculateWolf', () => {
     const decisions: GameDecisionData[] = [
       {
         holeNumber: 1,
+        roundGroupId: null,
         data: {
           wolfPlayerId: 'p1',
           partnerPlayerId: null,

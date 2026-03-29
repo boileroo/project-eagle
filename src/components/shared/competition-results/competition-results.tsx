@@ -8,10 +8,12 @@ export function CompetitionResults({
   result,
   participantTeamColours,
   teamColours,
+  hideGroupHeaders,
 }: {
   result: CompetitionResult;
   participantTeamColours?: Map<string, string>;
   teamColours?: Map<string, string>;
+  hideGroupHeaders?: boolean;
 }) {
   switch (result.type) {
     case 'match_play':
@@ -22,6 +24,7 @@ export function CompetitionResults({
             sideA: m.playerA.displayName,
             sideB: m.playerB.displayName,
           }))}
+          hideGroupHeaders={hideGroupHeaders}
         />
       );
     case 'best_ball':
@@ -34,6 +37,7 @@ export function CompetitionResults({
             teamAPlayers: m.teamAPlayers,
             teamBPlayers: m.teamBPlayers,
           }))}
+          hideGroupHeaders={hideGroupHeaders}
         />
       );
     case 'rumble':
@@ -44,7 +48,13 @@ export function CompetitionResults({
         />
       );
     case 'hi_lo':
-      return <HiLoResults result={result.result} teamColours={teamColours} />;
+      return (
+        <HiLoResults
+          result={result.result}
+          teamColours={teamColours}
+          hideGroupHeaders={hideGroupHeaders}
+        />
+      );
     case 'wolf':
       return (
         <PointLeaderboard

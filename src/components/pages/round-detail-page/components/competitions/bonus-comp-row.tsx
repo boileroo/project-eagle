@@ -14,7 +14,6 @@ export function BonusCompRow({
   participants,
   isCommissioner,
   roundStatus,
-  hasGroups,
   onChanged,
 }: {
   comp: RoundCompetitionsData[number];
@@ -23,7 +22,6 @@ export function BonusCompRow({
   participants: RoundData['participants'];
   isCommissioner: boolean;
   roundStatus: string;
-  hasGroups: boolean;
   onChanged: () => void;
 }) {
   const [awarding, setAwarding] = useState(false);
@@ -90,11 +88,7 @@ export function BonusCompRow({
       </div>
       <div className="flex items-center gap-2">
         {isCommissioner && isDraft && (
-          <EditCompetitionDialog
-            comp={comp}
-            hasGroups={hasGroups}
-            onSaved={onChanged}
-          />
+          <EditCompetitionDialog comp={comp} onSaved={onChanged} />
         )}
         {award && (
           <>

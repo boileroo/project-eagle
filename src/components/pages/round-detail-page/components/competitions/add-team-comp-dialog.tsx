@@ -185,7 +185,12 @@ export function AddTeamCompDialog({
       case 'match_play':
         return {
           formatType: 'match_play',
-          config: { pointsPerWin, pointsPerHalf, pairings: [] },
+          config: {
+            scoringBasis: 'stableford',
+            pointsPerWin,
+            pointsPerHalf,
+            pairings: [],
+          },
         };
       default:
         return {
@@ -204,19 +209,12 @@ export function AddTeamCompDialog({
     return false;
   };
 
-  const groupScope = (): 'all' | 'within_group' => {
-    if (formatType === 'best_ball' || formatType === 'hi_lo')
-      return 'within_group';
-    return 'all';
-  };
-
   const handleSave = async () => {
     await createCompetition({
       variables: {
         tournamentId,
         name: getFormatLabel(),
         competitionCategory: 'match',
-        groupScope: groupScope(),
         roundId,
         competitionConfig: buildConfig(),
       },

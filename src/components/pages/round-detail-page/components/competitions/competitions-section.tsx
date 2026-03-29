@@ -14,6 +14,10 @@ import {
   type TeamData,
   type GameDecisionData,
 } from '@/lib/domain';
+import {
+  collectTeamPoints,
+  type TeamPointsEntry,
+} from '@/lib/domain/team-points';
 import { useQuery } from '@tanstack/react-query';
 import { getAllGameDecisionsFn } from '@/lib/game-decisions.server';
 import { resolveEffectiveHandicap, getPlayingHandicap } from '@/lib/handicaps';
@@ -27,60 +31,12 @@ import { toast } from 'sonner';
 import { EditCompetitionDialog } from './edit-competition-dialog';
 import { ConfigureMatchesDialog } from './configure-matches-dialog';
 import { AddIndividualCompDialog } from './add-individual-comp-dialog';
-import { AddMatchDialog } from './add-match-dialog';
 import { AddTeamCompDialog } from './add-team-comp-dialog';
 import { AddBonusCompDialog } from './add-bonus-comp-dialog';
 import { BonusCompRow } from './bonus-comp-row';
 import { CompetitionsExplainerDialog } from './components/competitions-explainer-dialog';
 import { TeamStandingsBanner } from './components/team-standings-banner';
 import type { RoundData, ScorecardData, RoundCompetitionsData } from '../types';
-
-type TeamPointsEntry = { teamId: string; teamName: string; points: number };
-
-function collectTeamPoints(
-  result: ReturnType<typeof calculateCompetitionResults>,
-  teams: TeamData[],
-): TeamPointsEntry[] {
-  const totals = new Map<string, TeamPointsEntry>();
-
-  const addPoints = (teamId: string, teamName: string, points: number) => {
-    const existing = totals.get(teamId) ?? { teamId, teamName, points: 0 };
-    existing.points += points;
-    totals.set(teamId, existing);
-  };
-
-  const playerTeamMap = new Map<string, { teamId: string; teamName: string }>();
-  for (const team of teams) {
-    for (const memberId of team.memberParticipantIds) {
-      playerTeamMap.set(memberId, { teamId: team.teamId, teamName: team.name });
-    }
-  }
-
-  switch (result.type) {
-    case 'match_play':
-      for (const match of result.result.matches) {
-        const teamA = playerTeamMap.get(match.playerA.roundParticipantId);
-        const teamB = playerTeamMap.get(match.playerB.roundParticipantId);
-        if (teamA) addPoints(teamA.teamId, teamA.teamName, match.pointsA);
-        if (teamB) addPoints(teamB.teamId, teamB.teamName, match.pointsB);
-      }
-      break;
-    case 'best_ball':
-    case 'hi_lo':
-      for (const match of result.result.matches) {
-        addPoints(match.teamA.teamId, match.teamA.name, match.pointsA);
-        addPoints(match.teamB.teamId, match.teamB.name, match.pointsB);
-      }
-      break;
-    case 'rumble':
-      for (const teamResult of result.result.teamResults) {
-        addPoints(teamResult.teamId, teamResult.teamName, teamResult.points);
-      }
-      break;
-  }
-
-  return [...totals.values()];
-}
 
 type EngineInputs = {
   holes: HoleData[];
@@ -215,7 +171,7 @@ function CompetitionEntry({
           </Badge>
           <Badge variant="secondary" className="text-xs">
             {comp.competitionCategory === 'match'
-              ? 'Match'
+              ? 'Team Match'
               : comp.competitionCategory === 'game'
                 ? 'Game'
                 : 'Bonus'}
@@ -223,11 +179,7 @@ function CompetitionEntry({
         </div>
         {isCommissioner && isDraft && (
           <div className="flex items-center gap-1">
-            <EditCompetitionDialog
-              comp={comp}
-              hasGroups={round.groups.length > 1}
-              onSaved={onChanged}
-            />
+            <EditCompetitionDialog comp={comp} onSaved={onChanged} />
             {comp.formatType === 'match_play' && (
               <ConfigureMatchesDialog
                 comp={comp}
@@ -257,13 +209,29 @@ function CompetitionEntry({
         <div className="space-y-4">
           {groupedResult.results.map((gr) => (
             <div key={gr.groupId}>
+              <p className="text-muted-foreground mb-1 text-xs font-medium">
+                {gr.groupName ?? `Group ${gr.groupNumber}`}
+              </p>
               <CompetitionResults
                 result={gr.result}
                 participantTeamColours={participantTeamColours}
                 teamColours={teamColours}
+                hideGroupHeaders
               />
             </div>
           ))}
+          {groupedResult.combined && (
+            <div>
+              <p className="text-muted-foreground mb-1 text-xs font-medium">
+                Combined
+              </p>
+              <CompetitionResults
+                result={groupedResult.combined}
+                participantTeamColours={participantTeamColours}
+                teamColours={teamColours}
+              />
+            </div>
+          )}
         </div>
       ) : groupedResult.scope === 'within_group' ? (
         groupedResult.results[0] ? (
@@ -425,12 +393,15 @@ export function TeamCompetitionsSection({
 
   const hasEnoughPlayers = round.participants.length >= 2;
 
-  const scoredComps = competitions.filter(
-    (c) => !isBonusFormat(c.formatType as CompetitionConfig['formatType']),
-  );
-  const bonusComps = competitions.filter((c) =>
-    isBonusFormat(c.formatType as CompetitionConfig['formatType']),
-  );
+  const { scoredComps, bonusComps } = useMemo(() => {
+    const scored = competitions.filter(
+      (c) => !isBonusFormat(c.formatType as CompetitionConfig['formatType']),
+    );
+    const bonus = competitions.filter((c) =>
+      isBonusFormat(c.formatType as CompetitionConfig['formatType']),
+    );
+    return { scoredComps: scored, bonusComps: bonus };
+  }, [competitions]);
 
   const teamStandings = useMemo(() => {
     const isActive = round.status === 'open' || round.status === 'finalized';
@@ -496,6 +467,23 @@ export function TeamCompetitionsSection({
     return [...totals.values()].sort((a, b) => b.points - a.points);
   }, [round.status, engineInputs, scoredComps]);
 
+  // Fetch tournament-wide aggregated team points (automatic aggregation)
+  const { data: overallData } = useQuery({
+    queryKey: ['tournament-team-points', round.tournamentId],
+    queryFn: () =>
+      import('@/lib/tournament-team-points.server').then((m) =>
+        m.getTournamentTeamPointsFn({
+          data: { tournamentId: round.tournamentId },
+        }),
+      ),
+    staleTime: 30_000,
+  });
+  // Only show overall standings when the tournament has more than one round
+  const overallTeamStandings =
+    overallData && overallData.roundCount > 1
+      ? overallData.standings
+      : undefined;
+
   return (
     <div className="space-y-4">
       <Card>
@@ -509,16 +497,6 @@ export function TeamCompetitionsSection({
                 roundId={round.id}
                 round={round}
                 hasTeams={hasTeams}
-                onSaved={onChanged}
-                disabled={
-                  !(isCommissioner && isDraft) || hasTeams || !hasEnoughPlayers
-                }
-              />
-
-              <AddMatchDialog
-                tournamentId={round.tournamentId}
-                roundId={round.id}
-                competitions={competitions}
                 onSaved={onChanged}
                 disabled={
                   !(isCommissioner && isDraft) || hasTeams || !hasEnoughPlayers
@@ -573,6 +551,7 @@ export function TeamCompetitionsSection({
               {teamStandings && (
                 <TeamStandingsBanner
                   standings={teamStandings}
+                  overallStandings={overallTeamStandings}
                   roundStatus={round.status as 'open' | 'finalized'}
                   teamColours={teamColours}
                 />
@@ -613,7 +592,6 @@ export function TeamCompetitionsSection({
                           participants={round.participants}
                           isCommissioner={isCommissioner}
                           roundStatus={round.status}
-                          hasGroups={round.groups.length > 1}
                           onChanged={onChanged}
                         />
                       );

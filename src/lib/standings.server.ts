@@ -263,7 +263,9 @@ export const computeStandingsFn = createServerFn({ method: 'GET' })
               formatType: c.formatType,
               config: c.configJson ?? {},
             } as CompetitionConfig,
-            groupScope: (c.groupScope ?? 'all') as 'all' | 'within_group',
+            groupScope: (c.formatType === 'rumble'
+              ? 'all'
+              : (c.groupScope ?? 'all')) as 'all' | 'within_group',
           },
           holes,
           participants,

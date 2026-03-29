@@ -115,6 +115,7 @@ export function calculateMatchPlay(
           config.pointsPerHalf,
           group.roundGroupId,
           group.name,
+          config.scoringBasis ?? 'stableford',
         );
         matches.push(matchResult);
       }
@@ -142,6 +143,9 @@ export function calculateMatchPlay(
       scoreLookup,
       config.pointsPerWin,
       config.pointsPerHalf,
+      undefined,
+      undefined,
+      config.scoringBasis ?? 'stableford',
     );
   });
 
@@ -173,6 +177,7 @@ export function calculateMatch(
   pointsPerHalf: number,
   groupId?: string,
   groupName?: string | null,
+  scoringBasis: 'stableford' | 'gross' | 'net' = 'stableford',
 ): MatchResult {
   const totalHoles = holes.length;
   const holeResults: MatchHoleResult[] = [];
@@ -194,18 +199,46 @@ export function calculateMatch(
 
     const aReceived = getStrokesOnHole(playerAHC, hole.strokeIndex);
     const bReceived = getStrokesOnHole(playerBHC, hole.strokeIndex);
-    const aPoints = stablefordPoints(aStrokes, hole.par, aReceived);
-    const bPoints = stablefordPoints(bStrokes, hole.par, bReceived);
 
+    let aPoints: number;
+    let bPoints: number;
     let holeWinner: 'A' | 'B' | 'halved';
-    if (aPoints > bPoints) {
-      holeWinner = 'A';
-      matchScore++;
-    } else if (bPoints > aPoints) {
-      holeWinner = 'B';
-      matchScore--;
+
+    if (scoringBasis === 'stableford') {
+      aPoints = stablefordPoints(aStrokes, hole.par, aReceived);
+      bPoints = stablefordPoints(bStrokes, hole.par, bReceived);
+      if (aPoints > bPoints) {
+        holeWinner = 'A';
+        matchScore++;
+      } else if (bPoints > aPoints) {
+        holeWinner = 'B';
+        matchScore--;
+      } else {
+        holeWinner = 'halved';
+      }
     } else {
-      holeWinner = 'halved';
+      // For gross/net: lower score wins
+      const aNetStrokes = aStrokes - aReceived;
+      const bNetStrokes = bStrokes - bReceived;
+
+      if (scoringBasis === 'net') {
+        aPoints = aNetStrokes;
+        bPoints = bNetStrokes;
+      } else {
+        // gross
+        aPoints = aStrokes;
+        bPoints = bStrokes;
+      }
+
+      if (aPoints < bPoints) {
+        holeWinner = 'A';
+        matchScore++;
+      } else if (bPoints < aPoints) {
+        holeWinner = 'B';
+        matchScore--;
+      } else {
+        holeWinner = 'halved';
+      }
     }
 
     holesCompleted++;

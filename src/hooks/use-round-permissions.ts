@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useDevRoleOverride } from '@/lib/dev/role-override';
 
 interface RoundParticipantPerson {
   id: string;
@@ -118,6 +119,48 @@ export function useRoundPermissions({
   }, [round, isCommissioner, isRoundMarker, myParticipant]);
 
   const isMarkerOrCommissioner = isRoundMarker || isCommissioner;
+
+  const devOverride = useDevRoleOverride();
+
+  if (devOverride && round) {
+    const overriddenIsCommissioner = devOverride === 'commissioner';
+    const overriddenIsMarker = devOverride === 'marker';
+
+    const overriddenEditableIds = new Set<string>();
+    if (round.status === 'open') {
+      if (overriddenIsCommissioner) {
+        for (const rp of round.participants) overriddenEditableIds.add(rp.id);
+      } else if (overriddenIsMarker) {
+        const myGroupId = myParticipant?.roundGroupId;
+        for (const rp of round.participants) {
+          if (myGroupId ? rp.roundGroupId === myGroupId : true) {
+            overriddenEditableIds.add(rp.id);
+          }
+        }
+      } else if (myParticipant) {
+        overriddenEditableIds.add(myParticipant.id);
+      }
+    }
+
+    const overriddenGetRecordingRole = (
+      roundParticipantId: string,
+    ): 'player' | 'marker' | 'commissioner' => {
+      const rp = round.participants.find((p) => p.id === roundParticipantId);
+      if (rp?.person.userId === userId) return 'player';
+      if (overriddenIsCommissioner) return 'commissioner';
+      return 'marker';
+    };
+
+    return {
+      isCommissioner: overriddenIsCommissioner,
+      myParticipant,
+      myRole,
+      isRoundMarker: overriddenIsMarker,
+      getRecordingRole: overriddenGetRecordingRole,
+      editableParticipantIds: overriddenEditableIds,
+      isMarkerOrCommissioner: overriddenIsCommissioner || overriddenIsMarker,
+    };
+  }
 
   return {
     isCommissioner,

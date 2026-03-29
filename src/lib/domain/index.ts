@@ -1,10 +1,5 @@
-// ──────────────────────────────────────────────
-// Domain Engine — Shared Types & Dispatcher
-//
-// Pure TypeScript. No DB access. No framework coupling.
-// ──────────────────────────────────────────────
-
 import type { CompetitionConfig } from '../competitions';
+import { isBonusFormat, isTeamFormat } from '../competition-config';
 import { calculateMatchPlay, type MatchPlayResult } from './match-play';
 import { calculateBestBall, type BestBallResult } from './best-ball';
 import { calculateRumble, type RumbleResult } from './rumble';
@@ -12,18 +7,18 @@ import { calculateHiLo, type HiLoResult } from './hi-lo';
 import { calculateWolf, type WolfResult } from './wolf';
 import { calculateSixPoint, type SixPointResult } from './six-point';
 import { calculateChair, type ChairResult } from './chair';
+
+/** Assigns tied-aware ranks to a sorted list of items. */
 export { assignRanks } from './rank';
 
-// ──────────────────────────────────────────────
-// Engine Input Types (pre-resolved by caller)
-// ──────────────────────────────────────────────
-
+/** A single hole on the course with par and stroke index. */
 export interface HoleData {
   holeNumber: number;
   par: number;
   strokeIndex: number;
 }
 
+/** A round participant with pre-resolved handicap data. */
 export interface ParticipantData {
   roundParticipantId: string;
   personId: string;
@@ -36,6 +31,7 @@ export interface ParticipantData {
   roundGroupId: string | null;
 }
 
+/** A playing group within a round. */
 export interface GroupData {
   roundGroupId: string;
   groupNumber: number;
@@ -43,6 +39,7 @@ export interface GroupData {
   memberParticipantIds: string[];
 }
 
+/** A team (either ad-hoc round team or tournament-level team). */
 export interface TeamData {
   teamId: string;
   name: string;
@@ -50,14 +47,14 @@ export interface TeamData {
   memberParticipantIds: string[];
 }
 
-/** Resolved score: latest event per (participantId, holeNumber) */
+/** Resolved score: latest event per (participantId, holeNumber). */
 export interface ResolvedScore {
   roundParticipantId: string;
   holeNumber: number;
   strokes: number;
 }
 
-/** Wolf per-hole game decision (latest per holeNumber wins) */
+/** Wolf per-hole game decision (latest per holeNumber wins). */
 export interface GameDecisionData {
   holeNumber: number;
   /** The group this decision belongs to (null for unscoped decisions) */
@@ -70,6 +67,7 @@ export interface GameDecisionData {
   };
 }
 
+/** All data needed by a competition engine to produce results. */
 export interface CompetitionInput {
   competition: {
     id: string;
@@ -88,10 +86,7 @@ export interface CompetitionInput {
   gameDecisions?: GameDecisionData[];
 }
 
-// ──────────────────────────────────────────────
-// Engine Result Types
-// ──────────────────────────────────────────────
-
+/** Discriminated union of all competition engine outputs. */
 export type CompetitionResult =
   | { type: 'match_play'; result: MatchPlayResult }
   | { type: 'best_ball'; result: BestBallResult }
@@ -103,20 +98,13 @@ export type CompetitionResult =
   | { type: 'six_point'; result: SixPointResult }
   | { type: 'chair'; result: ChairResult };
 
-// ──────────────────────────────────────────────
-// Group-scoped result wrapper
-// ──────────────────────────────────────────────
-
+/** A single group's competition result with group metadata. */
 export interface GroupCompetitionResult {
   groupId: string;
   groupNumber: number;
   groupName: string | null;
   result: CompetitionResult;
 }
-
-// ──────────────────────────────────────────────
-// Main Dispatcher
-// ──────────────────────────────────────────────
 
 /**
  * Dispatches to the appropriate scoring engine based on competition format,
@@ -142,7 +130,6 @@ export function calculateCompetitionResults(
         result: calculateBestBall(input, config.config),
       };
     case 'nearest_pin':
-      // Bonus comps are award-based, not score-derived
       return { type: 'nearest_pin', result: null };
     case 'longest_drive':
       return { type: 'longest_drive', result: null };
@@ -177,7 +164,6 @@ export function calculateCompetitionResults(
   }
 }
 
-// Re-exports
 export type { MatchPlayResult, MatchResult } from './match-play';
 export type { BestBallResult, BestBallMatchResult } from './best-ball';
 export type { RumbleResult, RumbleTeamResult } from './rumble';
@@ -186,28 +172,27 @@ export type { WolfResult, WolfHoleResult, WolfPlayerResult } from './wolf';
 export type { SixPointResult, SixPointPlayerResult } from './six-point';
 export type { ChairResult, ChairPlayerResult } from './chair';
 
-// ──────────────────────────────────────────────
-// Group-aware calculation
-//
-// For `within_group` competitions, splits participants
-// and scores by group and runs the engine per group.
-// For `all` competitions, runs once over all data.
-// ──────────────────────────────────────────────
-
 /**
- * Convenience wrapper that handles group splitting automatically.
+ * Handles group splitting automatically for competitions.
  *
  * For `within_group` scope competitions, iterates over each group in the input,
  * filters participants/scores to that group, and calls `calculateCompetitionResults`
  * once per group. Returns `scope: 'within_group'` with an array of group results.
  *
+ * When multiple groups produce results for non-team, non-bonus individual games,
+ * also produces a `combined` result that merges all participants and scores across
+ * groups into a single ranking. If the engine cannot handle the merged dataset
+ * (e.g. six_point requires exactly 3 players), the combined result is omitted.
+ *
  * For `all` scope competitions, runs once over all data and returns `scope: 'all'`.
  */
-export function calculateGroupedResults(
-  input: CompetitionInput,
-):
+export function calculateGroupedResults(input: CompetitionInput):
   | { scope: 'all'; result: CompetitionResult }
-  | { scope: 'within_group'; results: GroupCompetitionResult[] } {
+  | {
+      scope: 'within_group';
+      results: GroupCompetitionResult[];
+      combined?: CompetitionResult;
+    } {
   const { competition, groups } = input;
 
   if (
@@ -258,5 +243,23 @@ export function calculateGroupedResults(
     });
   }
 
-  return { scope: 'within_group', results: groupResults };
+  let combined: CompetitionResult | undefined;
+
+  const formatType = competition.config.formatType;
+  const shouldCombine =
+    groupResults.length > 1 &&
+    !isBonusFormat(formatType) &&
+    !isTeamFormat(formatType) &&
+    formatType !== 'match_play';
+
+  if (shouldCombine) {
+    try {
+      combined = calculateCompetitionResults(input);
+    } catch {
+      // Engine cannot handle the merged dataset (e.g. six_point requires
+      // exactly 3 players) — skip the combined result gracefully.
+    }
+  }
+
+  return { scope: 'within_group', results: groupResults, combined };
 }

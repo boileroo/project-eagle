@@ -282,6 +282,7 @@ describe('calculateMatchPlay (dispatcher)', () => {
           config: {
             formatType: 'match_play',
             config: {
+              scoringBasis: 'stableford',
               pointsPerWin: 1,
               pointsPerHalf: 0.5,
               pairings: [{ playerA: 'p1', playerB: 'p2' }],
@@ -297,6 +298,7 @@ describe('calculateMatchPlay (dispatcher)', () => {
         ],
       },
       {
+        scoringBasis: 'stableford',
         pointsPerWin: 1,
         pointsPerHalf: 0.5,
         pairings: [{ playerA: 'p1', playerB: 'p2' }],
@@ -339,7 +341,12 @@ describe('calculateMatchPlay (dispatcher)', () => {
           name: 'Test',
           config: {
             formatType: 'match_play',
-            config: { pointsPerWin: 1, pointsPerHalf: 0, pairings: [] },
+            config: {
+              scoringBasis: 'stableford',
+              pointsPerWin: 1,
+              pointsPerHalf: 0,
+              pairings: [],
+            },
           },
           groupScope: 'within_group',
         },
@@ -348,7 +355,12 @@ describe('calculateMatchPlay (dispatcher)', () => {
         scores: [],
         groups,
       },
-      { pointsPerWin: 1, pointsPerHalf: 0, pairings: [] },
+      {
+        scoringBasis: 'stableford',
+        pointsPerWin: 1,
+        pointsPerHalf: 0,
+        pairings: [],
+      },
     );
     expect(result.matches).toHaveLength(1);
   });
@@ -405,6 +417,7 @@ describe('calculateMatchPlay (dispatcher)', () => {
           config: {
             formatType: 'match_play',
             config: {
+              scoringBasis: 'stableford',
               pointsPerWin: 1,
               pointsPerHalf: 0,
               pairings: [
@@ -421,6 +434,7 @@ describe('calculateMatchPlay (dispatcher)', () => {
         groups,
       },
       {
+        scoringBasis: 'stableford',
         pointsPerWin: 1,
         pointsPerHalf: 0,
         pairings: [

@@ -16,9 +16,14 @@ interface HiLoResultsProps {
     }>;
   };
   teamColours?: Map<string, string>;
+  hideGroupHeaders?: boolean;
 }
 
-export function HiLoResults({ result, teamColours }: HiLoResultsProps) {
+export function HiLoResults({
+  result,
+  teamColours,
+  hideGroupHeaders,
+}: HiLoResultsProps) {
   const matches = result.matches;
 
   if (matches.length === 0) {
@@ -97,9 +102,11 @@ export function HiLoResults({ result, teamColours }: HiLoResultsProps) {
     <div className="space-y-4">
       {Array.from(groupedMatches.entries()).map(([groupId, groupMatches]) => (
         <div key={groupId}>
-          <h4 className="text-muted-foreground mb-2 text-sm font-medium">
-            {groupMatches[0]?.groupName ?? `Group ${groupId.slice(0, 8)}`}
-          </h4>
+          {!hideGroupHeaders && (
+            <h4 className="text-muted-foreground mb-2 text-sm font-medium">
+              {groupMatches[0]?.groupName ?? `Group ${groupId.slice(0, 8)}`}
+            </h4>
+          )}
           <div className="space-y-2">
             {groupMatches.map((match, i) =>
               renderMatch(match, `${groupId}-${i}`),

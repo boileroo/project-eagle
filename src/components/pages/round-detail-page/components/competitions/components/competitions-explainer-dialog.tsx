@@ -23,32 +23,64 @@ export function CompetitionsExplainerDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6">
-          {/* Games between individuals */}
           <div>
-            <h4 className="font-semibold">Games Between Individuals</h4>
+            <h4 className="font-semibold">Games (no teams)</h4>
             <p className="text-muted-foreground mt-1 text-sm">
-              Head-to-head or group games where players compete individually.
-              Each player's score is calculated independently (e.g. Wolf, Six
-              Point, Chair).
+              Individual competitions played within each group. Each group can
+              have at most one game. Available when teams are not enabled.
             </p>
+            <ul className="text-muted-foreground mt-1 list-inside list-disc text-sm">
+              <li>
+                <strong>Wolf</strong> — 4 players. Rotating wolf picks a partner
+                or goes lone/blind-lone.
+              </li>
+              <li>
+                <strong>Six Point</strong> — 3 players. 4/2/0 point distribution
+                per hole.
+              </li>
+              <li>
+                <strong>Chair</strong> — 2+ players. Best score takes the chair;
+                holder earns points.
+              </li>
+              <li>
+                <strong>Singles Match Play</strong> — 2-player pairings.
+                Head-to-head match play.
+              </li>
+            </ul>
           </div>
 
-          {/* Matches between teams */}
           <div>
-            <h4 className="font-semibold">Matches Between Teams</h4>
+            <h4 className="font-semibold">Team Matches (teams enabled)</h4>
             <p className="text-muted-foreground mt-1 text-sm">
-              Pairings or groups compete as teams. Team members' scores are
-              combined or compared per hole (e.g. Best Ball, Hi-Lo, Rumble).
+              Team-vs-team competitions. Exactly one team match type per round,
+              applied uniformly across all groups. Each match produces team
+              points that aggregate toward the tournament team standings.
             </p>
+            <ul className="text-muted-foreground mt-1 list-inside list-disc text-sm">
+              <li>
+                <strong>Best Ball (Fourball)</strong> — 2v2. Each pair's best
+                stableford per hole.
+              </li>
+              <li>
+                <strong>Hi-Lo</strong> — 2v2. High ball + low ball sub-matches
+                per hole.
+              </li>
+              <li>
+                <strong>Rumble</strong> — 4 same-team players. Escalating
+                contribution across holes.
+              </li>
+              <li>
+                <strong>Singles Match Play</strong> — Cross-team 1v1 pairings.
+              </li>
+            </ul>
           </div>
 
-          {/* Bonus */}
           <div>
             <h4 className="font-semibold">Bonus Prizes</h4>
             <p className="text-muted-foreground mt-1 text-sm">
-              Fun side prizes like Nearest the Pin or Longest Drive. These can
-              optionally add bonus points to the individual stableford standings
-              for an extra element of competition.
+              Side prizes like Nearest the Pin or Longest Drive. Always
+              available, spanning all players across all groups. Can optionally
+              add bonus points to individual stableford standings.
             </p>
           </div>
         </div>

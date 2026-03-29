@@ -7,21 +7,10 @@ export const scoringBasisSchema = z.enum([
 ]);
 export type ScoringBasis = z.infer<typeof scoringBasisSchema>;
 
-export const stablefordConfigSchema = z.object({
-  formatType: z.literal('stableford'),
-  config: z.object({}),
-});
-
-export const strokePlayConfigSchema = z.object({
-  formatType: z.literal('stroke_play'),
-  config: z.object({
-    scoringBasis: z.enum(['net_strokes', 'gross_strokes']),
-  }),
-});
-
 export const matchPlayConfigSchema = z.object({
   formatType: z.literal('match_play'),
   config: z.object({
+    scoringBasis: z.enum(['stableford', 'gross', 'net']).default('stableford'),
     pointsPerWin: z.number().min(0).default(1),
     pointsPerHalf: z.number().min(0).default(0.5),
     pairings: z.array(
@@ -115,8 +104,6 @@ export const competitionConfigSchema = z.discriminatedUnion('formatType', [
 ]);
 export type CompetitionConfig = z.infer<typeof competitionConfigSchema>;
 
-export type StablefordConfig = z.infer<typeof stablefordConfigSchema>;
-export type StrokePlayConfig = z.infer<typeof strokePlayConfigSchema>;
 export type MatchPlayConfig = z.infer<typeof matchPlayConfigSchema>;
 export type BestBallConfig = z.infer<typeof bestBallConfigSchema>;
 export type NearestPinConfig = z.infer<typeof nearestPinConfigSchema>;
@@ -146,21 +133,15 @@ export const FORMAT_TYPES = Object.keys(
   FORMAT_TYPE_LABELS,
 ) as CompetitionConfig['formatType'][];
 
+/**
+ * Returns true for formats that inherently require team composition
+ * (2v2 pairs or same-team groups). Does not include match_play, which
+ * can be either individual or team-based depending on context.
+ */
 export function isTeamFormat(
   formatType: CompetitionConfig['formatType'],
 ): boolean {
   return (
-    formatType === 'best_ball' ||
-    formatType === 'hi_lo' ||
-    formatType === 'rumble'
-  );
-}
-
-export function isMatchFormat(
-  formatType: CompetitionConfig['formatType'],
-): boolean {
-  return (
-    formatType === 'match_play' ||
     formatType === 'best_ball' ||
     formatType === 'hi_lo' ||
     formatType === 'rumble'
@@ -173,33 +154,26 @@ export function isBonusFormat(
   return formatType === 'nearest_pin' || formatType === 'longest_drive';
 }
 
+/**
+ * Returns true for any scored competition format (everything except bonus).
+ */
 export function isGameFormat(
   formatType: CompetitionConfig['formatType'],
 ): boolean {
-  return (
-    formatType === 'match_play' ||
-    formatType === 'best_ball' ||
-    formatType === 'hi_lo' ||
-    formatType === 'rumble' ||
-    formatType === 'wolf' ||
-    formatType === 'six_point' ||
-    formatType === 'chair'
-  );
+  return !isBonusFormat(formatType);
 }
 
-export const PARTICIPANT_TYPE_LABELS: Record<'individual' | 'team', string> = {
-  individual: 'Individual',
-  team: 'Team',
-};
+export type CompetitionCategory = 'game' | 'match' | 'bonus';
 
 export type GroupScope = 'all' | 'within_group';
 
-export const GROUP_SCOPE_LABELS: Record<GroupScope, string> = {
-  all: 'All Players',
-  within_group: 'Within Group',
-};
-
-export const GROUP_SCOPES = Object.keys(GROUP_SCOPE_LABELS) as GroupScope[];
+/**
+ * Derives the group scope from the competition category.
+ * Games and team matches run within each group; bonus spans all players.
+ */
+export function deriveGroupScope(category: CompetitionCategory): GroupScope {
+  return category === 'bonus' ? 'all' : 'within_group';
+}
 
 export const sumStablefordAggregationSchema = z.object({
   method: z.literal('sum_stableford'),

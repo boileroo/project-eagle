@@ -4,6 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { TEST_ACCOUNTS } from '@/lib/dev/test-accounts';
 import { roundQueryOptions } from '@/lib/query-options';
+import {
+  useDevRoleOverride,
+  setDevRoleOverride,
+  type DevRoleOverride,
+} from '@/lib/dev/role-override';
 import { PresetsTab } from './components/presets-tab';
 import { ScoresTab } from './components/scores-tab';
 import { ActionsTab } from './components/actions-tab';
@@ -108,6 +113,14 @@ export function DevTools() {
   const roundCtx = useRoundContext();
   const testUser = useCurrentTestUser();
   const router = useRouter();
+  const devRoleOverride = useDevRoleOverride();
+
+  const handleRoleToggle = useCallback(
+    (role: DevRoleOverride) => {
+      setDevRoleOverride(devRoleOverride === role ? null : role);
+    },
+    [devRoleOverride],
+  );
 
   const handleNavigateToRound = useCallback(
     (tournamentId: string, roundId: string) => {
@@ -166,6 +179,28 @@ export function DevTools() {
                 </>
               )}
             </div>
+            {roundCtx && (
+              <div className="mt-1.5 flex items-center gap-1">
+                <span className="text-muted-foreground text-[10px]">
+                  View as
+                </span>
+                {(
+                  ['commissioner', 'marker', 'player'] as DevRoleOverride[]
+                ).map((role) => (
+                  <button
+                    key={role}
+                    onClick={() => handleRoleToggle(role)}
+                    className={`rounded px-1.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
+                      devRoleOverride === role
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Tabs */}
