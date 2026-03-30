@@ -16,3 +16,4 @@ export { TournamentDetailPage } from './tournament-detail-page/tournament-detail
 export { LiveScoringPage } from './live-scoring-page/live-scoring-page';
 export { JoinPage } from './join-page/join-page';
 export { GuestsPage } from './guests-page/guests-page';
+export { WizardPage } from './wizard-page/wizard-page';

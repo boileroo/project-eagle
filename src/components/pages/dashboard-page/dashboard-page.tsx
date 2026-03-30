@@ -29,6 +29,12 @@ export function DashboardPage({
 
       <DashboardSection title="Start" gridCols={3}>
         <DashboardCard
+          title="Guided Setup"
+          description="Step-by-step wizard to create a single round or tournament"
+          to="/tournaments/wizard"
+          size="large"
+        />
+        <DashboardCard
           title="New Tournament"
           description="Multi-round event with teams, competitions, and standings"
           to="/tournaments/new"

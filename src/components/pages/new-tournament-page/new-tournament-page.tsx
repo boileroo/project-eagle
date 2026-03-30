@@ -1,4 +1,4 @@
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, Link } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCreateTournament } from '@/lib/tournaments';
@@ -54,6 +54,12 @@ export function NewTournamentPage() {
         <p className="text-muted-foreground">
           Set up a new tournament. You can add players and rounds after creating
           it.
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Want a step-by-step walkthrough?{' '}
+          <Link to="/tournaments/wizard" className="text-primary underline-offset-4 hover:underline">
+            Use the wizard →
+          </Link>
         </p>
       </div>
 

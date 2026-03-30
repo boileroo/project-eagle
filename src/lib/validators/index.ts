@@ -8,3 +8,4 @@ export * from './score';
 export * from './shared';
 export * from './team';
 export * from './tournament';
+export * from './wizard';
