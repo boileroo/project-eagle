@@ -18,6 +18,7 @@ type Team = {
 
 type TeamItemProps = {
   team: Team;
+  allTeams: { id: string; name: string }[];
   canEdit: boolean;
   unassignedParticipants: {
     id: string;
@@ -27,17 +28,22 @@ type TeamItemProps = {
   }[];
   onAddMember: (teamId: string, participantId: string) => void;
   onRemoveMember: (memberId: string) => void;
+  onMoveToTeam: (memberId: string, targetTeamId: string) => void;
   onDelete: (teamId: string, teamName: string) => void;
 };
 
 export function TeamItem({
   team,
+  allTeams,
   canEdit,
   unassignedParticipants,
   onAddMember,
   onRemoveMember,
+  onMoveToTeam,
   onDelete,
 }: TeamItemProps) {
+  const otherTeams = allTeams.filter((t) => t.id !== team.id);
+
   return (
     <div key={team.id} className="space-y-2 rounded-md border p-3">
       <div className="flex items-center justify-between">
@@ -66,14 +72,37 @@ export function TeamItem({
           >
             <span>{m.participant.person.displayName}</span>
             {canEdit && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-5 px-1 text-xs"
-                onClick={() => onRemoveMember(m.id)}
-              >
-                ×
-              </Button>
+              <div className="flex items-center gap-1">
+                {otherTeams.length > 0 && (
+                  <select
+                    className="text-muted-foreground h-5 cursor-pointer border-none bg-transparent text-xs focus:outline-none"
+                    defaultValue=""
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        onMoveToTeam(m.id, e.target.value);
+                        e.target.value = '';
+                      }
+                    }}
+                  >
+                    <option value="" disabled>
+                      Move to…
+                    </option>
+                    {otherTeams.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-5 px-1 text-xs"
+                  onClick={() => onRemoveMember(m.id)}
+                >
+                  ×
+                </Button>
+              </div>
             )}
           </div>
         ))}

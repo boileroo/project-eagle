@@ -20,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
@@ -104,14 +103,6 @@ export function JoinTournamentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <button className="group bg-card hover:bg-background w-full rounded-lg border p-6 text-left transition-colors">
-          <h3 className="mb-1 font-semibold">Join Tournament</h3>
-          <p className="text-muted-foreground text-sm">
-            Enter a code to join an existing tournament
-          </p>
-        </button>
-      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Join Tournament</DialogTitle>

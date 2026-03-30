@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 interface DashboardSectionProps {
   title: string;
   children: ReactNode;
-  gridCols?: 2 | 3;
+  gridCols?: 1 | 2 | 3;
 }
 
 export function DashboardSection({
@@ -11,7 +11,12 @@ export function DashboardSection({
   children,
   gridCols = 2,
 }: DashboardSectionProps) {
-  const gridClass = gridCols === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2';
+  const gridClass =
+    gridCols === 3
+      ? 'sm:grid-cols-3'
+      : gridCols === 2
+        ? 'sm:grid-cols-2'
+        : 'grid-cols-1';
 
   return (
     <section className="space-y-3">

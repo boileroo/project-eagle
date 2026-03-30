@@ -179,6 +179,58 @@ export const removeTeamMemberFn = createServerFn({ method: 'POST' })
   });
 
 // ──────────────────────────────────────────────
+// Move a team member to a different team
+// ──────────────────────────────────────────────
+
+export const moveTeamMemberFn = createServerFn({ method: 'POST' })
+  .inputValidator(
+    z.object({
+      memberId: z.string().uuid(),
+      targetTeamId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const existing = await db.query.tournamentTeamMembers.findFirst({
+      where: eq(tournamentTeamMembers.id, data.memberId),
+    });
+    if (!existing) throw new Error('Team member not found');
+
+    const targetTeam = await db.query.tournamentTeams.findFirst({
+      where: eq(tournamentTeams.id, data.targetTeamId),
+    });
+    if (!targetTeam) throw new Error('Target team not found');
+
+    const sourceTeam = await db.query.tournamentTeams.findFirst({
+      where: eq(tournamentTeams.id, existing.teamId),
+    });
+    if (!sourceTeam) throw new Error('Source team not found');
+
+    if (sourceTeam.tournamentId !== targetTeam.tournamentId) {
+      throw new Error('Teams must belong to the same tournament');
+    }
+
+    await requireCommissioner(targetTeam.tournamentId);
+    await requireTournamentSetup(targetTeam.tournamentId);
+
+    if (existing.teamId === data.targetTeamId) {
+      return { success: true };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(tournamentTeamMembers)
+        .where(eq(tournamentTeamMembers.id, data.memberId));
+
+      await tx.insert(tournamentTeamMembers).values({
+        teamId: data.targetTeamId,
+        participantId: existing.participantId,
+      });
+    });
+
+    return { success: true };
+  });
+
+// ──────────────────────────────────────────────
 // Delete all teams for a tournament
 // ──────────────────────────────────────────────
 

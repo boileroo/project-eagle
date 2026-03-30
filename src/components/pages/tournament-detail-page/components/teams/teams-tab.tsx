@@ -3,6 +3,7 @@ import {
   useCreateTeam,
   useAddTeamMember,
   useRemoveTeamMember,
+  useMoveTeamMember,
 } from '@/lib/teams';
 import { ArrowRight, Trophy, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ export function TeamsTab({
   const [createTeam] = useCreateTeam();
   const [addTeamMember] = useAddTeamMember();
   const [removeTeamMember] = useRemoveTeamMember();
+  const [moveTeamMember] = useMoveTeamMember();
   const [newTeamName, setNewTeamName] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<{
     teamId: string;
@@ -107,6 +109,22 @@ export function TeamsTab({
       variables: { memberId },
       onSuccess: () => {
         toast.success('Player removed from team.');
+        onChanged();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
+  };
+
+  const handleMoveTeamMember = async (
+    memberId: string,
+    targetTeamId: string,
+  ) => {
+    await moveTeamMember({
+      variables: { memberId, targetTeamId },
+      onSuccess: () => {
+        toast.success('Player moved to team.');
         onChanged();
       },
       onError: (error) => {
@@ -212,10 +230,12 @@ export function TeamsTab({
                 <TeamItem
                   key={team.id}
                   team={team}
+                  allTeams={teams.map((t) => ({ id: t.id, name: t.name }))}
                   canEdit={canEdit}
                   unassignedParticipants={unassignedForTeams}
                   onAddMember={handleAddTeamMember}
                   onRemoveMember={handleRemoveTeamMember}
+                  onMoveToTeam={handleMoveTeamMember}
                   onDelete={(teamId, teamName) =>
                     setDeleteConfirm({ teamId, name: teamName })
                   }

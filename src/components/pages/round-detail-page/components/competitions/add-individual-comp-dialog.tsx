@@ -16,7 +16,6 @@ import {
 import { toast } from 'sonner';
 import { INDIVIDUAL_FORMATS } from '../constants';
 import { ScoringBasisRadio } from './competition-fields/scoring-basis-radio';
-import { PointsFields } from './competition-fields/points-fields';
 import type { RoundData } from '../types';
 
 const REQUIRED_GROUP_SIZE: Record<string, number> = {
@@ -295,12 +294,6 @@ export function AddIndividualCompDialog({
                 value={matchPlayScoringBasis}
                 onChange={setMatchPlayScoringBasis}
                 name="match-play-basis"
-              />
-              <PointsFields
-                pointsPerWin={pointsPerWin}
-                pointsPerHalf={pointsPerHalf}
-                onPointsPerWinChange={setPointsPerWin}
-                onPointsPerHalfChange={setPointsPerHalf}
               />
             </div>
           )}

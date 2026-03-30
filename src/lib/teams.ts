@@ -5,6 +5,7 @@ import {
   deleteTeamFn,
   addTeamMemberFn,
   removeTeamMemberFn,
+  moveTeamMemberFn,
   deleteAllTeamsFn,
 } from '@/lib/teams.server';
 import type { MutationCallOptions, MutationHookReturn } from '@/lib/mutation';
@@ -202,6 +203,48 @@ export function useRemoveTeamMember(): MutationHookReturn<
     RemoveTeamMemberVariables,
     RemoveTeamMemberResult
   >) => {
+    try {
+      const result = await mutation.mutateAsync(variables);
+      await onSuccess?.(result);
+    } catch (error) {
+      onError?.(error instanceof Error ? error : new Error(String(error)));
+    }
+  };
+
+  return [
+    mutate,
+    {
+      isPending: mutation.isPending,
+      isError: mutation.isError,
+      error: mutation.error,
+    },
+  ] as const;
+}
+
+// ──────────────────────────────────────────────
+// useMoveTeamMember
+// ──────────────────────────────────────────────
+
+type MoveTeamMemberVariables = {
+  memberId: string;
+  targetTeamId: string;
+};
+type MoveTeamMemberResult = { success: boolean };
+
+export function useMoveTeamMember(): MutationHookReturn<
+  MoveTeamMemberVariables,
+  MoveTeamMemberResult
+> {
+  const mutation = useMutation({
+    mutationFn: (variables: MoveTeamMemberVariables) =>
+      moveTeamMemberFn({ data: variables }),
+  });
+
+  const mutate = async ({
+    variables,
+    onSuccess,
+    onError,
+  }: MutationCallOptions<MoveTeamMemberVariables, MoveTeamMemberResult>) => {
     try {
       const result = await mutation.mutateAsync(variables);
       await onSuccess?.(result);

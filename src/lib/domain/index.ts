@@ -7,6 +7,7 @@ import { calculateHiLo, type HiLoResult } from './hi-lo';
 import { calculateWolf, type WolfResult } from './wolf';
 import { calculateSixPoint, type SixPointResult } from './six-point';
 import { calculateChair, type ChairResult } from './chair';
+import { assignRanks as _assignRanks } from './rank';
 
 /** Assigns tied-aware ranks to a sorted list of items. */
 export { assignRanks } from './rank';
@@ -173,6 +174,102 @@ export type { SixPointResult, SixPointPlayerResult } from './six-point';
 export type { ChairResult, ChairPlayerResult } from './chair';
 
 /**
+ * Builds a combined leaderboard for point-based per-group formats (wolf,
+ * six_point, chair) by summing each player's totalPoints across all group
+ * results and re-ranking. This avoids re-running the engine with a merged
+ * dataset that would produce incorrect rotations or player-count violations.
+ */
+function mergePointLeaderboards(
+  formatType: 'wolf' | 'six_point' | 'chair',
+  groupResults: GroupCompetitionResult[],
+): CompetitionResult {
+  const totals = new Map<
+    string,
+    { displayName: string; totalPoints: number }
+  >();
+
+  for (const gr of groupResults) {
+    let leaderboard: {
+      roundParticipantId: string;
+      displayName: string;
+      totalPoints: number;
+    }[];
+
+    if (formatType === 'wolf') {
+      leaderboard = (gr.result as { type: 'wolf'; result: WolfResult }).result
+        .leaderboard;
+    } else if (formatType === 'six_point') {
+      leaderboard = (gr.result as { type: 'six_point'; result: SixPointResult })
+        .result.leaderboard;
+    } else {
+      leaderboard = (gr.result as { type: 'chair'; result: ChairResult }).result
+        .leaderboard;
+    }
+
+    for (const entry of leaderboard) {
+      const existing = totals.get(entry.roundParticipantId);
+      if (existing) {
+        existing.totalPoints += entry.totalPoints;
+      } else {
+        totals.set(entry.roundParticipantId, {
+          displayName: entry.displayName,
+          totalPoints: entry.totalPoints,
+        });
+      }
+    }
+  }
+
+  const merged = Array.from(totals.entries())
+    .map(([roundParticipantId, { displayName, totalPoints }]) => ({
+      roundParticipantId,
+      displayName,
+      totalPoints,
+      rank: 0,
+    }))
+    .sort((a, b) => b.totalPoints - a.totalPoints);
+
+  _assignRanks(merged, (p) => p.totalPoints);
+
+  if (formatType === 'wolf') {
+    return {
+      type: 'wolf',
+      result: {
+        leaderboard: merged.map((p) => ({
+          ...p,
+          rotationPosition: 0,
+          holeResults: [],
+          holesCompleted: 0,
+        })),
+      },
+    };
+  }
+
+  if (formatType === 'six_point') {
+    return {
+      type: 'six_point',
+      result: {
+        leaderboard: merged.map((p) => ({
+          ...p,
+          holeScores: [],
+          holesCompleted: 0,
+        })),
+      },
+    };
+  }
+
+  return {
+    type: 'chair',
+    result: {
+      leaderboard: merged.map((p) => ({
+        ...p,
+        holeResults: [],
+        holesCompleted: 0,
+      })),
+    },
+  };
+}
+
+/**
  * Handles group splitting automatically for competitions.
  *
  * For `within_group` scope competitions, iterates over each group in the input,
@@ -253,11 +350,18 @@ export function calculateGroupedResults(input: CompetitionInput):
     formatType !== 'match_play';
 
   if (shouldCombine) {
-    try {
-      combined = calculateCompetitionResults(input);
-    } catch {
-      // Engine cannot handle the merged dataset (e.g. six_point requires
-      // exactly 3 players) — skip the combined result gracefully.
+    if (
+      formatType === 'wolf' ||
+      formatType === 'six_point' ||
+      formatType === 'chair'
+    ) {
+      combined = mergePointLeaderboards(formatType, groupResults);
+    } else {
+      try {
+        combined = calculateCompetitionResults(input);
+      } catch {
+        // Engine cannot handle the merged dataset — skip the combined result gracefully.
+      }
     }
   }
 

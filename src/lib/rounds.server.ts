@@ -3,6 +3,7 @@ import { and, eq, count, asc, lt } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
 import {
+  competitions,
   courses,
   rounds,
   roundGroups,
@@ -498,6 +499,143 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
           throw new Error(
             `Cannot finalize this round while Round ${unfinalized.roundNumber} is not finalized`,
           );
+        }
+      }
+    }
+
+    // Group-size validation when opening a round
+    if (data.newStatus === 'open') {
+      const roundCompetitions = await db.query.competitions.findMany({
+        where: eq(competitions.roundId, data.roundId),
+      });
+
+      const withinGroupComps = roundCompetitions.filter(
+        (c) => c.groupScope === 'within_group',
+      );
+
+      if (withinGroupComps.length > 0) {
+        const roundGroupsWithParticipants = await db.query.roundGroups.findMany(
+          {
+            where: eq(roundGroups.roundId, data.roundId),
+            with: { participants: true },
+          },
+        );
+
+        for (const comp of withinGroupComps) {
+          const relevantGroups = comp.roundGroupId
+            ? roundGroupsWithParticipants.filter(
+                (g) => g.id === comp.roundGroupId,
+              )
+            : roundGroupsWithParticipants;
+
+          for (const group of relevantGroups) {
+            const size = group.participants.length;
+            const groupLabel = group.name ?? `Group ${group.groupNumber}`;
+
+            if (comp.formatType === 'wolf' && size !== 4) {
+              throw new Error(
+                `Cannot open round: "${comp.name}" (Wolf) requires exactly 4 players per group, but ${groupLabel} has ${size}.`,
+              );
+            }
+
+            if (comp.formatType === 'six_point' && size !== 3) {
+              throw new Error(
+                `Cannot open round: "${comp.name}" (Six Point) requires exactly 3 players per group, but ${groupLabel} has ${size}.`,
+              );
+            }
+
+            if (
+              (comp.formatType === 'best_ball' ||
+                comp.formatType === 'hi_lo' ||
+                comp.formatType === 'rumble') &&
+              size !== 4
+            ) {
+              throw new Error(
+                `Cannot open round: "${comp.name}" requires exactly 4 players per group, but ${groupLabel} has ${size}.`,
+              );
+            }
+
+            if (comp.formatType === 'chair' && size < 2) {
+              throw new Error(
+                `Cannot open round: "${comp.name}" (Chair) requires at least 2 players per group, but ${groupLabel} has ${size}.`,
+              );
+            }
+          }
+        }
+      }
+
+      // Team-membership validation for team-based formats
+      const teamBasedComps = roundCompetitions.filter((c) =>
+        ['best_ball', 'hi_lo', 'rumble'].includes(c.formatType),
+      );
+
+      if (teamBasedComps.length > 0) {
+        const roundGroupsWithParticipants = await db.query.roundGroups.findMany(
+          {
+            where: eq(roundGroups.roundId, data.roundId),
+            with: { participants: true },
+          },
+        );
+
+        const allTournamentParticipantIds = roundGroupsWithParticipants
+          .flatMap((g) => g.participants)
+          .map((rp) => rp.tournamentParticipantId)
+          .filter((id): id is string => id != null);
+
+        const teamMemberships =
+          allTournamentParticipantIds.length > 0
+            ? await db.query.tournamentTeamMembers.findMany({
+                where: (ttm, { inArray }) =>
+                  inArray(ttm.participantId, allTournamentParticipantIds),
+              })
+            : [];
+
+        const teamByParticipantId = new Map<string, string>();
+        for (const m of teamMemberships) {
+          teamByParticipantId.set(m.participantId, m.teamId);
+        }
+
+        for (const comp of teamBasedComps) {
+          const relevantGroups = comp.roundGroupId
+            ? roundGroupsWithParticipants.filter(
+                (g) => g.id === comp.roundGroupId,
+              )
+            : roundGroupsWithParticipants;
+
+          for (const group of relevantGroups) {
+            const groupLabel = group.name ?? `Group ${group.groupNumber}`;
+
+            for (const rp of group.participants) {
+              if (
+                !rp.tournamentParticipantId ||
+                !teamByParticipantId.has(rp.tournamentParticipantId)
+              ) {
+                throw new Error(
+                  `Cannot open round: "${comp.name}" requires all players to be assigned to a team. A player in ${groupLabel} has no team assignment.`,
+                );
+              }
+            }
+
+            if (
+              comp.formatType === 'best_ball' ||
+              comp.formatType === 'hi_lo'
+            ) {
+              const teamIds = new Set(
+                group.participants
+                  .map((rp) =>
+                    rp.tournamentParticipantId
+                      ? teamByParticipantId.get(rp.tournamentParticipantId)
+                      : undefined,
+                  )
+                  .filter((id): id is string => id != null),
+              );
+              if (teamIds.size !== 2) {
+                throw new Error(
+                  `Cannot open round: "${comp.name}" requires exactly 2 teams per group, but ${groupLabel} has players from ${teamIds.size} team(s).`,
+                );
+              }
+            }
+          }
         }
       }
     }
