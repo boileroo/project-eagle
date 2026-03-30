@@ -1,0 +1,5 @@
+@utility label-caps {
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 600;
+}

@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface ContinueWithGoogleButtonProps {
   onClick: () => void;
@@ -14,7 +15,8 @@ export function ContinueWithGoogleButton({
   return (
     <Button
       variant="outline"
-      className={className}
+      size="xl"
+      className={cn('w-full', className)}
       onClick={onClick}
       disabled={isLoading}
     >

@@ -11,6 +11,7 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { DevTools } from '@/components/dev-tools/dev-tools';
 import { PwaUpdateToast } from '@/components/pwa-update-toast';
+import { MeshGradient } from '@/components/ui/mesh-gradient';
 import { getAuthUser } from '@/lib/auth.server';
 import appCss from '@/styles/globals.css?url';
 import { appleSplashScreens } from '@/config/apple-splash';
@@ -63,7 +64,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { name: 'theme-color', content: '#FAF9F6' },
+      { name: 'theme-color', content: '#12131d' },
       { name: 'apple-mobile-web-app-capable', content: 'yes' },
       {
         name: 'apple-mobile-web-app-status-bar-style',
@@ -120,6 +121,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
           enableSystem={false}
           disableTransitionOnChange
         >
+          <MeshGradient />
           {children}
           <Toaster />
         </ThemeProvider>

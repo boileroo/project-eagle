@@ -1,0 +1,22 @@
+@layer base {
+  :root {
+    --glass-bg: rgba(255, 255, 255, 0.5);
+    --glass-border: rgba(255, 255, 255, 0.8);
+    --glass-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  }
+
+  .dark {
+    --glass-bg: oklch(0.2 0.028 264.05 / 0.4);
+    --glass-border: oklch(1 0 0 / 0.04);
+    --glass-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  }
+}
+
+@utility glass {
+  background: var(--glass-bg);
+  border-radius: 16px;
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+}
