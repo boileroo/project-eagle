@@ -13,7 +13,7 @@ export function AerieTextLogo({
       )}
       {...props}
     >
-      Aerie
+      Aerie<span className="text-tokyo-white">.</span>
     </p>
   );
 }

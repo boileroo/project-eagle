@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Text } from '@/components/ui/text';
 
 interface DashboardSectionProps {
   title: string;
@@ -19,10 +20,14 @@ export function DashboardSection({
         : 'grid-cols-1';
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-muted-foreground text-sm font-medium tracking-wider uppercase">
+    <section className="space-y-4">
+      <Text
+        size="xs"
+        color="blue"
+        className="font-bold tracking-[0.2em] uppercase"
+      >
         {title}
-      </h2>
+      </Text>
       <div className={`grid gap-4 ${gridClass}`}>{children}</div>
     </section>
   );

@@ -1,7 +1,10 @@
 import { Link } from '@tanstack/react-router';
+import { Card } from '@/components/ui/card';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 import type { ActiveRound } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+
+import { LiveBadge } from '@/components/ui/live-badge';
 
 interface ActiveRoundSectionProps {
   activeRounds: ActiveRound[];
@@ -10,77 +13,98 @@ interface ActiveRoundSectionProps {
 export function ActiveRoundSection({ activeRounds }: ActiveRoundSectionProps) {
   if (activeRounds.length === 0) return null;
 
+  const round = activeRounds[0];
+  const roundTitle = round.isSingleRound
+    ? round.tournamentName
+    : `Round ${round.roundNumber ?? 1}`;
+
   return (
-    <section className="space-y-3">
-      <h2 className="text-muted-foreground text-sm font-medium tracking-wider uppercase">
-        Resume
-      </h2>
-      {activeRounds.length === 1 ? (
+    <div className="flex w-full flex-col justify-center gap-4">
+      {/* Main Active Round Card */}
+      <Card
+        isHoverable
+        className="relative flex w-full flex-col justify-between gap-6 overflow-hidden rounded-[2.5rem] border-white/5 p-6 sm:p-8 md:flex-row md:items-center"
+      >
+        <div className="flex flex-col gap-4 md:gap-2">
+          {/* Top row: LIVE pill and Course Name */}
+          <div className="flex items-center gap-3">
+            <LiveBadge />
+            <Text size="sm" color="muted">
+              {round.courseName}
+            </Text>
+          </div>
+
+          {/* Title */}
+          <div>
+            <Heading level={2} color="white">
+              {roundTitle}
+            </Heading>
+            {!round.isSingleRound && (
+              <Text size="sm" color="muted" className="mt-1">
+                {round.tournamentName}
+              </Text>
+            )}
+          </div>
+        </div>
+
         <Link
           to="/tournaments/$tournamentId/rounds/$roundId"
           params={{
-            tournamentId: activeRounds[0].tournamentId,
-            roundId: activeRounds[0].roundId,
+            tournamentId: round.tournamentId,
+            roundId: round.roundId,
           }}
-          className="group block"
+          className="bg-tokyo-blue text-background flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 font-bold tracking-wider uppercase md:w-auto md:shrink-0"
         >
-          <Card className="border-primary/40 bg-primary/5 group-hover:bg-primary/10 border-l-4 transition-colors">
-            <CardContent className="flex items-center justify-between p-5">
-              <div className="min-w-0 space-y-1">
-                <p className="truncate text-lg font-semibold">
-                  {activeRounds[0].courseName}
-                  {!activeRounds[0].isSingleRound &&
-                    activeRounds[0].roundNumber != null &&
-                    ` — Round ${activeRounds[0].roundNumber}`}
-                </p>
-                {!activeRounds[0].isSingleRound && (
-                  <p className="text-muted-foreground text-sm">
-                    {activeRounds[0].tournamentName}
-                  </p>
-                )}
-              </div>
-              <Badge variant="secondary" className="shrink-0">
-                Live
-              </Badge>
-            </CardContent>
-          </Card>
+          <Text size="sm" asChild>
+            <span>Continue Round</span>
+          </Text>
+          <span className="ml-1 leading-none">→</span>
         </Link>
-      ) : (
-        <div className="space-y-2">
-          {activeRounds.map((round) => (
+      </Card>
+
+      {/* If there are more active rounds, list them minimally underneath */}
+      {activeRounds.length > 1 && (
+        <div className="flex flex-col gap-2">
+          {activeRounds.slice(1).map((r) => (
             <Link
-              key={round.roundId}
+              key={r.roundId}
               to="/tournaments/$tournamentId/rounds/$roundId"
               params={{
-                tournamentId: round.tournamentId,
-                roundId: round.roundId,
+                tournamentId: r.tournamentId,
+                roundId: r.roundId,
               }}
-              className="group block"
+              className="group block focus-visible:outline-none"
             >
-              <Card className="border-primary/30 group-hover:bg-primary/5 border-l-4 transition-colors">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">
-                      {round.courseName}
-                      {!round.isSingleRound &&
-                        round.roundNumber != null &&
-                        ` — Round ${round.roundNumber}`}
-                    </p>
-                    {!round.isSingleRound && (
-                      <p className="text-muted-foreground truncate text-sm">
-                        {round.tournamentName}
-                      </p>
-                    )}
+              <Card
+                isHoverable
+                className="flex flex-row items-center justify-between gap-4 rounded-[2rem] border-white/5 px-6 py-4"
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Text
+                      size="xs"
+                      color="green"
+                      className="flex items-center gap-1 font-bold tracking-wider uppercase"
+                    >
+                      <div className="bg-tokyo-green h-1.5 w-1.5 animate-pulse rounded-full" />
+                      LIVE
+                    </Text>
+                    <Text size="xs" color="muted">
+                      {r.courseName}
+                    </Text>
                   </div>
-                  <Badge variant="secondary" className="shrink-0">
-                    Live
-                  </Badge>
-                </CardContent>
+                  <Text color="white" className="mt-1 font-bold">
+                    {r.isSingleRound
+                      ? r.tournamentName
+                      : `Round ${r.roundNumber ?? 1}`}
+                  </Text>
+                </div>
+                <span className="text-tokyo-blue">→</span>
               </Card>
             </Link>
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }

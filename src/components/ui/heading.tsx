@@ -1,39 +1,49 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
-interface HeadingProps extends React.HTMLAttributes<HTMLHeadingElement> {
+export interface HeadingProps extends React.HTMLAttributes<HTMLHeadingElement> {
   level?: 1 | 2 | 3 | 4 | 5 | 6;
   glow?: boolean;
+  color?: 'default' | 'white' | 'red' | 'blue' | 'green';
 }
 
 export function Heading({
   level = 1,
   glow = false,
+  color = 'default',
   className,
   children,
   ...props
 }: HeadingProps) {
   const Comp = `h${level}` as const;
 
-  const baseStyles = 'font-heading font-bold';
+  const baseStyles = 'font-heading font-bold tracking-tight';
+
   const sizeStyles = {
-    1: 'text-5xl leading-tight',
-    2: 'text-4xl leading-tight',
-    3: 'text-3xl leading-snug',
-    4: 'text-2xl leading-snug',
-    5: 'text-xl leading-normal',
-    6: 'text-lg leading-normal',
+    1: 'text-4xl sm:text-5xl md:text-6xl lg:text-7xl',
+    2: 'text-3xl sm:text-4xl',
+    3: 'text-2xl sm:text-3xl',
+    4: 'text-xl sm:text-2xl',
+    5: 'text-lg sm:text-xl',
+    6: 'text-base sm:text-lg',
   };
 
-  const glowStyles = glow ? 'drop-shadow-[0_0_20px_var(--color-primary)]' : '';
-  const defaultColor = 'text-foreground';
+  const colorStyles = {
+    default: 'text-foreground',
+    white: 'text-tokyo-white',
+    red: 'text-tokyo-red',
+    blue: 'text-tokyo-blue',
+    green: 'text-tokyo-green',
+  };
+
+  const glowStyles = glow ? 'drop-shadow-[0_0_20px_currentColor]' : '';
 
   return (
     <Comp
       className={cn(
         baseStyles,
         sizeStyles[level],
-        defaultColor,
+        colorStyles[color],
         glowStyles,
         className,
       )}

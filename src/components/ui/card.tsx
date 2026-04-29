@@ -2,12 +2,18 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
-function Card({ className, ...props }: React.ComponentProps<'div'>) {
+export interface CardProps extends React.ComponentProps<'div'> {
+  isHoverable?: boolean;
+}
+
+function Card({ className, isHoverable, ...props }: CardProps) {
   return (
     <div
       data-slot="card"
       className={cn(
         'glass text-card-foreground flex flex-col gap-6 py-6',
+        isHoverable &&
+          'cursor-pointer transition-all duration-300 hover:border-black/10 hover:bg-black/5 dark:hover:border-white/10 dark:hover:bg-white/5',
         className,
       )}
       {...props}

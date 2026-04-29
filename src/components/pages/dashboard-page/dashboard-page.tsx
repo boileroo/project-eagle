@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { ActiveRound } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Plus, Users } from 'lucide-react';
+import { DashboardHero } from './components/dashboard-hero';
 import { ActiveRoundSection } from './components/active-round-section';
+import { DashboardActionCard } from './components/dashboard-action-card';
 import { JoinTournamentDialog } from './components/join-tournament-dialog';
 import { CreateEventDialog } from './components/create-event-dialog';
 import { DashboardSection } from './components/dashboard-section';
@@ -21,66 +21,55 @@ export function DashboardPage({
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Home</h1>
-        <p className="text-muted-foreground">
-          Welcome back, {displayName ?? userEmail}
-        </p>
-      </div>
+    <div className="mx-auto flex max-w-5xl flex-col items-center justify-center space-y-12 py-12 md:py-20">
+      <DashboardHero displayName={displayName} userEmail={userEmail} />
 
       <ActiveRoundSection activeRounds={activeRounds} />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Button
-          size="lg"
-          className="h-14 text-lg font-semibold"
+      <div className="grid w-full gap-6 md:grid-cols-2">
+        <DashboardActionCard
+          eyebrow="New Event"
+          eyebrowColor="red"
+          title="Create Tournament"
+          description="Set up a private clubhouse event, customize rules, and invite your circle."
+          linkText="Start Setup"
           onClick={() => setCreateDialogOpen(true)}
-        >
-          <Plus className="mr-2 h-5 w-5" />
-          Create Event
-        </Button>
-        <Button
-          size="lg"
-          variant="outline"
-          className="bg-card hover:bg-muted h-14 border text-lg font-semibold shadow-sm"
+        />
+        <DashboardActionCard
+          eyebrow="Active Circuit"
+          eyebrowColor="blue"
+          title="Join Tournament"
+          description="Enter an invitational code or browse public elite-tier club rankings."
+          linkText="Browse Events"
           onClick={() => setJoinDialogOpen(true)}
-        >
-          <Users className="text-muted-foreground mr-2 h-5 w-5" />
-          Join Event
-        </Button>
+        />
       </div>
 
-      <DashboardSection title="My Events" gridCols={1}>
-        <DashboardCard
-          title="All Events"
-          description="View your past and upcoming tournaments and rounds"
-          to="/tournaments"
-        />
-      </DashboardSection>
-
-      <DashboardSection title="Settings & Library" gridCols={3}>
-        <DashboardCard
-          title="Account"
-          description="Manage your profile and settings"
-          to="/account"
-        />
-        <DashboardCard
-          title="Courses"
-          description="Browse and manage the course library"
-          to="/courses"
-        />
-        <DashboardCard
-          title="Guests"
-          description="Manage your saved guests"
-          to="/guests"
-        />
-      </DashboardSection>
+      <div className="w-full pt-12">
+        <DashboardSection title="Settings & Library" gridCols={3}>
+          <DashboardCard
+            title="All Events"
+            description="View your past and upcoming tournaments and rounds"
+            to="/tournaments"
+          />
+          <DashboardCard
+            title="Courses"
+            description="Browse and manage the course library"
+            to="/courses"
+          />
+          <DashboardCard
+            title="Account"
+            description="Manage your profile and settings"
+            to="/account"
+          />
+        </DashboardSection>
+      </div>
 
       <JoinTournamentDialog
         open={joinDialogOpen}
         onOpenChange={setJoinDialogOpen}
       />
+
       <CreateEventDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}

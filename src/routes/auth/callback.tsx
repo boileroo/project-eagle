@@ -25,7 +25,7 @@ export default function AuthCallback() {
         setError(error.message);
       }
 
-      router.navigate({ to: '/login' });
+      router.navigate({ to: '/login', search: { next: undefined } });
     }
 
     exchangeCode();

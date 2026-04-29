@@ -3,12 +3,14 @@ import { Slot } from 'radix-ui';
 import { cn } from '@/lib/utils';
 
 export interface TextProps extends React.HTMLAttributes<HTMLParagraphElement> {
-  variant?: 'default' | 'muted' | 'small' | 'xs' | 'label';
+  size?: 'xs' | 'sm' | 'base' | 'lg';
+  color?: 'default' | 'muted' | 'white' | 'red' | 'blue' | 'green';
   asChild?: boolean;
 }
 
 export function Text({
-  variant = 'default',
+  size = 'base',
+  color = 'default',
   asChild = false,
   className,
   children,
@@ -16,16 +18,24 @@ export function Text({
 }: TextProps) {
   const Comp = asChild ? Slot.Root : 'p';
 
-  const variants = {
-    default: 'text-foreground text-base',
-    muted: 'text-muted-foreground text-sm',
-    small: 'text-foreground/90 text-sm',
-    xs: 'text-foreground/80 text-xs',
-    label: 'label-caps text-foreground/90 text-xs',
+  const sizes = {
+    base: 'text-base',
+    sm: 'text-sm font-medium',
+    xs: 'text-xs',
+    lg: 'text-lg',
+  };
+
+  const colors = {
+    default: 'text-foreground',
+    muted: 'text-muted-foreground',
+    white: 'text-tokyo-white',
+    red: 'text-tokyo-red',
+    blue: 'text-tokyo-blue',
+    green: 'text-tokyo-green',
   };
 
   return (
-    <Comp className={cn(variants[variant], className)} {...props}>
+    <Comp className={cn(sizes[size], colors[color], className)} {...props}>
       {children}
     </Comp>
   );

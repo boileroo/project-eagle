@@ -4,7 +4,7 @@ import { OfflineFallback } from '@/components/offline-fallback';
 
 export function OfflineShell() {
   return (
-    <div className="bg-background flex min-h-screen items-center justify-center p-6">
+    <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md space-y-6 text-center">
         <div className="text-5xl">📴</div>
         <div className="space-y-2">
@@ -18,7 +18,9 @@ export function OfflineShell() {
         <div className="text-muted-foreground text-xs">
           Need to sign in?{' '}
           <Button variant="link" asChild className="px-1">
-            <Link to="/login">Go online and sign in</Link>
+            <Link to="/login" search={{ next: undefined }}>
+              Go online and sign in
+            </Link>
           </Button>
         </div>
       </div>

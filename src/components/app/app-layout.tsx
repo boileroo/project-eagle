@@ -34,7 +34,7 @@ export function AppLayout({ user }: AppLayoutProps) {
   const showOfflineFallback = useOfflineFallback(isOnline, isRoundRoute);
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="min-h-screen">
       <SiteHeader
         user={user}
         isOnline={isOnline}

@@ -136,7 +136,7 @@ export function LoginPage() {
 
           <div className="flex items-center gap-4 text-xs">
             <span className="border-border/60 flex-1 border-t" />
-            <Text variant="label" asChild>
+            <Text size="xs" className="label-caps" asChild>
               <span>Or continue with</span>
             </Text>
             <span className="border-border/60 flex-1 border-t" />
@@ -150,7 +150,7 @@ export function LoginPage() {
       </Card>
 
       <CardFooter className="mt-8 justify-center px-0">
-        <Text variant="small">
+        <Text size="sm">
           Don&apos;t have an account?{' '}
           <Link
             to="/signup"

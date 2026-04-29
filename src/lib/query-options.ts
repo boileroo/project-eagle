@@ -1,5 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
-import { getRoundFn } from './rounds.server';
+import { getRoundFn, getActiveRoundsFn } from './rounds.server';
 import { getScorecardFn } from './scores.server';
 import { getRoundCompetitionsFn } from './competitions.server';
 import {
@@ -13,6 +13,13 @@ import {
   getMyPersonFn,
 } from './tournaments.server';
 import { getCoursesFn, getCourseFn } from './courses.server';
+
+export function activeRoundsQueryOptions() {
+  return queryOptions({
+    queryKey: ['active-rounds'] as const,
+    queryFn: () => getActiveRoundsFn(),
+  });
+}
 
 export function roundQueryOptions(roundId: string) {
   return queryOptions({
