@@ -7,7 +7,7 @@ import {
 } from '@/lib/tournaments';
 import { useRemoveRoundParticipant } from '@/lib/rounds';
 import { formatHandicapWithFallback } from '@/lib/handicaps';
-import { X } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { AddPlayerDialog } from '@/components/add-player-dialog';
 import { EditHandicapDialog } from '@/components/pages/tournament-detail-page/components/edit-handicap-dialog';
@@ -15,8 +15,11 @@ import { ChangeRoleDialog } from '@/components/pages/tournament-detail-page/comp
 import { LeaveTournamentDialog } from '@/components/pages/tournament-detail-page/components/participants/leave-tournament-dialog';
 import { RemoveParticipantDialog } from '@/components/pages/tournament-detail-page/components/participants/remove-participant-dialog';
 import { EditRoundHandicapDialog } from '@/components/pages/round-detail-page/components/edit-round-handicap-dialog';
+import { RolePill, RolePillButton } from './components/role-pill';
+import { HandicapPill, HandicapPillButton } from './components/handicap-pill';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { RemoveButton } from '@/components/ui/remove-button';
 import { toast } from 'sonner';
 import type { TournamentLoaderData, RoundData } from '@/types';
 
@@ -30,22 +33,11 @@ type PlayersTabProps = {
   onChanged: () => void;
 };
 
-const roleBadgeClassNames: Record<string, string> = {
-  commissioner:
-    'border-indigo-400 bg-indigo-200 text-indigo-950 hover:bg-indigo-200',
-  player: 'border-indigo-300 bg-indigo-100 text-indigo-900 hover:bg-indigo-100',
-  guest: 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-50',
-};
-
 const participantRoleSortOrder: Record<string, number> = {
   commissioner: 0,
   player: 1,
   guest: 2,
 };
-
-function formatRoleLabel(role: string) {
-  return role.charAt(0).toUpperCase() + role.slice(1);
-}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getParticipantRole(participant: any, isTournamentMode: boolean) {
@@ -269,8 +261,6 @@ export function PlayersTab({
         const participantRole = getParticipantRole(p, isTournamentMode);
 
         const isCommissionerParticipant = participantRole === 'commissioner';
-        const roleBadgeClassName =
-          roleBadgeClassNames[participantRole] ?? roleBadgeClassNames.player;
         const isCreator = personUserId === creatorUserId;
         const canLeaveSelf =
           isMe &&
@@ -292,8 +282,10 @@ export function PlayersTab({
               isMe ? 'border-primary/25 bg-primary/10' : ''
             }`}
           >
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{displayName}</span>
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-sm font-medium">
+                {displayName}
+              </span>
               {p.tournamentParticipant?.teamMemberships?.[0]?.team && (
                 <Badge variant="secondary" className="text-xs">
                   {p.tournamentParticipant.teamMemberships[0].team.name}
@@ -311,18 +303,10 @@ export function PlayersTab({
                     isCommissionerParticipant && commissionerCount === 1
                   }
                   isCreator={isCreator}
-                  trigger={
-                    <button type="button" className="cursor-pointer">
-                      <Badge className={`text-xs ${roleBadgeClassName}`}>
-                        {formatRoleLabel(participantRole)}
-                      </Badge>
-                    </button>
-                  }
+                  trigger={<RolePillButton role={participantRole} />}
                 />
               ) : (
-                <Badge className={`text-xs ${roleBadgeClassName}`}>
-                  {formatRoleLabel(participantRole)}
-                </Badge>
+                <RolePill role={participantRole} />
               )}
 
               {(canEdit || isMe) && isDraft ? (
@@ -333,48 +317,23 @@ export function PlayersTab({
                       handicapOverride: p.handicapOverride,
                     }}
                     onSaved={onChanged}
-                    trigger={
-                      <button type="button" className="cursor-pointer">
-                        <Badge
-                          variant="outline"
-                          className="hover:bg-accent min-w-16 justify-center tabular-nums"
-                        >
-                          HC {handicapLabel}
-                        </Badge>
-                      </button>
-                    }
+                    trigger={<HandicapPillButton value={handicapLabel} />}
                   />
                 ) : (
                   <EditRoundHandicapDialog
                     roundParticipant={p as RoundData['participants'][number]}
                     onSaved={onChanged}
-                    trigger={
-                      <button type="button" className="cursor-pointer">
-                        <Badge
-                          variant="outline"
-                          className="hover:bg-accent min-w-16 justify-center tabular-nums"
-                        >
-                          HC {handicapLabel}
-                        </Badge>
-                      </button>
-                    }
+                    trigger={<HandicapPillButton value={handicapLabel} />}
                   />
                 )
               ) : (
-                <Badge
-                  variant="outline"
-                  className="min-w-16 justify-center tabular-nums"
-                >
-                  HC {handicapLabel}
-                </Badge>
+                <HandicapPill value={handicapLabel} />
               )}
 
-              <Button
-                variant="ghost"
-                size="icon"
+              <RemoveButton
                 disabled={!canRemoveThisParticipant}
-                className="text-muted-foreground hover:text-destructive h-6 w-6 disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label={`${isMe ? 'Leave' : 'Remove'} ${displayName}`}
+                className="disabled:pointer-events-none disabled:opacity-0"
+                label={`${isMe ? 'Leave' : 'Remove'} ${displayName}`}
                 onClick={() => {
                   if (canLeaveSelf) {
                     setLeavingTarget({
@@ -392,13 +351,43 @@ export function PlayersTab({
 
                   void handleRemoveParticipant(p.id, displayName);
                 }}
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
+              />
             </div>
           </div>
         );
       })}
+
+      {isTournamentMode && tournament && canEdit && isDraft && (
+        <div className="flex justify-end border-t pt-3">
+          <AddPlayerDialog
+            trigger={
+              <Button
+                size="icon-sm"
+                className="rounded-full"
+                aria-label="Add player"
+              >
+                <Plus />
+              </Button>
+            }
+            onAddGuest={async (personId, name) => {
+              await addParticipant({
+                variables: {
+                  tournamentId: tournament.id,
+                  personId,
+                  role: 'player',
+                },
+                onSuccess: () => {
+                  toast.success(`${name} added!`);
+                  onChanged();
+                },
+                onError: (error) => {
+                  toast.error(error.message);
+                },
+              });
+            }}
+          />
+        </div>
+      )}
 
       {tournament && !iAmParticipant && canJoinOrLeaveInTournament && (
         <Button
@@ -409,27 +398,6 @@ export function PlayersTab({
         >
           Join
         </Button>
-      )}
-
-      {tournament && canEdit && isDraft && (
-        <AddPlayerDialog
-          onAddGuest={async (personId, name) => {
-            await addParticipant({
-              variables: {
-                tournamentId: tournament.id,
-                personId,
-                role: 'player',
-              },
-              onSuccess: () => {
-                toast.success(`${name} added!`);
-                onChanged();
-              },
-              onError: (error) => {
-                toast.error(error.message);
-              },
-            });
-          }}
-        />
       )}
 
       <LeaveTournamentDialog

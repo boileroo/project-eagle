@@ -3,16 +3,18 @@ import type { RoundSummary } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 
 export function RoundsPage({ rounds }: { rounds: RoundSummary[] }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Rounds</h1>
-          <p className="text-muted-foreground">
+          <Heading level={1}>Rounds</Heading>
+          <Text size="sm" color="muted">
             Your single rounds and casual games.
-          </p>
+          </Text>
         </div>
         <Button asChild>
           <Link to="/rounds/new">New Round</Link>
@@ -37,9 +39,8 @@ export function RoundsPage({ rounds }: { rounds: RoundSummary[] }) {
               key={round.id}
               to="/rounds/$roundId"
               params={{ roundId: round.id }}
-              className="group"
             >
-              <Card className="group-hover:bg-background h-full transition-colors">
+              <Card className="h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between text-lg">
                     <span>{round.course.name}</span>
@@ -62,7 +63,7 @@ export function RoundsPage({ rounds }: { rounds: RoundSummary[] }) {
                       {round.participants.length !== 1 ? 's' : ''}
                     </Badge>
                     {round.status !== 'draft' && (
-                      <Badge variant="outline">{round.status}</Badge>
+                      <Badge variant="secondary">{round.status}</Badge>
                     )}
                   </div>
                 </CardContent>

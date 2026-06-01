@@ -2,7 +2,6 @@ import { Lock } from 'lucide-react';
 import { useTransitionRound } from '@/lib/rounds';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScoreEntryDialog } from '@/components/score-entry-dialog';
-import { Separator } from '@/components/ui/separator';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -22,10 +21,6 @@ import type {
   RoundCompetitionsData,
   TournamentLoaderData,
 } from '@/types';
-
-// ──────────────────────────────────────────────
-// Main Page Component
-// ──────────────────────────────────────────────
 
 export function RoundDetailPage({
   round,
@@ -188,11 +183,9 @@ export function RoundDetailPage({
         allScorecardsComplete={allScorecardsComplete}
       />
 
-      <Separator />
-
       {/* Locked banner — shown when round is awaiting start */}
       {round.status === 'scheduled' && (
-        <div className="bg-muted/50 flex items-start gap-3 rounded-md border px-4 py-3 text-sm">
+        <div className="bg-surface-high flex items-start gap-3 rounded-xl px-4 py-3 text-sm">
           <Lock className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
           <div>
             <span className="font-medium">Round is locked.</span>{' '}

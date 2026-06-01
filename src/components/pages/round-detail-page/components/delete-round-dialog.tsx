@@ -1,12 +1,12 @@
-import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { useDeleteRound } from '@/lib/rounds';
 import { useDeleteTournament } from '@/lib/tournaments';
 import { toast } from 'sonner';
 
 interface DeleteRoundDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   roundId: string;
   tournamentId: string;
   roundNumber?: number | null;
@@ -17,6 +17,8 @@ interface DeleteRoundDialogProps {
 }
 
 export function DeleteRoundDialog({
+  open,
+  onOpenChange,
   roundId,
   tournamentId,
   roundNumber,
@@ -26,7 +28,6 @@ export function DeleteRoundDialog({
   onDeleted,
 }: DeleteRoundDialogProps) {
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
   const [deleteRound, { isPending: deletingRound }] = useDeleteRound();
   const [deleteTournament, { isPending: deletingTournament }] =
     useDeleteTournament();
@@ -47,7 +48,7 @@ export function DeleteRoundDialog({
         },
         onError: (error) => {
           toast.error(error.message);
-          setOpen(false);
+          onOpenChange(false);
         },
       });
     } else {
@@ -63,27 +64,22 @@ export function DeleteRoundDialog({
         },
         onError: (error) => {
           toast.error(error.message);
-          setOpen(false);
+          onOpenChange(false);
         },
       });
     }
   };
 
   return (
-    <>
-      <Button variant="destructive" size="sm" onClick={() => setOpen(true)}>
-        Delete
-      </Button>
-      <ConfirmDialog
-        open={open}
-        onOpenChange={setOpen}
-        title="Delete round?"
-        description={`This will permanently delete Round ${roundNumber ?? '—'} and all its participants and scores. This action cannot be undone.`}
-        confirmText="Delete"
-        variant="destructive"
-        loading={deleting}
-        onConfirm={handleDelete}
-      />
-    </>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Delete round?"
+      description={`This will permanently delete Round ${roundNumber ?? '—'} and all its participants and scores. This action cannot be undone.`}
+      confirmText="Delete"
+      variant="destructive"
+      loading={deleting}
+      onConfirm={handleDelete}
+    />
   );
 }

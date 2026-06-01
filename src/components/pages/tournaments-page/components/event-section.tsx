@@ -1,5 +1,7 @@
 import { type ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 
 interface EventSectionProps {
   title: string;
@@ -20,7 +22,7 @@ export function EventSection({
   return (
     <section className="space-y-4">
       <div className="flex items-center gap-2">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <Heading level={2}>{title}</Heading>
         {count > 0 && (
           <span className="text-muted-foreground text-sm">({count})</span>
         )}
@@ -33,7 +35,9 @@ export function EventSection({
       ) : (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8">
-            <p className="text-muted-foreground text-sm">{emptyMessage}</p>
+            <Text size="sm" color="muted">
+              {emptyMessage}
+            </Text>
           </CardContent>
         </Card>
       )}

@@ -1,5 +1,15 @@
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { RemoveButton } from '@/components/ui/remove-button';
+import { ArrowLeftRight } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { getTeamColor } from '@/config/team-colors';
 
 type TeamMember = {
   id: string;
@@ -20,6 +30,7 @@ type TeamItemProps = {
   team: Team;
   allTeams: { id: string; name: string }[];
   canEdit: boolean;
+  colorIndex?: number;
   unassignedParticipants: {
     id: string;
     person: {
@@ -36,6 +47,7 @@ export function TeamItem({
   team,
   allTeams,
   canEdit,
+  colorIndex,
   unassignedParticipants,
   onAddMember,
   onRemoveMember,
@@ -43,85 +55,96 @@ export function TeamItem({
   onDelete,
 }: TeamItemProps) {
   const otherTeams = allTeams.filter((t) => t.id !== team.id);
+  const color = colorIndex !== undefined ? getTeamColor(colorIndex) : null;
 
   return (
-    <div key={team.id} className="space-y-2 rounded-md border p-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold">{team.name}</span>
-        <div className="flex items-center gap-1">
-          <Badge variant="outline" className="text-xs">
+    <div className="overflow-hidden rounded-xl border">
+      <div
+        className={cn(
+          'flex items-center justify-between px-3 py-2',
+          color ? color.headerBg : 'bg-muted',
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">{team.name}</span>
+          <Badge variant="outline" className="bg-background/70 tabular-nums">
             {team.members.length}
           </Badge>
-          {canEdit && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-destructive h-6 w-6 p-0 text-xs"
-              onClick={() => onDelete(team.id, team.name)}
-            >
-              ×
-            </Button>
-          )}
         </div>
+        {canEdit && (
+          <RemoveButton
+            label={`Delete ${team.name}`}
+            onClick={() => onDelete(team.id, team.name)}
+          />
+        )}
       </div>
-      <div className="space-y-0.5">
-        {team.members.map((m) => (
-          <div
-            key={m.id}
-            className="flex items-center justify-between rounded px-2 py-0.5 text-sm"
-          >
-            <span>{m.participant.person.displayName}</span>
-            {canEdit && (
-              <div className="flex items-center gap-1">
-                {otherTeams.length > 0 && (
-                  <select
-                    className="text-muted-foreground h-5 cursor-pointer border-none bg-transparent text-xs focus:outline-none"
-                    defaultValue=""
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        onMoveToTeam(m.id, e.target.value);
-                        e.target.value = '';
-                      }
-                    }}
-                  >
-                    <option value="" disabled>
-                      Move to…
-                    </option>
-                    {otherTeams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-5 px-1 text-xs"
-                  onClick={() => onRemoveMember(m.id)}
-                >
-                  ×
-                </Button>
-              </div>
-            )}
+
+      <div className="space-y-1 p-2">
+        {team.members.length === 0 ? (
+          <p className="text-muted-foreground px-2 py-1 text-sm">
+            No members yet.
+          </p>
+        ) : (
+          team.members.map((m) => (
+            <div
+              key={m.id}
+              className="flex items-center justify-between rounded-md border px-3 py-2"
+            >
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                {m.participant.person.displayName}
+              </span>
+              {canEdit && (
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {otherTeams.length > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="h-7 w-7 rounded-full"
+                          aria-label="Move to another team"
+                        >
+                          <ArrowLeftRight className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {otherTeams.map((t) => (
+                          <DropdownMenuItem
+                            key={t.id}
+                            onClick={() => onMoveToTeam(m.id, t.id)}
+                          >
+                            {t.name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  <RemoveButton
+                    label={`Remove ${m.participant.person.displayName} from team`}
+                    onClick={() => onRemoveMember(m.id)}
+                  />
+                </div>
+              )}
+            </div>
+          ))
+        )}
+
+        {canEdit && unassignedParticipants.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {unassignedParticipants.map((p) => (
+              <Button
+                key={p.id}
+                size="sm"
+                variant="outline"
+                className="h-6 text-xs"
+                onClick={() => onAddMember(team.id, p.id)}
+              >
+                + {p.person.displayName}
+              </Button>
+            ))}
           </div>
-        ))}
+        )}
       </div>
-      {canEdit && unassignedParticipants.length > 0 && (
-        <div className="flex flex-wrap gap-1 pt-1">
-          {unassignedParticipants.map((p) => (
-            <Button
-              key={p.id}
-              size="sm"
-              variant="outline"
-              className="h-6 text-xs"
-              onClick={() => onAddMember(team.id, p.id)}
-            >
-              + {p.person.displayName}
-            </Button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

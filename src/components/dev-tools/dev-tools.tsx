@@ -140,7 +140,7 @@ export function DevTools() {
       </button>
 
       {open && (
-        <div className="fixed bottom-16 left-4 z-9999 w-[360px] rounded-lg border bg-white shadow-xl dark:bg-zinc-900">
+        <div className="fixed bottom-16 left-4 z-9999 w-[360px] rounded-lg border bg-zinc-900 shadow-xl">
           {/* Header */}
           <div className="border-b px-3 py-2">
             <div className="flex items-center justify-between">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useUpdateRound } from '@/lib/rounds';
@@ -39,12 +39,14 @@ interface EditRoundDialogProps {
     numberOfHoles: number;
   }[];
   onSaved: () => void;
+  trigger?: ReactNode;
 }
 
 export function EditRoundDialog({
   round,
   courses,
   onSaved,
+  trigger,
 }: EditRoundDialogProps) {
   const [open, setOpen] = useState(false);
   const [updateRound, { isPending: saving }] = useUpdateRound();
@@ -92,9 +94,11 @@ export function EditRoundDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          Edit
-        </Button>
+        {trigger ?? (
+          <Button variant="outline" size="sm">
+            Edit
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

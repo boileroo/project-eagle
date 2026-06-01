@@ -15,7 +15,7 @@ export function ContinueWithGoogleButton({
   return (
     <Button
       variant="outline"
-      size="xl"
+      size="lg"
       className={cn('w-full', className)}
       onClick={onClick}
       disabled={isLoading}

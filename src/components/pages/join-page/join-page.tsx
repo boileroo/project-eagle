@@ -99,7 +99,7 @@ export function JoinPage() {
         </CardHeader>
         <CardContent className="text-center">
           <Link to="/">
-            <Button variant="outline">Go to Dashboard</Button>
+            <Button variant="ghost">Go to Dashboard</Button>
           </Link>
         </CardContent>
       </Card>
@@ -125,13 +125,13 @@ export function JoinPage() {
         ) : null}
 
         {error ? (
-          <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">
+          <div className="bg-destructive text-destructive-foreground rounded-xl p-3 text-sm">
             {error}
           </div>
         ) : null}
 
         {!isJoinable && tournament ? (
-          <div className="bg-warning/10 text-warning rounded-md p-3 text-sm">
+          <div className="bg-surface-high text-muted-foreground rounded-xl p-3 text-sm">
             This tournament has already started and is not accepting new
             players.
           </div>
@@ -139,7 +139,7 @@ export function JoinPage() {
 
         {isJoinable && joinState?.alreadyJoined ? (
           <div className="space-y-3">
-            <div className="rounded-md border p-4 text-center">
+            <div className="bg-surface-high rounded-xl p-4 text-center">
               <p className="font-medium">
                 You&apos;re already in this tournament.
               </p>
@@ -162,7 +162,7 @@ export function JoinPage() {
         !joinState?.alreadyJoined &&
         !joinState?.isAuthenticated ? (
           <div className="space-y-3">
-            <div className="rounded-md border p-4 text-center text-sm">
+            <div className="bg-surface-high rounded-xl p-4 text-center text-sm">
               Sign in to join this tournament. If the commissioner already added
               you as a guest, you&apos;ll be able to claim that slot after
               signing in.
@@ -191,7 +191,7 @@ export function JoinPage() {
 
         {!isJoinable ? (
           <Link to="/">
-            <Button variant="outline" className="w-full">
+            <Button variant="ghost" className="w-full">
               Go to Dashboard
             </Button>
           </Link>

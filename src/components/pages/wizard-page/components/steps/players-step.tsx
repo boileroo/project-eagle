@@ -3,6 +3,9 @@ import type { WizardPlayer } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
+import { NumberStepper } from '@/components/ui/number-stepper';
 
 interface PlayersStepProps {
   players: WizardPlayer[];
@@ -53,24 +56,22 @@ export function PlayersStep({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold">Players</h2>
-        <p className="text-muted-foreground text-sm">
+      <div className="text-center">
+        <Heading level={2}>Players</Heading>
+        <Text size="sm" color="muted" className="mt-1">
           Set the number of players and their names. You are Player 1. Other
           players can join later and update their own details.
-        </p>
+        </Text>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <Label htmlFor="player-count">Number of players</Label>
-        <Input
+        <NumberStepper
           id="player-count"
-          type="number"
+          value={count}
+          onChange={handleCountChange}
           min={1}
           max={40}
-          value={count}
-          onChange={(e) => handleCountChange(parseInt(e.target.value) || 1)}
-          className="w-24"
         />
       </div>
 
@@ -91,11 +92,10 @@ export function PlayersStep({
         ))}
       </div>
 
-      <div className="flex justify-between">
-        <Button type="button" variant="outline" onClick={onBack}>
-          Back
-        </Button>
+      <div className="flex flex-col gap-3 pt-2">
         <Button
+          size="lg"
+          className="w-full"
           onClick={() => {
             onChange(currentPlayers);
             onNext();
@@ -103,6 +103,15 @@ export function PlayersStep({
           disabled={!canProceed}
         >
           Next
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="w-full"
+          onClick={onBack}
+        >
+          Back
         </Button>
       </div>
     </div>

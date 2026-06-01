@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -13,9 +13,11 @@ import { useClipboard } from '@/hooks/use-clipboard';
 export function ShareDialog({
   displayName,
   inviteCode,
+  trigger,
 }: {
   displayName: string;
   inviteCode: string;
+  trigger?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const { copy, copied } = useClipboard({
@@ -26,9 +28,11 @@ export function ShareDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          Share
-        </Button>
+        {trigger ?? (
+          <Button variant="outline" size="sm">
+            Share
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

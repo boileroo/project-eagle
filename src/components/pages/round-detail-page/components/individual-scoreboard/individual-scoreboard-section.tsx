@@ -5,14 +5,6 @@ import { getIndividualScoreboardFn } from '@/lib/scoreboards.server';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-// ──────────────────────────────────────────────
-// Individual Scoreboard Section
-//
-// Displays the auto-computed per-player scoreboard
-// for a round: gross, net, stableford, bonus, total.
-// Always shown when the round is open or finalized.
-// ──────────────────────────────────────────────
-
 const BASIS_LABELS: Record<string, string> = {
   gross_strokes: 'Gross',
   net_strokes: 'Net',
@@ -88,14 +80,14 @@ export function IndividualScoreboardSection({ roundId }: { roundId: string }) {
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs sm:text-sm">
             <thead>
               <tr className="border-b">
                 <th className="text-muted-foreground w-6 px-4 py-2 text-left font-medium">
                   #
                 </th>
                 <th className="px-4 py-2 text-left font-medium">Player</th>
-                <th className="text-muted-foreground px-4 py-2 text-right font-medium">
+                <th className="text-muted-foreground hidden px-4 py-2 text-right font-medium sm:table-cell">
                   HCP
                 </th>
                 <th
@@ -120,7 +112,8 @@ export function IndividualScoreboardSection({ roundId }: { roundId: string }) {
                   {trophyCol === 'stableford' && (
                     <TrophyIcon className="mr-1 inline h-3 w-3" />
                   )}
-                  Stableford
+                  <span className="hidden sm:inline">Stableford</span>
+                  <span className="sm:hidden">Pts</span>
                 </th>
                 {hasContributorBonuses && (
                   <th className="text-muted-foreground px-4 py-2 text-right font-medium">
@@ -153,7 +146,9 @@ export function IndividualScoreboardSection({ roundId }: { roundId: string }) {
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{row.displayName}</span>
+                      <span className="max-w-[100px] truncate font-medium sm:max-w-none">
+                        {row.displayName}
+                      </span>
                       {row.standaloneBadges.map((badge) => (
                         <Badge
                           key={badge.competitionId}
@@ -166,7 +161,7 @@ export function IndividualScoreboardSection({ roundId }: { roundId: string }) {
                       ))}
                     </div>
                   </td>
-                  <td className="text-muted-foreground px-4 py-2 text-right tabular-nums">
+                  <td className="text-muted-foreground hidden px-4 py-2 text-right tabular-nums sm:table-cell">
                     {formatHandicapWithFallback(row.playingHandicap)}
                   </td>
                   <td

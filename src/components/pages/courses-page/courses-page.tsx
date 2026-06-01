@@ -3,16 +3,18 @@ import type { CourseListSummary } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 
 export function CoursesPage({ courses }: { courses: CourseListSummary[] }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Courses</h1>
-          <p className="text-muted-foreground">
+          <Heading level={1}>Courses</Heading>
+          <Text size="sm" color="muted">
             Browse the course library or add a new course.
-          </p>
+          </Text>
         </div>
         <Button asChild>
           <Link to="/courses/new">Add Course</Link>
@@ -37,9 +39,8 @@ export function CoursesPage({ courses }: { courses: CourseListSummary[] }) {
               key={course.id}
               to="/courses/$courseId"
               params={{ courseId: course.id }}
-              className="group"
             >
-              <Card className="group-hover:bg-background h-full transition-colors">
+              <Card className="h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between text-lg">
                     <span>{course.name}</span>

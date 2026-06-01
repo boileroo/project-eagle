@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Text } from '@/components/ui/text';
 import type { LeaderboardData } from '@/types';
 
 type RoundOutcome = LeaderboardData['roundOutcomes'][number];
@@ -83,9 +84,14 @@ export function CompetitionOutcomesSection({
 
       {teamRounds.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-muted-foreground text-sm font-semibold tracking-[0.12em] uppercase">
+          <Text
+            size="sm"
+            weight="semibold"
+            color="muted"
+            className="tracking-[0.12em] uppercase"
+          >
             Team matches and outcomes
-          </h3>
+          </Text>
           {teamRounds.map((round) => (
             <RoundOutcomeCard
               key={round.roundId}
@@ -98,9 +104,14 @@ export function CompetitionOutcomesSection({
 
       {individualRounds.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-muted-foreground text-sm font-semibold tracking-[0.12em] uppercase">
+          <Text
+            size="sm"
+            weight="semibold"
+            color="muted"
+            className="tracking-[0.12em] uppercase"
+          >
             Individual games
-          </h3>
+          </Text>
           {individualRounds.map((round) => (
             <RoundOutcomeCard
               key={`${round.roundId}-individual`}

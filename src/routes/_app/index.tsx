@@ -12,7 +12,6 @@ export const Route = createFileRoute('/_app/')({
     const { activeRounds } = Route.useLoaderData();
     return (
       <DashboardPage
-        userEmail={user.email!}
         displayName={user.displayName ?? null}
         activeRounds={activeRounds}
       />

@@ -5,8 +5,10 @@ import {
   useAssignParticipantToGroup,
 } from '@/lib/groups';
 import { useToggleRoundMarker } from '@/lib/rounds';
+import { Plus, Shuffle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { RemoveButton } from '@/components/ui/remove-button';
 import { toast } from 'sonner';
 import type { RoundData } from '@/types';
 import { AutoAssignDialog } from './auto-assign-dialog';
@@ -17,6 +19,7 @@ type GroupsTabProps = {
   canEdit: boolean;
   canToggleMarker?: boolean;
   userId: string;
+  teamColorMap?: Map<string, number>;
   onChanged: () => void;
 };
 
@@ -25,6 +28,7 @@ export function GroupsTab({
   canEdit,
   canToggleMarker = false,
   userId,
+  teamColorMap,
   onChanged,
 }: GroupsTabProps) {
   const [assigning, setAssigning] = useState<string | null>(null);
@@ -43,10 +47,21 @@ export function GroupsTab({
   const canConfigureGroups = canEditGroups && hasEnoughPlayersForGroups;
   const showGroups = hasEnoughPlayersForGroups;
 
-  const ungrouped = round.participants.filter((rp) => !rp.roundGroupId);
   const groups = round.groups ?? [];
 
   const canAddGroups = canConfigureGroups;
+
+  const byName = (
+    a: RoundData['participants'][number],
+    b: RoundData['participants'][number],
+  ) =>
+    a.person.displayName.localeCompare(b.person.displayName, undefined, {
+      sensitivity: 'base',
+    });
+
+  const ungrouped = round.participants
+    .filter((rp) => !rp.roundGroupId)
+    .sort(byName);
 
   const groupParticipantsMap = useMemo(() => {
     const g = round.groups ?? [];
@@ -54,11 +69,23 @@ export function GroupsTab({
     for (const group of g) {
       map.set(
         group.id,
-        round.participants.filter((rp) => rp.roundGroupId === group.id),
+        round.participants
+          .filter((rp) => rp.roundGroupId === group.id)
+          .sort(byName),
       );
     }
     return map;
+    // byName is a stable inline comparator — no need to list it as a dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round.groups, round.participants]);
+
+  const fullGroupIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const [id, members] of groupParticipantsMap) {
+      if (members.length >= 4) ids.add(id);
+    }
+    return ids;
+  }, [groupParticipantsMap]);
 
   const handleAssignToGroup = async (
     roundParticipantId: string,
@@ -125,6 +152,30 @@ export function GroupsTab({
     );
   }
 
+  const groupsFooter = canAddGroups ? (
+    <div className="flex justify-end gap-2 border-t pt-3">
+      <Button
+        variant="secondary"
+        size="icon-sm"
+        className="rounded-full"
+        aria-label="Auto-assign groups"
+        disabled={round.participants.length === 0}
+        onClick={() => setAutoAssignOpen(true)}
+      >
+        <Shuffle />
+      </Button>
+      <Button
+        size="icon-sm"
+        className="rounded-full"
+        aria-label="Add group"
+        disabled={addingGroup}
+        onClick={handleAddGroup}
+      >
+        <Plus />
+      </Button>
+    </div>
+  ) : null;
+
   if (!showGroups || groups.length === 0) {
     return (
       <div className="space-y-2">
@@ -133,26 +184,8 @@ export function GroupsTab({
             ? 'No groups configured yet.'
             : 'Add more than 4 players to enable groups.'}
         </p>
-        {canAddGroups && (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAutoAssignOpen(true)}
-              disabled={round.participants.length === 0}
-            >
-              Auto-assign
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddGroup}
-              disabled={addingGroup}
-            >
-              {addingGroup ? '…' : '+ Group'}
-            </Button>
-          </div>
-        )}
+        {groupsFooter}
+
         <AutoAssignDialog
           open={autoAssignOpen}
           roundId={round.id}
@@ -169,50 +202,28 @@ export function GroupsTab({
 
   return (
     <div className="space-y-4">
-      {canAddGroups && (
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setAutoAssignOpen(true)}
-            disabled={round.participants.length === 0}
-          >
-            Auto-assign
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleAddGroup}
-            disabled={addingGroup}
-          >
-            {addingGroup ? '…' : '+ Group'}
-          </Button>
-        </div>
-      )}
-
       {groups.map((group) => {
         const members = groupParticipantsMap.get(group.id) ?? [];
         return (
-          <div key={group.id} className="rounded-lg border">
-            <div className="bg-muted/50 flex items-center justify-between rounded-t-lg px-4 py-2">
+          <div key={group.id} className="overflow-hidden rounded-xl border">
+            <div className="bg-muted flex items-center justify-between px-3 py-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold">
                   {group.name || `Group ${group.groupNumber}`}
                 </span>
-                <Badge variant="secondary" className="text-xs">
+                <Badge
+                  variant="outline"
+                  className="bg-background/70 tabular-nums"
+                >
                   {members.length}
                 </Badge>
               </div>
               {canEditGroups && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive h-7 text-xs"
+                <RemoveButton
+                  label={`Delete ${group.name || `Group ${group.groupNumber}`}`}
                   disabled={deletingGroupId === group.id}
                   onClick={() => handleDeleteGroup(group.id)}
-                >
-                  {deletingGroupId === group.id ? '…' : 'Delete'}
-                </Button>
+                />
               )}
             </div>
             <div className="space-y-1 p-2">
@@ -233,6 +244,8 @@ export function GroupsTab({
                     canToggleMarker={canToggleMarker}
                     togglingMarker={togglingMarker === rp.id}
                     onToggleMarker={handleToggleMarker}
+                    teamColorMap={teamColorMap}
+                    fullGroupIds={fullGroupIds}
                   />
                 ))
               )}
@@ -242,12 +255,12 @@ export function GroupsTab({
       })}
 
       {ungrouped.length > 0 && (
-        <div className="rounded-lg border border-dashed">
-          <div className="flex items-center gap-2 px-4 py-2">
+        <div className="overflow-hidden rounded-xl border">
+          <div className="bg-muted flex items-center gap-2 px-3 py-2">
             <span className="text-muted-foreground text-sm font-semibold">
               Unassigned
             </span>
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="bg-background/70 tabular-nums">
               {ungrouped.length}
             </Badge>
           </div>
@@ -264,11 +277,15 @@ export function GroupsTab({
                 canToggleMarker={canToggleMarker}
                 togglingMarker={togglingMarker === rp.id}
                 onToggleMarker={handleToggleMarker}
+                teamColorMap={teamColorMap}
+                fullGroupIds={fullGroupIds}
               />
             ))}
           </div>
         </div>
       )}
+
+      {groupsFooter}
 
       <AutoAssignDialog
         open={autoAssignOpen}

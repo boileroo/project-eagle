@@ -1,15 +1,21 @@
+import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 
 interface ScoringBasisRadioProps {
   value: 'stableford' | 'gross' | 'net';
   onChange: (value: 'stableford' | 'gross' | 'net') => void;
-  /** HTML name attribute for the radio group — must be unique per page to avoid conflicts */
   name: string;
 }
 
+const OPTIONS = [
+  { value: 'stableford', label: 'Stableford' },
+  { value: 'gross', label: 'Gross' },
+  { value: 'net', label: 'Net' },
+] as const;
+
 /**
- * Shared "Scoring Basis" radio group (Stableford, Gross Strokes, Net Score)
- * used in the six_point competition form.
+ * Pill-style toggle group for selecting scoring basis.
+ * Replaces native radio inputs for a more touch-friendly UI.
  */
 export function ScoringBasisRadio({
   value,
@@ -19,27 +25,24 @@ export function ScoringBasisRadio({
   return (
     <div className="space-y-2">
       <Label>Scoring Basis</Label>
-      <div className="flex gap-3">
-        {(
-          [
-            { value: 'stableford', label: 'Stableford' },
-            { value: 'gross', label: 'Gross Strokes' },
-            { value: 'net', label: 'Net Strokes' },
-          ] as const
-        ).map((opt) => (
-          <label
+      <div className="flex gap-2" role="radiogroup" aria-label="Scoring Basis">
+        {OPTIONS.map((opt) => (
+          <button
             key={opt.value}
-            className="flex cursor-pointer items-center gap-1.5 text-sm"
+            type="button"
+            role="radio"
+            aria-checked={value === opt.value}
+            name={name}
+            onClick={() => onChange(opt.value)}
+            className={cn(
+              'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+              value === opt.value
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border text-foreground hover:bg-muted/60',
+            )}
           >
-            <input
-              type="radio"
-              name={name}
-              value={opt.value}
-              checked={value === opt.value}
-              onChange={() => onChange(opt.value)}
-            />
             {opt.label}
-          </label>
+          </button>
         ))}
       </div>
     </div>

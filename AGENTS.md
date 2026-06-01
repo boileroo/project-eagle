@@ -100,31 +100,16 @@ import { TeamItem } from './components/team-item';
 import { Button } from '@/components/ui/button';
 ```
 
-### 8. Tokyo Night Editorial Styling & UI Principles
+### 8. UI Styling Principles
 
-The application utilizes a strict "Tokyo Night" (dark) and "Tokyo Linen" (light) design system, relying on glassmorphism and precision typography. To maintain this, strictly adhere to these rules:
+The design system is defined in `docs/design/DESIGN.md` and implemented via CSS custom properties in `src/styles/globals.css`. The app uses Tailwind CSS v4 with `@theme` token registration (no `tailwind.config.*` file). Key points:
 
-1. **Componentize Everything:** Always default to extracting UI elements into reusable components. If you find yourself writing `div` wrappers with complex Tailwind classes or repeating HTML structures, extract them into a distinct component (either page-level in a `components/` folder or globally in `src/components/ui/` if highly reusable).
-2. **Internalize Styles (No Prop Drilling of Utility Classes):** Do not pass massive Tailwind utility strings down through props. If a style is needed more than once, **hardcode it inside the component** and expose it via semantic props.
-3. **Global Interactive States:** All interactive elements (`a`, `button`) globally inherit standard interaction states (`transition-[filter] hover:brightness-90 active:brightness-75`). **Do not manually add background color changes (`hover:bg-...`) to cards or links unless explicitly required.** If a `Card` needs to be interactive, wrap it in a `<Link>` or `<button>` to automatically inherit these global brightness changes.
-4. **Use UI Components over Generic HTML Tags:** Never use generic HTML tags like `<h3>`, `<p>`, `<span>`, or raw `<button>` when a designated UI component exists (like `<Heading>`, `<Card>`, `<Button>`, `<Badge>`, `<Label>`, `<Text>`). If you are styling a text element heavily, consider if it should be an existing component or if a new typographic component should be created for consistency.
-5. **Favor Semantic Props over Utility Strings:** When a component needs to change color or layout, expose semantic props (`color="red" | "green" | "blue"`, `size="sm" | "lg"`) rather than relying on passing raw Tailwind classes or CSS tokens as strings. This keeps the design system strict and refactoring easy.
-
-```typescript
-// BAD: Passing huge strings, using bare HTML tags
-<a href="/foo" className="hover:bg-black/5 hover:border-black/10 cursor-pointer">
-  <div className="card">
-    <h3 className="text-tokyo-red text-2xl font-bold">Title</h3>
-  </div>
-</a>
-
-// GOOD: Componentized, Semantic, relying on global button/link hover states
-<Link to="/foo" className="focus-visible:outline-none">
-  <Card>
-    <Heading color="red" size="lg">Title</Heading>
-  </Card>
-</Link>
-```
+- **Light-first** with an optional dark mode (`.dark` class on `<html>`)
+- **Primary accent**: emerald green `#1DB17C`
+- **Font**: Inter Variable
+- All colours use semantic CSS custom properties consumed via Tailwind utilities (e.g. `bg-primary`, `text-muted-foreground`)
+- Three surface elevation tiers: `surface-low`, `surface-high`, `surface-highest`
+- Radius scale derived from `--radius` base value (0.75rem)
 
 ## Creating a New Page
 

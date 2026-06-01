@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { Badge, badgeVariants } from '@/components/ui/badge';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
+import type { VariantProps } from 'class-variance-authority';
 
-type BadgeVariant = 'default' | 'secondary' | 'outline' | 'warning' | 'success';
+type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>['variant']>;
 
 interface PageHeaderProps {
   breadcrumb?: ReactNode;
@@ -15,7 +18,10 @@ interface PageHeaderProps {
 /**
  * Shared page header layout used by both Tournament and Round detail pages.
  * Provides consistent styling for breadcrumb, title + status, metadata,
- * description, and right-aligned action buttons.
+ * description, and action buttons.
+ *
+ * On mobile: stacked layout with actions below all header info.
+ * On desktop: same stacked layout — no cramped side-by-side overflows.
  */
 export function PageHeader({
   breadcrumb,
@@ -26,31 +32,32 @@ export function PageHeader({
   actions,
 }: PageHeaderProps) {
   return (
-    <>
-      <div className="flex items-center justify-between">
-        <div>
-          {breadcrumb && (
-            <div className="text-muted-foreground mb-1 text-sm">
-              {breadcrumb}
-            </div>
-          )}
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-            {statusBadge && (
-              <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
-            )}
-          </div>
-          {metadata && (
-            <div className="text-muted-foreground mt-1 flex items-center gap-3">
-              {metadata}
-            </div>
+    <div className="space-y-3">
+      <div className="space-y-1">
+        {breadcrumb && <div className="text-sm">{breadcrumb}</div>}
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <Heading level={1} className="sm:text-3xl">
+            {title}
+          </Heading>
+          {statusBadge && (
+            <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
           )}
         </div>
-
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {metadata && (
+          <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            {metadata}
+          </div>
+        )}
+        {description && (
+          <Text size="sm" color="muted">
+            {description}
+          </Text>
+        )}
       </div>
 
-      {description && <p className="text-muted-foreground">{description}</p>}
-    </>
+      {actions && (
+        <div className="flex flex-wrap items-center gap-2">{actions}</div>
+      )}
+    </div>
   );
 }

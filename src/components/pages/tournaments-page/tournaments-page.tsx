@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 import { TournamentCard } from './components/tournament-card';
 import { SingleRoundCard } from './components/single-round-card';
 import { EventSection } from './components/event-section';
@@ -51,11 +53,13 @@ export function TournamentsPage({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Events</h1>
-          <p className="text-muted-foreground">Your tournaments and rounds.</p>
+          <Heading level={1}>Events</Heading>
+          <Text size="sm" color="muted">
+            Your tournaments and rounds.
+          </Text>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="ghost" size="sm" asChild>
             <Link to="/rounds/new">Quick Round</Link>
           </Button>
           <Button size="sm" asChild>
@@ -65,13 +69,13 @@ export function TournamentsPage({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b">
+      <div className="flex gap-1">
         <button
           onClick={() => setTab('active')}
-          className={`px-4 py-2 text-sm font-medium transition-colors ${
+          className={`rounded-lg px-4 py-2 text-sm font-medium ${
             tab === 'active'
-              ? 'text-foreground border-primary border-b-2'
-              : 'text-muted-foreground hover:text-foreground'
+              ? 'bg-surface-high text-foreground'
+              : 'text-muted-foreground'
           }`}
         >
           Active
@@ -83,10 +87,10 @@ export function TournamentsPage({
         </button>
         <button
           onClick={() => setTab('past')}
-          className={`px-4 py-2 text-sm font-medium transition-colors ${
+          className={`rounded-lg px-4 py-2 text-sm font-medium ${
             tab === 'past'
-              ? 'text-foreground border-primary border-b-2'
-              : 'text-muted-foreground hover:text-foreground'
+              ? 'bg-surface-high text-foreground'
+              : 'text-muted-foreground'
           }`}
         >
           Past
@@ -107,7 +111,7 @@ export function TournamentsPage({
             </p>
             {tab === 'active' && (
               <div className="flex gap-2">
-                <Button variant="outline" asChild>
+                <Button variant="ghost" asChild>
                   <Link to="/rounds/new">Quick Round</Link>
                 </Button>
                 <Button asChild>

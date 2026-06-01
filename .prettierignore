@@ -5,6 +5,3 @@ dist
 .env
 .env.local
 *.local
-
-# TanStack Router generated file — do not format
-src/routeTree.gen.ts

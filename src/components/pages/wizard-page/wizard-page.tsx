@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import type { WizardStep, WizardState, EventType } from './types';
 import type { WizardPlayer, WizardRound, WizardTeam } from '@/lib/validators';
 import { useCreateEvent } from '@/lib/wizard';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 import { StepIndicator } from './components/step-indicator';
 import { EventTypeStep } from './components/steps/event-type-step';
 import { TournamentDetailsStep } from './components/steps/tournament-details-step';
@@ -105,8 +107,10 @@ export function WizardPage({ courses, creatorName }: WizardPageProps) {
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Guided Setup</h1>
-        <p className="text-muted-foreground">Set up your event step by step.</p>
+        <Heading level={1}>Guided Setup</Heading>
+        <Text size="sm" color="muted" className="mt-1">
+          Set up your event step by step.
+        </Text>
       </div>
 
       <StepIndicator
@@ -163,6 +167,7 @@ export function WizardPage({ courses, creatorName }: WizardPageProps) {
           <RoundsStep
             rounds={state.rounds}
             players={state.players}
+            teams={state.teams}
             courses={courses}
             hasTeams={state.teams.length > 0}
             isSingleRound={state.eventType === 'single_round'}

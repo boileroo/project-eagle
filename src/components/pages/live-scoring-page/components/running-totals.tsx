@@ -4,7 +4,7 @@
 // ──────────────────────────────────────────────
 
 import { cn } from '@/lib/utils';
-import { scoreDiffColorClass } from '@/lib/scoring-utils';
+
 import type { ScorecardData } from '@/types';
 
 type Hole = { holeNumber: number; par: number };
@@ -75,7 +75,7 @@ export function RunningTotals({
                     <span
                       className={cn(
                         'min-w-[2.5rem] text-right text-sm font-medium tabular-nums',
-                        scoreDiffColorClass(t.diff),
+                        '',
                       )}
                     >
                       {t.diff === 0

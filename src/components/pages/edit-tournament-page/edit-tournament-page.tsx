@@ -17,7 +17,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 import { toast } from 'sonner';
 
 export function EditTournamentPage({
@@ -40,9 +41,9 @@ export function EditTournamentPage({
   if (!isOwner) {
     return (
       <div className="py-12 text-center">
-        <p className="text-muted-foreground">
+        <Text size="sm" color="muted">
           You don&apos;t have permission to edit this tournament.
-        </p>
+        </Text>
       </div>
     );
   }
@@ -66,52 +67,51 @@ export function EditTournamentPage({
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Edit Tournament</h1>
-        <p className="text-muted-foreground">
+        <Heading level={1}>Edit Tournament</Heading>
+        <Text size="sm" color="muted">
           Update the details for {tournament.name}.
-        </p>
+        </Text>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tournament Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>Tournament Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
+        <form
+          noValidate
+          onSubmit={form.handleSubmit(handleSubmit)}
+          className="space-y-6"
+        >
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Tournament Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           <div className="flex justify-end gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={() =>
                 navigate({
                   to: '/tournaments/$tournamentId',

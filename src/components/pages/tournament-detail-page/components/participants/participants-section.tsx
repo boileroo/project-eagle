@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +41,12 @@ export function ParticipantsSection({
     'players',
   );
 
+  const teamColorMap = useMemo(() => {
+    const map = new Map<string, number>();
+    tournament?.teams.forEach((t, i) => map.set(t.id, i));
+    return map;
+  }, [tournament?.teams]);
+
   const hasTournament = !!tournament;
   const hasTeamsConfigured = hasTournament && tournament.teams.length > 0;
   const hasGroups = !!round;
@@ -62,7 +68,7 @@ export function ParticipantsSection({
     disabled?: boolean;
   }[] = [];
   if (hasTournament) tabs.push({ id: 'players', label: 'Players' });
-  if (hasTournament && (!round || hasTeamsConfigured))
+  if (hasTournament && (!round || hasTeamsConfigured || isCommissioner))
     tabs.push({ id: 'teams', label: 'Teams', disabled: teamsTabDisabled });
   if (hasGroups && !(isPastSetup && !hasGroupsConfigured))
     tabs.push({ id: 'groups', label: 'Groups' });
@@ -146,6 +152,7 @@ export function ParticipantsSection({
                   tournament={tournament}
                   competitions={competitions}
                   canEdit={canEditTeams}
+                  teamColorMap={teamColorMap}
                   onChanged={onChanged}
                 />
               )}
@@ -155,6 +162,7 @@ export function ParticipantsSection({
                   canEdit={!!canEditGroups}
                   canToggleMarker={isCommissioner}
                   userId={userId}
+                  teamColorMap={teamColorMap}
                   onChanged={onChanged}
                 />
               )}

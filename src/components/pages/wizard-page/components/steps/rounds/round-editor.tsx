@@ -3,10 +3,13 @@ import type {
   WizardRound,
   WizardPlayer,
   WizardCompetition,
+  WizardTeam,
 } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Heading } from '@/components/ui/heading';
+import { SelectInput } from '@/components/ui/select-input';
 import { WizardCompetitionForm } from './components/wizard-competition-form';
 import { WizardCompetitionList } from './components/wizard-competition-list';
 
@@ -19,6 +22,7 @@ interface RoundEditorProps {
   round: WizardRound;
   roundNumber: number;
   players: WizardPlayer[];
+  teams: WizardTeam[];
   courses: CourseOption[];
   hasTeams: boolean;
   onChange: (round: WizardRound) => void;
@@ -31,6 +35,7 @@ export function RoundEditor({
   round,
   roundNumber,
   players,
+  teams,
   courses,
   hasTeams,
   onChange,
@@ -51,29 +56,25 @@ export function RoundEditor({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
       {onRemove && (
         <div className="flex items-center justify-between">
-          <h3 className="font-medium">Round {roundNumber}</h3>
-          <Button type="button" variant="outline" size="sm" onClick={onRemove}>
-            Remove Round
-          </Button>
+          <Heading level={3}>Round {roundNumber}</Heading>
         </div>
       )}
 
-      {/* Card 1: Round Details */}
-      <div className="space-y-3 rounded-lg border p-4">
-        <h4 className="text-sm font-medium">Round Details</h4>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-1">
-            <Label htmlFor={`round-${roundNumber}-course`} className="text-xs">
+      {/* Round Details */}
+      <div className="space-y-4 rounded-xl border p-4">
+        <Heading level={4}>Round Details</Heading>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor={`round-${roundNumber}-course`}>
               Course <span className="text-destructive">*</span>
             </Label>
-            <select
+            <SelectInput
               id={`round-${roundNumber}-course`}
               value={round.courseId}
               onChange={(e) => onChange({ ...round, courseId: e.target.value })}
-              className="border-input bg-background ring-offset-background focus-visible:ring-ring h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               <option value="">Select course…</option>
               {courses.map((c) => (
@@ -81,42 +82,38 @@ export function RoundEditor({
                   {c.name}
                 </option>
               ))}
-            </select>
+            </SelectInput>
           </div>
-
-          <div className="space-y-1">
-            <Label htmlFor={`round-${roundNumber}-date`} className="text-xs">
-              Date
-            </Label>
-            <Input
-              id={`round-${roundNumber}-date`}
-              type="date"
-              value={round.date ? round.date.slice(0, 10) : ''}
-              onChange={(e) => {
-                onChange({ ...round, date: e.target.value || undefined });
-              }}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor={`round-${roundNumber}-tee`} className="text-xs">
-              Tee Time
-            </Label>
-            <Input
-              id={`round-${roundNumber}-tee`}
-              type="time"
-              value={round.teeTime ?? ''}
-              onChange={(e) =>
-                onChange({ ...round, teeTime: e.target.value || undefined })
-              }
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor={`round-${roundNumber}-date`}>Date</Label>
+              <Input
+                id={`round-${roundNumber}-date`}
+                type="date"
+                value={round.date ? round.date.slice(0, 10) : ''}
+                onChange={(e) =>
+                  onChange({ ...round, date: e.target.value || undefined })
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`round-${roundNumber}-tee`}>Tee Time</Label>
+              <Input
+                id={`round-${roundNumber}-tee`}
+                type="time"
+                value={round.teeTime ?? ''}
+                onChange={(e) =>
+                  onChange({ ...round, teeTime: e.target.value || undefined })
+                }
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Card 2: Competitions */}
-      <div className="space-y-3 rounded-lg border p-4">
-        <h4 className="text-sm font-medium">Competitions</h4>
+      {/* Competitions */}
+      <div className="space-y-3 rounded-xl border p-4">
+        <Heading level={4}>Competitions</Heading>
         <WizardCompetitionList
           competitions={round.competitions}
           onRemove={handleRemoveComp}
@@ -126,6 +123,7 @@ export function RoundEditor({
             mode="game"
             hasTeams={hasTeams}
             players={players}
+            teams={teams}
             onAdd={handleAddComp}
             onCancel={() => setActiveForm(null)}
           />
@@ -135,6 +133,7 @@ export function RoundEditor({
             mode="bonus"
             hasTeams={hasTeams}
             players={players}
+            teams={teams}
             onAdd={handleAddComp}
             onCancel={() => setActiveForm(null)}
           />

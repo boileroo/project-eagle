@@ -2,6 +2,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { useUpdateCourse } from '@/lib/courses';
 import { CourseForm } from '@/components/course-form';
 import { type CreateCourseInput } from '@/lib/validators';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 import { toast } from 'sonner';
 import { type CourseData } from '@/types';
 
@@ -18,9 +20,9 @@ export function EditCoursePage({
   if (!isOwner) {
     return (
       <div className="py-12 text-center">
-        <p className="text-muted-foreground">
+        <Text size="sm" color="muted">
           You don&apos;t have permission to edit this course.
-        </p>
+        </Text>
       </div>
     );
   }
@@ -58,10 +60,10 @@ export function EditCoursePage({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Edit Course</h1>
-        <p className="text-muted-foreground">
+        <Heading level={1}>Edit Course</Heading>
+        <Text size="sm" color="muted">
           Update the details for {course.name}.
-        </p>
+        </Text>
       </div>
       <CourseForm
         defaultValues={defaultValues}

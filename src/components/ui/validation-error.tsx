@@ -15,7 +15,7 @@ export function ValidationError({
   return (
     <div
       className={cn(
-        'bg-destructive/10 text-destructive rounded-xl p-3 text-sm font-medium',
+        'bg-destructive text-destructive-foreground rounded-xl p-3 text-sm font-medium',
         className,
       )}
       role="alert"

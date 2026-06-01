@@ -25,8 +25,9 @@ import { buildTeamColourMap } from '@/lib/team-colours';
 import { CompetitionResults } from '@/components/shared/competition-results';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { EditCompetitionDialog } from './edit-competition-dialog';
 import { ConfigureMatchesDialog } from './configure-matches-dialog';
@@ -161,24 +162,26 @@ function CompetitionEntry({
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="font-medium">{comp.name}</h3>
-          <Badge variant="outline" className="text-xs">
-            {FORMAT_TYPE_LABELS[
-              comp.formatType as CompetitionConfig['formatType']
-            ] ?? comp.formatType}
-          </Badge>
-          <Badge variant="secondary" className="text-xs">
-            {comp.competitionCategory === 'match'
-              ? 'Team Match'
-              : comp.competitionCategory === 'game'
-                ? 'Game'
-                : 'Bonus'}
-          </Badge>
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div>
+          <Heading level={4}>{comp.name}</Heading>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            <Badge variant="outline" className="text-xs">
+              {FORMAT_TYPE_LABELS[
+                comp.formatType as CompetitionConfig['formatType']
+              ] ?? comp.formatType}
+            </Badge>
+            <Badge variant="secondary" className="text-xs">
+              {comp.competitionCategory === 'match'
+                ? 'Team Match'
+                : comp.competitionCategory === 'game'
+                  ? 'Game'
+                  : 'Bonus'}
+            </Badge>
+          </div>
         </div>
         {isCommissioner && isDraft && (
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <EditCompetitionDialog comp={comp} onSaved={onChanged} />
             {comp.formatType === 'match_play' && (
               <ConfigureMatchesDialog
@@ -201,17 +204,17 @@ function CompetitionEntry({
         )}
       </div>
       {groupedResult === null ? (
-        <p className="text-muted-foreground text-sm">
+        <Text size="sm" color="muted">
           Unable to calculate results.
-        </p>
+        </Text>
       ) : groupedResult.scope === 'within_group' &&
         groupedResult.results.length > 1 ? (
         <div className="space-y-4">
           {groupedResult.results.map((gr) => (
             <div key={gr.groupId}>
-              <p className="text-muted-foreground mb-1 text-xs font-medium">
+              <Text size="xs" color="muted" weight="medium" className="mb-1">
                 {gr.groupName ?? `Group ${gr.groupNumber}`}
-              </p>
+              </Text>
               <CompetitionResults
                 result={gr.result}
                 participantTeamColours={participantTeamColours}
@@ -222,9 +225,9 @@ function CompetitionEntry({
           ))}
           {groupedResult.combined && (
             <div>
-              <p className="text-muted-foreground mb-1 text-xs font-medium">
+              <Text size="xs" color="muted" weight="medium" className="mb-1">
                 Combined
-              </p>
+              </Text>
               <CompetitionResults
                 result={groupedResult.combined}
                 participantTeamColours={participantTeamColours}
@@ -241,9 +244,9 @@ function CompetitionEntry({
             teamColours={teamColours}
           />
         ) : (
-          <p className="text-muted-foreground text-sm">
+          <Text size="sm" color="muted">
             Unable to calculate results.
-          </p>
+          </Text>
         )
       ) : (
         <CompetitionResults
@@ -252,7 +255,6 @@ function CompetitionEntry({
           teamColours={teamColours}
         />
       )}
-      <Separator className="mt-4" />
     </div>
   );
 }
@@ -490,53 +492,46 @@ export function TeamCompetitionsSection({
         <CardHeader>
           <CardTitle className="flex items-center justify-between text-lg">
             <span>Competitions</span>
-            <div className="flex items-center gap-2">
-              {/* Show all add buttons at all times; disable when not permitted */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setExplainerOpen(true)}
+              title="Learn about competition types"
+            >
+              <CircleHelp className="h-4 w-4" />
+            </Button>
+          </CardTitle>
+          {isCommissioner && isDraft && (
+            <div className="flex flex-wrap gap-2">
               <AddIndividualCompDialog
                 tournamentId={round.tournamentId}
                 roundId={round.id}
                 round={round}
                 hasTeams={hasTeams}
                 onSaved={onChanged}
-                disabled={
-                  !(isCommissioner && isDraft) || hasTeams || !hasEnoughPlayers
-                }
+                disabled={hasTeams || !hasEnoughPlayers}
               />
-
               <AddTeamCompDialog
                 tournamentId={round.tournamentId}
                 roundId={round.id}
                 round={round}
                 competitions={competitions}
                 onSaved={onChanged}
-                disabled={
-                  !(isCommissioner && isDraft) || !hasTeams || !hasEnoughPlayers
-                }
+                disabled={!hasTeams || !hasEnoughPlayers}
               />
-
               <AddBonusCompDialog
                 tournamentId={round.tournamentId}
                 roundId={round.id}
                 onSaved={onChanged}
-                disabled={!(isCommissioner && isDraft) || !hasEnoughPlayers}
+                disabled={!hasEnoughPlayers}
               />
-
-              {/* Help button always visible */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setExplainerOpen(true)}
-                title="Learn about competition types"
-              >
-                <CircleHelp className="h-4 w-4" />
-              </Button>
             </div>
-          </CardTitle>
+          )}
         </CardHeader>
         <CardContent>
           {competitions.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
+            <Text size="sm" color="muted">
               Individual scores (strokes + stableford) are automatically tracked
               and will be visible once the round is underway.
               {isCommissioner && isDraft && (
@@ -545,7 +540,7 @@ export function TeamCompetitionsSection({
                   Use the above buttons to add additional games or matches.
                 </>
               )}
-            </p>
+            </Text>
           ) : (
             <div className="space-y-6">
               {teamStandings && (
@@ -574,7 +569,9 @@ export function TeamCompetitionsSection({
 
               {bonusComps.length > 0 && (
                 <div>
-                  <h3 className="mb-3 font-medium">Bonus Prizes</h3>
+                  <Heading level={4} className="mb-3">
+                    Bonus Prizes
+                  </Heading>
                   <div className="space-y-2">
                     {bonusComps.map((comp) => {
                       const config = comp.configJson as {

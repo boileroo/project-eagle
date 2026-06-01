@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Heading } from '@/components/ui/heading';
 import { type CourseData } from '@/types';
 import { DeleteCourseDialog } from './components/delete-course-dialog';
 import { CourseScorecard } from './components/course-scorecard';
@@ -16,14 +16,14 @@ export function CourseDetailPage({
   return (
     <div className="space-y-6">
       <div className="text-muted-foreground mb-1 text-sm">
-        <Link to="/courses" className="hover:text-primary underline">
+        <Link to="/courses" className="underline">
           ← Courses
         </Link>
       </div>
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">{course.name}</h1>
+            <Heading level={1}>{course.name}</Heading>
             <Badge variant="secondary">{course.numberOfHoles} holes</Badge>
           </div>
           {course.location && (
@@ -33,7 +33,7 @@ export function CourseDetailPage({
 
         {isOwner && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" asChild>
+            <Button variant="ghost" asChild>
               <Link
                 to="/courses/$courseId/edit"
                 params={{ courseId: course.id }}
@@ -45,8 +45,6 @@ export function CourseDetailPage({
           </div>
         )}
       </div>
-
-      <Separator />
 
       <CourseScorecard holes={course.holes} />
     </div>

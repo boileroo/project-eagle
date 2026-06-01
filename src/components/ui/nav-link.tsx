@@ -11,8 +11,8 @@ const BasicNavLink = React.forwardRef<
       ref={ref}
       {...props}
       className={cn(
-        'text-tokyo-red hover:text-tokyo-red/80 flex h-full items-center border-b-2 border-transparent px-1 text-xs font-semibold tracking-[0.15em] uppercase transition-colors',
-        '[&.active]:text-tokyo-blue [&.active]:border-tokyo-blue',
+        'text-foreground flex h-full items-center border-b-2 border-transparent px-1 text-xs font-semibold tracking-[0.15em] uppercase',
+        '[&.active]:text-primary [&.active]:border-primary',
         props.className,
       )}
     />

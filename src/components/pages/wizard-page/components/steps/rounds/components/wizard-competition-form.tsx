@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import type { WizardCompetition, WizardPlayer } from '@/lib/validators';
+import type {
+  WizardCompetition,
+  WizardPlayer,
+  WizardTeam,
+} from '@/lib/validators';
 import type { CompetitionConfig } from '@/lib/competition-config';
 import { isBonusFormat, isTeamFormat } from '@/lib/competition-config';
 import {
@@ -11,29 +15,43 @@ import { ScoringBasisRadio } from '@/components/pages/round-detail-page/componen
 import { PointsFields } from '@/components/pages/round-detail-page/components/competitions/competition-fields/points-fields';
 import { BonusModeFields } from '@/components/pages/round-detail-page/components/competitions/competition-fields/bonus-mode-fields';
 import { Button } from '@/components/ui/button';
+import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SelectInput } from '@/components/ui/select-input';
 
 type CompetitionCategory = WizardCompetition['competitionCategory'];
 
+function defaultMatchPoints(teams: WizardTeam[] | undefined): number {
+  if (!teams || teams.length < 2) return 1;
+  const sizes = teams.map((t) => t.playerIndices.length).filter((n) => n > 0);
+  return sizes.length >= 2 ? Math.min(...sizes) : 1;
+}
+
 function defaultConfig(
   formatType: CompetitionConfig['formatType'],
+  teams?: WizardTeam[],
 ): CompetitionConfig {
+  const matchPoints = defaultMatchPoints(teams);
   switch (formatType) {
     case 'match_play':
       return {
         formatType,
         config: {
           scoringBasis: 'stableford',
-          pointsPerWin: 1,
-          pointsPerHalf: 0.5,
+          pointsPerWin: matchPoints,
+          pointsPerHalf: matchPoints / 2,
           pairings: [],
         },
       };
     case 'best_ball':
       return {
         formatType,
-        config: { pointsPerWin: 1, pointsPerHalf: 0.5, pairings: [] },
+        config: {
+          pointsPerWin: matchPoints,
+          pointsPerHalf: matchPoints / 2,
+          pairings: [],
+        },
       };
     case 'nearest_pin':
     case 'longest_drive':
@@ -47,7 +65,10 @@ function defaultConfig(
         config: { scoringBasis: 'stableford', pointsPerWin: 1 },
       };
     case 'hi_lo':
-      return { formatType, config: { pointsPerWin: 1, pointsPerHalf: 0.5 } };
+      return {
+        formatType,
+        config: { pointsPerWin: matchPoints, pointsPerHalf: matchPoints / 2 },
+      };
     case 'wolf':
     case 'six_point':
     case 'chair':
@@ -78,6 +99,7 @@ interface WizardCompetitionFormProps {
   mode: 'game' | 'bonus';
   hasTeams: boolean;
   players: WizardPlayer[];
+  teams?: WizardTeam[];
   onAdd: (comps: WizardCompetition[]) => void;
   onCancel: () => void;
 }
@@ -85,6 +107,7 @@ interface WizardCompetitionFormProps {
 export function WizardCompetitionForm({
   mode,
   hasTeams,
+  teams,
   onAdd,
   onCancel,
 }: WizardCompetitionFormProps) {
@@ -93,14 +116,14 @@ export function WizardCompetitionForm({
   const [formatType, setFormatType] =
     useState<CompetitionConfig['formatType']>(startFormat);
   const [config, setConfig] = useState<CompetitionConfig>(
-    defaultConfig(startFormat),
+    defaultConfig(startFormat, teams),
   );
 
   const category = categoryForFormat(formatType, hasTeams);
 
   const handleFormatChange = (ft: CompetitionConfig['formatType']) => {
     setFormatType(ft);
-    setConfig(defaultConfig(ft));
+    setConfig(defaultConfig(ft, teams));
   };
 
   const updateConfig = (patch: Partial<CompetitionConfig['config']>) => {
@@ -125,13 +148,12 @@ export function WizardCompetitionForm({
   };
 
   const isValid = name.trim().length > 0;
-
   const heading =
     mode === 'bonus' ? 'Add Bonus' : hasTeams ? 'Add Match' : 'Add Game';
 
   return (
     <div className="space-y-4 rounded-lg border p-4">
-      <h4 className="font-medium">{heading}</h4>
+      <Heading level={4}>{heading}</Heading>
 
       <div className="space-y-1">
         <Label htmlFor="comp-name">Name</Label>
@@ -151,7 +173,7 @@ export function WizardCompetitionForm({
 
       <div className="space-y-1">
         <Label htmlFor="comp-format">Format</Label>
-        <select
+        <SelectInput
           id="comp-format"
           value={formatType}
           onChange={(e) =>
@@ -159,7 +181,6 @@ export function WizardCompetitionForm({
               e.target.value as CompetitionConfig['formatType'],
             )
           }
-          className="border-input bg-background ring-offset-background focus-visible:ring-ring h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           {mode === 'bonus' &&
             BONUS_FORMATS.map((f) => (
@@ -181,7 +202,7 @@ export function WizardCompetitionForm({
                 {f.label}
               </option>
             ))}
-        </select>
+        </SelectInput>
       </div>
 
       {(formatType === 'wolf' ||
@@ -221,7 +242,7 @@ export function WizardCompetitionForm({
 
       {formatType === 'rumble' && (
         <div className="space-y-1">
-          <Label>Points per Win</Label>
+          <Label>Points per Match</Label>
           <Input
             type="number"
             step="0.5"

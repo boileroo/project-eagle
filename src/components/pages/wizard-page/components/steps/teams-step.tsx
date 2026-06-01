@@ -3,6 +3,9 @@ import type { WizardPlayer, WizardTeam } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
+import { X } from 'lucide-react';
 
 interface TeamsStepProps {
   players: WizardPlayer[];
@@ -90,12 +93,12 @@ export function TeamsStep({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold">Teams</h2>
-        <p className="text-muted-foreground text-sm">
+      <div className="text-center">
+        <Heading level={2}>Teams</Heading>
+        <Text size="sm" color="muted" className="mt-1">
           Optionally organise players into teams for team competitions. You can
           assign players to teams later from the tournament page.
-        </p>
+        </Text>
       </div>
 
       <div className="flex items-center gap-3">
@@ -138,15 +141,14 @@ export function TeamsStep({
                   />
                 </div>
                 {localTeams.length > 2 && (
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
-                    size="sm"
                     onClick={() => removeTeam(teamIndex)}
-                    className="mt-5"
+                    aria-label={`Remove team ${teamIndex + 1}`}
+                    className="text-muted-foreground hover:bg-muted/60 hover:text-foreground mt-5 rounded-md p-1 transition-colors"
                   >
-                    Remove
-                  </Button>
+                    <X className="h-4 w-4" />
+                  </button>
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
@@ -186,11 +188,19 @@ export function TeamsStep({
         </div>
       )}
 
-      <div className="flex justify-between">
-        <Button type="button" variant="outline" onClick={onBack}>
+      <div className="flex flex-col gap-3 pt-2">
+        <Button size="lg" className="w-full" onClick={handleNext}>
+          Next
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="w-full"
+          onClick={onBack}
+        >
           Back
         </Button>
-        <Button onClick={handleNext}>Next</Button>
       </div>
     </div>
   );

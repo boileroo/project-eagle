@@ -15,7 +15,7 @@ Your scope is strictly limited to UI and UX improvements:
 - Interaction patterns, feedback states (loading, error, empty, success)
 - Accessibility (ARIA labels, keyboard navigation, focus management)
 - Responsiveness and layout on different screen sizes
-- Consistency with the existing design system and component patterns
+- Consistency with the design system and component patterns
 
 You must NOT:
 

@@ -164,6 +164,9 @@ export const renderRouterToString = undefined;
 export default defineConfig({
   server: {
     port: 5173,
+    warmup: {
+      ssrFiles: ['./src/lib/*.server.ts'],
+    },
   },
   plugins: [
     tsConfigPaths(),
@@ -206,8 +209,8 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        theme_color: '#FAF9F6',
-        background_color: '#FAF9F6',
+        theme_color: '#FFFFFF',
+        background_color: '#FFFFFF',
         icons: [
           {
             src: '/pwa-64x64.png',

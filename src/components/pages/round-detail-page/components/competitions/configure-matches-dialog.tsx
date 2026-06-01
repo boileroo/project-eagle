@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { useUpdateCompetition } from '@/lib/competitions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Select } from '@/components/ui/select';
 import {
   Dialog,
@@ -225,7 +224,7 @@ export function ConfigureMatchesDialog({
               const { playerA, playerB } = getAddState(group.id);
 
               return (
-                <div key={group.id} className="space-y-2">
+                <div key={group.id} className="space-y-2 pb-4">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold">
                       {group.name || `Group ${group.groupNumber}`}
@@ -415,8 +414,6 @@ export function ConfigureMatchesDialog({
                       No players in this group.
                     </p>
                   )}
-
-                  <Separator />
                 </div>
               );
             })}

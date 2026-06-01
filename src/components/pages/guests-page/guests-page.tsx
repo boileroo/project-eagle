@@ -3,6 +3,8 @@ import type { GuestListItem } from '@/types';
 import { formatHandicapWithFallback } from '@/lib/handicaps';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 import { EditGuestDialog } from './components/edit-guest-dialog';
 import { DeleteGuestDialog } from './components/delete-guest-dialog';
 
@@ -13,19 +15,19 @@ export function GuestsPage({ guests }: { guests: GuestListItem[] }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Guests</h1>
-        <p className="text-muted-foreground">
+        <Heading level={1}>Guests</Heading>
+        <Text size="sm" color="muted">
           Manage guests you&apos;ve added to tournaments
-        </p>
+        </Text>
       </div>
 
       {guests.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">
+            <Text size="sm" color="muted">
               You haven&apos;t created any guests yet. Add guests when creating
               a tournament.
-            </p>
+            </Text>
           </CardContent>
         </Card>
       ) : (
@@ -45,14 +47,14 @@ export function GuestsPage({ guests }: { guests: GuestListItem[] }) {
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setEditGuest(guest)}
                   >
                     Edit
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setDeleteGuest(guest)}
                   >

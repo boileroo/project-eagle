@@ -2,6 +2,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { useCreateCourse } from '@/lib/courses';
 import { CourseForm } from '@/components/course-form';
 import { type CreateCourseInput } from '@/lib/validators';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 import { toast } from 'sonner';
 
 export function NewCoursePage() {
@@ -27,10 +29,10 @@ export function NewCoursePage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">New Course</h1>
-        <p className="text-muted-foreground">
+        <Heading level={1}>New Course</Heading>
+        <Text size="sm" color="muted">
           Add a new course to the library.
-        </p>
+        </Text>
       </div>
       <CourseForm
         onSubmit={handleSubmit}

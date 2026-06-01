@@ -1,87 +1,9 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/space-grotesk';
 @import '@fontsource-variable/inter';
-@import './utilities/typography.css';
-@import './utilities/glass.css';
 
-@custom-variant dark (&:is(.dark *));
-
-/* 
-  =========================================
-  1. BASE COLOR PALETTES
-  =========================================
-*/
 @theme {
   --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-heading:
-    'Space Grotesk Variable', 'Space Grotesk', ui-sans-serif, system-ui,
-    sans-serif;
 
-  /* LAYER 0: TOKYO CORE PALETTE (Theme Independent) */
-  --color-tokyo-linen: #f2f0eb;
-  --color-tokyo-stone: #cfc9c2;
-  --color-tokyo-red: #f7768e;
-  --color-tokyo-orange: #ff9e64;
-  --color-tokyo-yellow: #e0af68;
-  --color-tokyo-green: #9ece6a;
-  --color-tokyo-teal: #73daca;
-  --color-tokyo-cyan: #b4f9f8;
-  --color-tokyo-blue: #7aa2f7;
-  --color-tokyo-light-blue: #7dcfff;
-  --color-tokyo-sky: #2ac3de;
-  --color-tokyo-purple: #bb9af7;
-  --color-tokyo-lavender: #c0caf5;
-  --color-tokyo-white: #ffffff;
-
-  /* LAYER 0: TOKYO LINEN SCALE (Light Mode Monochromes) */
-  --color-tokyo-linen-100: #e5ecf9;
-  --color-tokyo-linen-200: #e0e5f0;
-  --color-tokyo-linen-300: #c7d2e8;
-  --color-tokyo-linen-600: #697da4;
-  --color-tokyo-linen-900: #375493;
-
-  /* LAYER 0: TOKYO STORM SCALE (Dark Mode Monochromes) */
-  --color-tokyo-storm-100: oklch(0.7882 0.0434 264.46);
-  --color-tokyo-storm-400: oklch(0.52 0.04 264.46);
-  --color-tokyo-storm-600: oklch(0.3 0.035 264.05);
-  --color-tokyo-storm-700: oklch(0.28 0.032 264.05);
-  --color-tokyo-storm-800: oklch(0.24 0.032 264.05);
-  --color-tokyo-storm-850: oklch(0.195 0.028 264.05);
-  --color-tokyo-storm-900: oklch(0.17 0.025 264.05);
-  --color-tokyo-storm-950: oklch(0.145 0.022 264.05);
-
-  /* LAYER 1: TOKYO LINEN (LIGHT) PRIMITIVES */
-  --color-tl-canvas: var(--color-tokyo-linen);
-  --color-tl-white: var(--color-tokyo-white);
-  --color-tl-text: var(--color-tokyo-linen-900);
-  --color-tl-primary: var(--color-tokyo-blue);
-  --color-tl-surface-low: var(--color-tokyo-linen-200);
-  --color-tl-surface-high: var(--color-tokyo-linen-100);
-  --color-tl-muted-text: var(--color-tokyo-linen-600);
-  --color-tl-border: var(--color-tokyo-linen-300);
-
-  --color-tl-destructive: var(--color-tokyo-red);
-  --color-tl-success: var(--color-tokyo-green);
-  --color-tl-warning: var(--color-tokyo-yellow);
-  --color-tl-info: var(--color-tokyo-blue);
-
-  /* LAYER 2: TOKYO NIGHT (DARK) PRIMITIVES */
-  --color-tn-canvas: var(--color-tokyo-storm-950);
-  --color-tn-text: var(--color-tokyo-lavender);
-  --color-tn-surface: var(--color-tokyo-storm-850);
-  --color-tn-primary: var(--color-tokyo-blue);
-  --color-tn-surface-low: var(--color-tokyo-storm-900);
-  --color-tn-surface-high: var(--color-tokyo-storm-800);
-  --color-tn-surface-muted: var(--color-tokyo-storm-700);
-  --color-tn-muted-text: var(--color-tokyo-storm-400);
-  --color-tn-border: var(--color-tokyo-storm-600);
-
-  --color-tn-destructive: var(--color-tokyo-red);
-  --color-tn-success: var(--color-tokyo-green);
-  --color-tn-warning: var(--color-tokyo-yellow);
-  --color-tn-info: var(--color-tokyo-blue);
-
-  /* LAYER 3: COMPONENT TOKENS TO THEME AUTO-MAPPING */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -98,161 +20,133 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-warning: var(--warning);
-  --color-warning-foreground: var(--warning-foreground);
-  --color-info: var(--info);
-  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
   --color-surface-low: var(--surface-low);
   --color-surface-high: var(--surface-high);
+  --color-surface-highest: var(--surface-highest);
 
-  --color-coral: var(--coral);
-  --color-coral-foreground: var(--coral-foreground);
-  --color-purple: var(--purple);
-  --color-purple-foreground: var(--purple-foreground);
+  --color-info: var(--info);
+  --color-warning: var(--warning);
+  --color-amber: var(--amber);
 
-  --color-chart-1: var(--primary);
-  --color-chart-2: var(--info);
-  --color-chart-3: var(--success);
-  --color-chart-4: var(--warning);
-  --color-chart-5: var(--destructive);
+  /* Extended green scale — for hover states, tinted backgrounds, charts */
+  --color-green-10: #e9f8f2;
+  --color-green-20: #c7efde;
+  --color-green-30: #90e0bd;
+  --color-green-40: #58d09c;
+  --color-green: #21c17c;
+  --color-green-60: #18905c;
+  --color-green-70: #10603d;
 
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--foreground);
-  --color-sidebar-primary: var(--primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--accent);
-  --color-sidebar-accent-foreground: var(--foreground);
-  --color-sidebar-border: var(--border);
-  --color-sidebar-ring: var(--ring);
+  /* success is an alias for primary — used by live-badge, scorecard, nav-sheet */
+  --color-success: var(--primary);
+
+  /* Extended purple scale — secondary chart series */
+  --color-purple-10: #f0edf8;
+  --color-purple-20: #dad1ee;
+  --color-purple-30: #b6a3de;
+  --color-purple-40: #9275ce;
+  --color-purple: #6e48be;
+  --color-purple-60: #52358e;
+  --color-purple-70: #36235e;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 12px);
+
+  --shadow-card:
+    0 4px 24px -4px rgb(0 0 0 / 0.1), 0 1px 6px -1px rgb(0 0 0 / 0.07);
 }
 
-/* 
-  =========================================
-  2. THEME IMPLEMENTATION
-  =========================================
-*/
+/* ---------- Light (default) ---------- */
+
 @layer base {
   :root {
-    /* UNIVERSAL COMMON ALIASES */
-    --card-foreground: var(--foreground);
-    --popover-foreground: var(--foreground);
-    --secondary-foreground: var(--foreground);
-    --accent-foreground: var(--foreground);
-    --input: var(--border);
-    --ring: var(--primary);
+    --background: #f5f7f8;
+    --foreground: #232c2e;
 
-    /* TOKYO LINEN (LIGHT) MAPPINGS */
-    --background: var(--color-tl-canvas);
-    --foreground: var(--color-tl-text);
-    --card: var(--color-tl-white);
-    --popover: var(--color-tl-white);
+    --card: #ffffff;
+    --card-foreground: #232c2e;
+    --popover: #ffffff;
+    --popover-foreground: #232c2e;
 
-    --primary: var(--color-tl-primary);
-    --primary-foreground: var(--color-tl-white);
+    --primary: #21c17c;
+    --primary-foreground: #ffffff;
 
-    --secondary: var(--color-tl-surface-low);
-    --muted: var(--color-tl-surface-low);
-    --muted-foreground: var(--color-tl-muted-text);
+    --secondary: #edefef;
+    --secondary-foreground: #232c2e;
+    --muted: #edefef;
+    --muted-foreground: #5c6363;
 
-    --accent: var(--color-tl-surface-high);
+    --accent: #ffa340;
+    --accent-foreground: #232c2e;
 
-    --destructive: var(--color-tl-destructive);
-    --destructive-foreground: var(--color-tl-white);
+    --destructive: #e24955;
+    --destructive-foreground: #ffffff;
 
-    --success: var(--color-tl-success);
-    --success-foreground: var(--color-tl-white);
+    --border: #c6c7c8;
+    --input: #c6c7c8;
+    --ring: #21c17c;
 
-    --warning: var(--color-tl-warning);
-    --warning-foreground: var(--foreground);
+    --surface-low: #f5f7f8;
+    --surface-high: #ffffff;
+    --surface-highest: #edefef;
 
-    --info: var(--color-tl-info);
-    --info-foreground: var(--color-tl-white);
+    --info: #379fdc;
+    --warning: #ffa340;
+    --amber: #ffa340;
 
-    --border: var(--color-tl-border);
-    --surface-low: var(--color-tl-surface-low);
-    --surface-high: var(--color-tl-surface-high);
-
-    --sidebar: var(--background);
-    --sidebar-primary-foreground: var(--color-tl-white);
-
-    --coral: var(--color-tl-coral);
-    --coral-foreground: var(--color-tl-white);
-    --purple: var(--color-tl-purple);
-    --purple-foreground: var(--color-tl-white);
-
-    --radius: 0.625rem;
+    --radius: 0.75rem;
   }
 
+  /* ---------- Dark (opt-in via .dark on <html>) ---------- */
+
   .dark {
-    /* TOKYO NIGHT (DARK) MAPPINGS */
-    --background: var(--color-tn-canvas);
-    --foreground: var(--color-tn-text);
-    --card: var(--color-tn-surface);
-    --popover: var(--color-tn-surface);
+    --background: #1a2022;
+    --foreground: #ffffff;
 
-    --primary: var(--color-tn-primary);
-    --primary-foreground: var(--background);
+    --card: #232c2e;
+    --card-foreground: #ffffff;
+    --popover: #232c2e;
+    --popover-foreground: #ffffff;
 
-    --secondary: var(--color-tn-surface-muted);
-    --muted: var(--color-tn-surface-muted);
-    --muted-foreground: var(--color-tn-muted-text);
+    --primary: #21c17c;
+    --primary-foreground: #ffffff;
 
-    --accent: var(--color-tn-border);
+    --secondary: #2c3537;
+    --secondary-foreground: #ffffff;
+    --muted: #2c3537;
+    --muted-foreground: #8e9191;
 
-    --destructive: var(--color-tn-destructive);
-    --destructive-foreground: var(--background);
+    --accent: #ffa340;
+    --accent-foreground: #1a2022;
 
-    --success: var(--color-tn-success);
-    --success-foreground: var(--background);
+    --destructive: #e24955;
+    --destructive-foreground: #ffffff;
 
-    --warning: var(--color-tn-warning);
-    --warning-foreground: var(--background);
+    --border: #3d4849;
+    --input: #3d4849;
+    --ring: #21c17c;
 
-    --info: var(--color-tn-info);
-    --info-foreground: var(--background);
+    --surface-low: #1a2022;
+    --surface-high: #232c2e;
+    --surface-highest: #2c3537;
 
-    --border: var(--color-tn-border);
-    --surface-low: var(--color-tn-surface-low);
-    --surface-high: var(--color-tn-surface-high);
-
-    --sidebar: var(--surface-low);
-    --sidebar-primary-foreground: var(--background);
-
-    --coral: var(--color-tn-coral);
-    --coral-foreground: var(--background);
-    --purple: var(--color-tn-purple);
-    --purple-foreground: var(--background);
+    --info: #379fdc;
+    --warning: #ffa340;
+    --amber: #ffa340;
   }
 
   * {
     @apply border-border;
   }
 
-  a, button {
-    @apply transition-[filter] duration-200;
-  }
-  a:hover, button:hover {
-    @apply brightness-90;
-  }
-  a:active, button:active {
-    @apply brightness-75;
-  }
-
   body {
     @apply bg-background text-foreground;
-    font-feature-settings:
-      'rlig' 1,
-      'calt' 1;
   }
 }

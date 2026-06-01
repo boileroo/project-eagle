@@ -5,13 +5,9 @@ import {
   HeadContent,
   Scripts,
 } from '@tanstack/react-router';
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
-import { DevTools } from '@/components/dev-tools/dev-tools';
 import { PwaUpdateToast } from '@/components/pwa-update-toast';
-import { MeshGradient } from '@/components/ui/mesh-gradient';
 import { getAuthUser } from '@/lib/auth.server';
 import appCss from '@/styles/globals.css?url';
 import { appleSplashScreens } from '@/config/apple-splash';
@@ -64,7 +60,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { name: 'theme-color', content: '#12131d' },
+      { name: 'theme-color', content: '#000000' },
       { name: 'apple-mobile-web-app-capable', content: 'yes' },
       {
         name: 'apple-mobile-web-app-status-bar-style',
@@ -110,26 +106,19 @@ function RootComponent() {
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body className="bg-background min-h-screen font-sans antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          <MeshGradient />
-          {children}
-          <Toaster />
-        </ThemeProvider>
+        <PwaUpdateToast />
+        {children}
+        <Toaster />
         <Scripts />
-        {import.meta.env.DEV && <DevTools />}
+        {/* {import.meta.env.DEV && <DevTools />}
         {import.meta.env.DEV && (
           <TanStackRouterDevtools position="bottom-right" />
-        )}
+        )} */}
       </body>
     </html>
   );

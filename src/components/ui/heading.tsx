@@ -2,14 +2,21 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 export interface HeadingProps extends React.HTMLAttributes<HTMLHeadingElement> {
-  level?: 1 | 2 | 3 | 4 | 5 | 6;
-  glow?: boolean;
-  color?: 'default' | 'white' | 'red' | 'blue' | 'green';
+  level?: 1 | 2 | 3 | 4 | 5;
+  color?: 'default' | 'muted' | 'primary' | 'destructive' | 'white' | 'inherit';
 }
 
+/**
+ * Fixed-size headings for a mobile-first UI. No responsive breakpoint scaling.
+ *
+ * level 1 — 24px bold     — page title (<h1>)
+ * level 2 — 20px bold     — section heading (<h2>)
+ * level 3 — 16px bold     — card / subsection title (<h3>)
+ * level 4 — 14px bold     — list item / minor heading (<h4>)
+ * level 5 — 12px semibold — micro label (<h5>)
+ */
 export function Heading({
   level = 1,
-  glow = false,
   color = 'default',
   className,
   children,
@@ -17,36 +24,26 @@ export function Heading({
 }: HeadingProps) {
   const Comp = `h${level}` as const;
 
-  const baseStyles = 'font-heading font-bold tracking-tight';
-
   const sizeStyles = {
-    1: 'text-4xl sm:text-5xl md:text-6xl lg:text-7xl',
-    2: 'text-3xl sm:text-4xl',
-    3: 'text-2xl sm:text-3xl',
-    4: 'text-xl sm:text-2xl',
-    5: 'text-lg sm:text-xl',
-    6: 'text-base sm:text-lg',
+    1: 'text-2xl font-bold tracking-tight',
+    2: 'text-xl font-bold tracking-tight',
+    3: 'text-base font-bold',
+    4: 'text-sm font-bold',
+    5: 'text-xs font-semibold',
   };
 
   const colorStyles = {
     default: 'text-foreground',
-    white: 'text-tokyo-white',
-    red: 'text-tokyo-red',
-    blue: 'text-tokyo-blue',
-    green: 'text-tokyo-green',
+    muted: 'text-muted-foreground',
+    primary: 'text-primary',
+    destructive: 'text-destructive',
+    white: 'text-white',
+    inherit: 'text-inherit',
   };
-
-  const glowStyles = glow ? 'drop-shadow-[0_0_20px_currentColor]' : '';
 
   return (
     <Comp
-      className={cn(
-        baseStyles,
-        sizeStyles[level],
-        colorStyles[color],
-        glowStyles,
-        className,
-      )}
+      className={cn(sizeStyles[level], colorStyles[color], className)}
       {...props}
     >
       {children}

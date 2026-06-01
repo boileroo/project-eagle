@@ -38,9 +38,8 @@ export function SingleRoundCard({ tournament }: SingleRoundCardProps) {
     <Link
       to="/tournaments/$tournamentId/rounds/$roundId"
       params={{ tournamentId: tournament.id, roundId: round.id }}
-      className="group"
     >
-      <Card className="group-hover:bg-background h-full transition-colors">
+      <Card className="h-full">
         <CardHeader>
           <CardTitle className="flex items-center justify-between text-lg">
             <span className="truncate">{round.course.name}</span>

@@ -6,7 +6,7 @@ import {
   formatHandicapAdjustment,
   formatHandicap,
 } from '@/lib/handicaps';
-import { shortName, scoreCellClass } from '@/lib/scoring-utils';
+import { shortName } from '@/lib/scoring-utils';
 
 // ──────────────────────────────────────────────
 // Types
@@ -132,10 +132,10 @@ export function Scorecard({
         key={participant.id}
         className={cn(
           'relative h-10 min-w-12 border px-1 text-center text-sm',
-          cell ? scoreCellClass(cell.strokes, hole.par) : '',
+          '',
           cellEditable &&
             'hover:ring-primary cursor-pointer hover:ring-2 hover:ring-inset',
-          canEdit && !cellEditable && 'bg-muted/50',
+          canEdit && !cellEditable && 'bg-surface-high',
         )}
         onClick={handleScoreActivate}
         onKeyDown={(event) => {
@@ -188,7 +188,7 @@ export function Scorecard({
     return (
       <td
         key={participantId}
-        className="bg-muted/50 border px-1 text-center text-sm font-semibold"
+        className="bg-surface-high border px-1 text-center text-sm font-semibold"
       >
         {total != null ? (
           <span>
@@ -197,7 +197,7 @@ export function Scorecard({
               <span
                 className={cn(
                   'ml-1 text-xs',
-                  diff > 0 ? 'text-red-500' : 'text-green-600',
+                  diff > 0 ? 'text-destructive' : 'text-success',
                 )}
               >
                 {diff > 0 ? `+${diff}` : diff}
@@ -215,7 +215,7 @@ export function Scorecard({
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="bg-muted/30">
+          <tr className="bg-surface-high font-semibold">
             <th className="bg-background sticky left-0 z-10 border px-2 py-1.5 text-left text-xs font-medium">
               Hole
             </th>
@@ -262,8 +262,8 @@ export function Scorecard({
           ))}
 
           {/* Out row */}
-          <tr className="bg-muted/30 font-semibold">
-            <td className="bg-muted/30 sticky left-0 z-10 border px-2 py-1 text-center text-xs">
+          <tr className="bg-surface-high font-semibold">
+            <td className="bg-surface-high sticky left-0 z-10 border px-2 py-1 text-center text-xs">
               Out
             </td>
             <td className="border px-2 py-1 text-center text-xs">{frontPar}</td>
@@ -292,8 +292,8 @@ export function Scorecard({
               ))}
 
               {/* In row */}
-              <tr className="bg-muted/30 font-semibold">
-                <td className="bg-muted/30 sticky left-0 z-10 border px-2 py-1 text-center text-xs">
+              <tr className="bg-surface-high font-semibold">
+                <td className="bg-surface-high sticky left-0 z-10 border px-2 py-1 text-center text-xs">
                   In
                 </td>
                 <td className="border px-2 py-1 text-center text-xs">
@@ -308,8 +308,8 @@ export function Scorecard({
           )}
 
           {/* Total row */}
-          <tr className="bg-muted/50 font-bold">
-            <td className="bg-muted/50 sticky left-0 z-10 border px-2 py-1.5 text-center text-xs">
+          <tr className="bg-surface-high font-bold">
+            <td className="bg-surface-high sticky left-0 z-10 border px-2 py-1.5 text-center text-xs">
               Total
             </td>
             <td className="border px-2 py-1.5 text-center text-xs">

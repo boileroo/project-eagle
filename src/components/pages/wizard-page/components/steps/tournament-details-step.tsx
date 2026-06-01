@@ -3,6 +3,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 import {
   Form,
   FormControl,
@@ -51,15 +53,19 @@ export function TournamentDetailsStep({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold">Tournament Details</h2>
-        <p className="text-muted-foreground text-sm">
+      <div className="text-center">
+        <Heading level={2}>Tournament Details</Heading>
+        <Text size="sm" color="muted" className="mt-1">
           Give your tournament a name and an optional description.
-        </p>
+        </Text>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <form
+          noValidate
+          onSubmit={form.handleSubmit(handleSubmit)}
+          className="space-y-4"
+        >
           <FormField
             control={form.control}
             name="tournamentName"
@@ -90,11 +96,19 @@ export function TournamentDetailsStep({
             )}
           />
 
-          <div className="flex justify-between">
-            <Button type="button" variant="outline" onClick={onBack}>
+          <div className="flex flex-col gap-3 pt-2">
+            <Button type="submit" size="lg" className="w-full">
+              Next
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full"
+              onClick={onBack}
+            >
               Back
             </Button>
-            <Button type="submit">Next</Button>
           </div>
         </form>
       </Form>

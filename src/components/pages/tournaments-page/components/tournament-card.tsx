@@ -29,9 +29,8 @@ export function TournamentCard({ tournament }: TournamentCardProps) {
     <Link
       to="/tournaments/$tournamentId"
       params={{ tournamentId: tournament.id }}
-      className="group"
     >
-      <Card className="group-hover:bg-background h-full transition-colors">
+      <Card className="h-full">
         <CardHeader>
           <CardTitle className="flex items-center justify-between text-lg">
             <span className="truncate">{tournament.name}</span>
@@ -46,7 +45,7 @@ export function TournamentCard({ tournament }: TournamentCardProps) {
               {tournament.participants.length} player
               {tournament.participants.length !== 1 ? 's' : ''}
             </Badge>
-            <Badge variant="outline">
+            <Badge variant="secondary">
               {tournament.rounds.length} round
               {tournament.rounds.length !== 1 ? 's' : ''}
             </Badge>

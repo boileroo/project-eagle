@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { formatHandicap } from '@/lib/handicaps';
@@ -40,6 +41,7 @@ interface AddPlayerDialogProps {
     name: string,
     handicap: string,
   ) => Promise<void>;
+  trigger?: ReactNode;
   triggerLabel?: string;
 }
 
@@ -54,6 +56,7 @@ interface AddPlayerDialogProps {
  */
 export function AddPlayerDialog({
   onAddGuest,
+  trigger,
   triggerLabel = 'Add Player',
 }: AddPlayerDialogProps) {
   const [open, setOpen] = useState(false);
@@ -145,7 +148,7 @@ export function AddPlayerDialog({
     >
       <div className="mt-2 flex justify-end">
         <DialogTrigger asChild>
-          <Button size="sm">{triggerLabel}</Button>
+          {trigger ?? <Button size="sm">{triggerLabel}</Button>}
         </DialogTrigger>
       </div>
       <DialogContent className="sm:max-w-md">

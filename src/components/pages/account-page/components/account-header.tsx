@@ -1,10 +1,11 @@
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
+
 export function AccountHeader() {
   return (
     <div>
-      <h1 className="text-3xl font-bold tracking-tight">My Account</h1>
-      <p className="text-muted-foreground">
-        Manage your player profile and settings.
-      </p>
+      <Heading level={1}>My Account</Heading>
+      <Text color="muted">Manage your player profile and settings.</Text>
     </div>
   );
 }

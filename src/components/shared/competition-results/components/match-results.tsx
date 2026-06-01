@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { Text } from '@/components/ui/text';
 
 interface MatchResultsProps {
   matches: Array<{
@@ -87,9 +88,9 @@ export function MatchResults({ matches, hideGroupHeaders }: MatchResultsProps) {
       {Array.from(groupedMatches.entries()).map(([groupId, groupMatches]) => (
         <div key={groupId}>
           {!hideGroupHeaders && (
-            <h4 className="text-muted-foreground mb-2 text-sm font-medium">
+            <Text size="sm" weight="medium" color="muted" className="mb-2">
               {groupMatches[0]?.groupName ?? `Group ${groupId.slice(0, 8)}`}
-            </h4>
+            </Text>
           )}
           <div className="space-y-2">
             {groupMatches.map((match, i) =>

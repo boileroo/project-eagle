@@ -5,6 +5,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 
 export function CompetitionsExplainerDialog({
   open,
@@ -24,11 +26,11 @@ export function CompetitionsExplainerDialog({
         </DialogHeader>
         <div className="space-y-6">
           <div>
-            <h4 className="font-semibold">Games (no teams)</h4>
-            <p className="text-muted-foreground mt-1 text-sm">
+            <Heading level={4}>Games (no teams)</Heading>
+            <Text size="sm" color="muted" className="mt-1">
               Individual competitions played within each group. Each group can
               have at most one game. Available when teams are not enabled.
-            </p>
+            </Text>
             <ul className="text-muted-foreground mt-1 list-inside list-disc text-sm">
               <li>
                 <strong>Wolf</strong> — 4 players. Rotating wolf picks a partner
@@ -50,12 +52,12 @@ export function CompetitionsExplainerDialog({
           </div>
 
           <div>
-            <h4 className="font-semibold">Team Matches (teams enabled)</h4>
-            <p className="text-muted-foreground mt-1 text-sm">
+            <Heading level={4}>Team Matches (teams enabled)</Heading>
+            <Text size="sm" color="muted" className="mt-1">
               Team-vs-team competitions. Exactly one team match type per round,
               applied uniformly across all groups. Each match produces team
               points that aggregate toward the tournament team standings.
-            </p>
+            </Text>
             <ul className="text-muted-foreground mt-1 list-inside list-disc text-sm">
               <li>
                 <strong>Best Ball (Fourball)</strong> — 2v2. Each pair's best
@@ -76,12 +78,12 @@ export function CompetitionsExplainerDialog({
           </div>
 
           <div>
-            <h4 className="font-semibold">Bonus Prizes</h4>
-            <p className="text-muted-foreground mt-1 text-sm">
+            <Heading level={4}>Bonus Prizes</Heading>
+            <Text size="sm" color="muted" className="mt-1">
               Side prizes like Nearest the Pin or Longest Drive. Always
               available, spanning all players across all groups. Can optionally
               add bonus points to individual stableford standings.
-            </p>
+            </Text>
           </div>
         </div>
       </DialogContent>

@@ -1,5 +1,4 @@
 import { useRouter } from '@tanstack/react-router';
-import { Separator } from '@/components/ui/separator';
 import { ParticipantsSection } from './components/participants/participants-section';
 import { RoundsSection } from './components/rounds/rounds-section';
 import { LeaderboardSection } from './components/leaderboard/leaderboard-section';
@@ -36,8 +35,6 @@ export function TournamentDetailPage({
         tournament={tournament}
         isCommissioner={isCommissioner}
       />
-
-      <Separator />
 
       <ParticipantsSection
         tournament={tournament}

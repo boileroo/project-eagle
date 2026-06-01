@@ -17,10 +17,8 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { ThemeSelector } from './theme-selector';
 import { type AccountData } from '@/types';
 
 export function AccountForm({ account }: { account: AccountData }) {
@@ -79,8 +77,6 @@ export function AccountForm({ account }: { account: AccountData }) {
               )}
             />
 
-            <Separator />
-
             <FormField
               control={form.control}
               name="currentHandicap"
@@ -103,10 +99,6 @@ export function AccountForm({ account }: { account: AccountData }) {
                 </FormItem>
               )}
             />
-
-            <Separator />
-
-            <ThemeSelector />
 
             <div className="flex justify-end pt-2">
               <Button type="submit" disabled={isPending}>

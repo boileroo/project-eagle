@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import type { WizardRound, WizardPlayer } from '@/lib/validators';
+import type { WizardRound, WizardPlayer, WizardTeam } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
+import { X } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -16,6 +19,7 @@ interface CourseOption {
 interface RoundsStepProps {
   rounds: WizardRound[];
   players: WizardPlayer[];
+  teams: WizardTeam[];
   courses: CourseOption[];
   hasTeams: boolean;
   isSingleRound: boolean;
@@ -28,6 +32,7 @@ interface RoundsStepProps {
 export function RoundsStep({
   rounds,
   players,
+  teams,
   courses,
   hasTeams,
   isSingleRound,
@@ -41,11 +46,8 @@ export function RoundsStep({
   const toggleOpen = (index: number, open: boolean) => {
     setOpenRounds((prev) => {
       const next = new Set(prev);
-      if (open) {
-        next.add(index);
-      } else {
-        next.delete(index);
-      }
+      if (open) next.add(index);
+      else next.delete(index);
       return next;
     });
   };
@@ -76,16 +78,11 @@ export function RoundsStep({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold">
-          {isSingleRound ? 'Round Setup' : 'Rounds'}
-        </h2>
-        <p className="text-muted-foreground text-sm">
-          Configure{isSingleRound ? ' your round' : ' each round'}: choose a
-          course, set the date, and add competitions. Players will be split into
-          balanced groups automatically — you can reassign them from the round
-          detail page before play begins.
-        </p>
+      <div className="text-center">
+        <Heading level={2}>{isSingleRound ? 'Round Setup' : 'Rounds'}</Heading>
+        <Text size="sm" color="muted" className="mt-1">
+          Choose a course, set the date, and add competitions.
+        </Text>
       </div>
 
       <div className="space-y-4">
@@ -97,6 +94,7 @@ export function RoundsStep({
                 round={round}
                 roundNumber={index + 1}
                 players={players}
+                teams={teams}
                 courses={courses}
                 hasTeams={hasTeams}
                 onChange={(r) => handleRoundChange(index, r)}
@@ -115,7 +113,7 @@ export function RoundsStep({
               open={isOpen}
               onOpenChange={(open) => toggleOpen(index, open)}
             >
-              <div className="rounded-lg border">
+              <div className="rounded-xl border">
                 <div className="flex items-center justify-between px-4 py-3">
                   <CollapsibleTrigger asChild>
                     <button
@@ -137,14 +135,14 @@ export function RoundsStep({
                     </button>
                   </CollapsibleTrigger>
                   {rounds.length > 1 && (
-                    <Button
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
                       onClick={() => handleRemoveRound(index)}
+                      aria-label={`Remove round ${index + 1}`}
+                      className="text-muted-foreground hover:bg-muted/60 hover:text-foreground rounded-md p-1 transition-colors"
                     >
-                      Remove
-                    </Button>
+                      <X className="h-4 w-4" />
+                    </button>
                   )}
                 </div>
                 <CollapsibleContent>
@@ -153,6 +151,7 @@ export function RoundsStep({
                       round={round}
                       roundNumber={index + 1}
                       players={players}
+                      teams={teams}
                       courses={courses}
                       hasTeams={hasTeams}
                       onChange={(r) => handleRoundChange(index, r)}
@@ -171,12 +170,23 @@ export function RoundsStep({
         </Button>
       )}
 
-      <div className="flex justify-between">
-        <Button type="button" variant="outline" onClick={onBack}>
-          Back
-        </Button>
-        <Button onClick={onNext} disabled={!canProceed}>
+      <div className="flex flex-col gap-3 pt-2">
+        <Button
+          size="lg"
+          className="w-full"
+          onClick={onNext}
+          disabled={!canProceed}
+        >
           Next
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="w-full"
+          onClick={onBack}
+        >
+          Back
         </Button>
       </div>
     </div>

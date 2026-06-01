@@ -5,7 +5,7 @@ import {
   useRemoveTeamMember,
   useMoveTeamMember,
 } from '@/lib/teams';
-import { ArrowRight, Trophy, Users } from 'lucide-react';
+import { ArrowRight, Plus, Trophy, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,7 @@ type TeamsTabProps = {
   tournament?: TournamentLoaderData;
   competitions?: CompetitionData[];
   canEdit: boolean;
+  teamColorMap?: Map<string, number>;
   onChanged: () => void;
 };
 
@@ -27,9 +28,11 @@ export function TeamsTab({
   tournament,
   competitions,
   canEdit,
+  teamColorMap,
   onChanged,
 }: TeamsTabProps) {
   const [creatingTeam, setCreatingTeam] = useState(false);
+  const [showTeamInput, setShowTeamInput] = useState(false);
   const [createTeam] = useCreateTeam();
   const [addTeamMember] = useAddTeamMember();
   const [removeTeamMember] = useRemoveTeamMember();
@@ -67,6 +70,7 @@ export function TeamsTab({
   };
 
   const teams = tournament.teams;
+  const atTeamLimit = teams.length >= 4;
   const assignedParticipantIds = new Set(
     teams.flatMap((t) => t.members.map((m) => m.participantId)),
   );
@@ -75,13 +79,14 @@ export function TeamsTab({
   );
 
   const handleCreateTeam = async () => {
-    if (!newTeamName.trim()) return;
+    if (!newTeamName.trim() || atTeamLimit) return;
     setCreatingTeam(true);
     await createTeam({
       variables: { tournamentId: tournament.id, name: newTeamName.trim() },
       onSuccess: () => {
         toast.success('Team created!');
         setNewTeamName('');
+        setShowTeamInput(false);
         onChanged();
       },
       onError: (error) => {
@@ -136,7 +141,7 @@ export function TeamsTab({
   return (
     <div className="space-y-4">
       {canEdit && teams.length === 0 && (
-        <div className="from-card via-card to-primary/5 border-border/70 overflow-hidden rounded-xl border bg-gradient-to-br shadow-sm">
+        <div className="bg-card border-border/70 overflow-hidden rounded-xl border">
           <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
@@ -197,41 +202,21 @@ export function TeamsTab({
 
       {showTeams && (
         <>
-          {canEdit && (
-            <div className="flex gap-2">
-              <Input
-                placeholder="New team name…"
-                value={newTeamName}
-                onChange={(e) => setNewTeamName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCreateTeam()}
-                className="h-8 text-sm"
-              />
-              <Button
-                size="sm"
-                onClick={handleCreateTeam}
-                disabled={creatingTeam || !newTeamName.trim()}
-                className="h-8"
-              >
-                {creatingTeam ? '…' : 'Add'}
-              </Button>
-            </div>
-          )}
-
           {teams.length === 0 ? (
             <p className="text-muted-foreground text-sm">
-              No teams yet.
               {canEdit
-                ? ' Create one above to enable team vs team matches.'
-                : ' The commissioner can create teams.'}
+                ? 'No teams yet. Use the + button to add one.'
+                : 'No teams yet. The commissioner can create teams.'}
             </p>
           ) : (
             <div className="space-y-3">
-              {teams.map((team) => (
+              {teams.map((team, index) => (
                 <TeamItem
                   key={team.id}
                   team={team}
                   allTeams={teams.map((t) => ({ id: t.id, name: t.name }))}
                   canEdit={canEdit}
+                  colorIndex={teamColorMap?.get(team.id) ?? index}
                   unassignedParticipants={unassignedForTeams}
                   onAddMember={handleAddTeamMember}
                   onRemoveMember={handleRemoveTeamMember}
@@ -241,6 +226,55 @@ export function TeamsTab({
                   }
                 />
               ))}
+            </div>
+          )}
+
+          {canEdit && (
+            <div className="border-t pt-3">
+              {showTeamInput ? (
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    placeholder="New team name…"
+                    value={newTeamName}
+                    onChange={(e) => setNewTeamName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleCreateTeam()}
+                    className="h-8 text-sm"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleCreateTeam}
+                    disabled={creatingTeam || !newTeamName.trim()}
+                    className="h-8"
+                  >
+                    {creatingTeam ? '…' : 'Add'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon-sm"
+                    className="rounded-full"
+                    aria-label="Cancel"
+                    onClick={() => {
+                      setShowTeamInput(false);
+                      setNewTeamName('');
+                    }}
+                  >
+                    <X />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex justify-end">
+                  <Button
+                    size="icon-sm"
+                    className="rounded-full"
+                    aria-label="Add team"
+                    disabled={atTeamLimit}
+                    onClick={() => setShowTeamInput(true)}
+                  >
+                    <Plus />
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </>

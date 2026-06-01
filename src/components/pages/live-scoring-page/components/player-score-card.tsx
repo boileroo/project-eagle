@@ -6,7 +6,7 @@
 import { cn } from '@/lib/utils';
 import { formatHandicapAdjustment } from '@/lib/handicaps';
 import { Badge } from '@/components/ui/badge';
-import { parLabel, scoreDiffColorClass } from '@/lib/scoring-utils';
+import { parLabel } from '@/lib/scoring-utils';
 import { useScoreMutation } from '@/hooks';
 import { useOnlineStatus } from '@/hooks';
 
@@ -97,11 +97,7 @@ export function PlayerScoreCard({
             {currentVal ?? '–'}
           </span>
           {diff != null && (
-            <span
-              className={cn('text-sm font-medium', scoreDiffColorClass(diff))}
-            >
-              {parLabel(diff)}
-            </span>
+            <span className="text-sm font-medium">{parLabel(diff)}</span>
           )}
         </div>
 
