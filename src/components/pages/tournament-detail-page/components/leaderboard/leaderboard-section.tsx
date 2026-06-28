@@ -117,7 +117,7 @@ export function LeaderboardSection({
             <LeaderboardSummaryBar
               finalisedRounds={finalisedRounds.length}
               roundCount={leaderboard.rounds.length}
-              primaryScoringBasis={leaderboard.primaryScoringBasis}
+              primaryScoringBasis={leaderboard.scoringBasis}
               hasContributorBonuses={hasContributorBonuses}
               hasStandalones={hasStandalones}
             />
@@ -156,13 +156,13 @@ export function LeaderboardSection({
                     <IndividualLeaderboardTable
                       rows={leaderboard.rows}
                       rounds={leaderboard.rounds}
-                      primaryScoringBasis={leaderboard.primaryScoringBasis}
+                      primaryScoringBasis={leaderboard.scoringBasis}
                     />
                   </div>
                   <div className="lg:hidden">
                     <IndividualLeaderboardCards
                       rows={leaderboard.rows}
-                      primaryScoringBasis={leaderboard.primaryScoringBasis}
+                      primaryScoringBasis={leaderboard.scoringBasis}
                     />
                   </div>
                 </div>

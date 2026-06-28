@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useDeleteAllTeams } from '@/lib/teams';
-import { isGameFormat, useDeleteCompetition } from '@/lib/competitions';
+import { isGameFormat, useDeleteGame } from '@/lib/games';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,13 +11,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { type CompetitionData } from '@/types';
+import { type GameData } from '@/types';
 
 type DisableTeamsDialogProps = {
   open: boolean;
   tournamentId: string;
   teamsCount: number;
-  competitions: CompetitionData[];
+  competitions: GameData[];
   onClose: () => void;
   onDisabled: () => void;
 };
@@ -31,15 +31,15 @@ export function DisableTeamsDialog({
   onDisabled,
 }: DisableTeamsDialogProps) {
   const [disabling, setDisabling] = useState(false);
-  const [deleteCompetition] = useDeleteCompetition();
+  const [deleteGame] = useDeleteGame();
   const [deleteAllTeams] = useDeleteAllTeams();
 
   const handleDisable = async () => {
     setDisabling(true);
     try {
-      const gamesToDelete = competitions.filter((c: CompetitionData) =>
+      const gamesToDelete = competitions.filter((c: GameData) =>
         isGameFormat(
-          c.formatType as
+          c.format as
             | 'match_play'
             | 'best_ball'
             | 'hi_lo'
@@ -51,8 +51,8 @@ export function DisableTeamsDialog({
       );
 
       for (const comp of gamesToDelete) {
-        await deleteCompetition({
-          variables: { competitionId: comp.id },
+        await deleteGame({
+          variables: { gameId: comp.id },
           onError: (error) => {
             console.error('Failed to delete game:', error);
           },

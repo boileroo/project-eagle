@@ -11,13 +11,13 @@ import {
 import { PlayersTab } from './players-tab';
 import { TeamsTab } from '../teams/teams-tab';
 import { GroupsTab } from '../groups/groups-tab';
-import type { TournamentLoaderData, RoundData, CompetitionData } from '@/types';
+import type { TournamentLoaderData, RoundData, GameData } from '@/types';
 
 type ParticipantsSectionProps = {
   tournament?: TournamentLoaderData;
   round?: RoundData;
   isSingleRound?: boolean;
-  competitions?: CompetitionData[];
+  games?: GameData[];
   isCommissioner: boolean;
   userId: string;
   myPerson?: { id: string } | null;
@@ -29,7 +29,7 @@ export function ParticipantsSection({
   tournament,
   round,
   isSingleRound = false,
-  competitions,
+  games,
   isCommissioner,
   userId,
   myPerson,
@@ -93,10 +93,10 @@ export function ParticipantsSection({
               <span>Participants</span>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary">
-                  {hasTournament && tournament.participants.length > 0
-                    ? `${tournament.participants.length} player${tournament.participants.length !== 1 ? 's' : ''}`
-                    : round?.participants.length
-                      ? `${round.participants.length} player${round.participants.length !== 1 ? 's' : ''}`
+                  {hasTournament && tournament.players.length > 0
+                    ? `${tournament.players.length} player${tournament.players.length !== 1 ? 's' : ''}`
+                    : round?.players.length
+                      ? `${round.players.length} player${round.players.length !== 1 ? 's' : ''}`
                       : 'No participants'}
                 </Badge>
                 <ChevronDown
@@ -150,7 +150,7 @@ export function ParticipantsSection({
               {activeTab === 'teams' && (
                 <TeamsTab
                   tournament={tournament}
-                  competitions={competitions}
+                  games={games}
                   canEdit={canEditTeams}
                   teamColorMap={teamColorMap}
                   onChanged={onChanged}

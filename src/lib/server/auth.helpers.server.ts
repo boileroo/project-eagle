@@ -4,8 +4,8 @@ import { db } from '@/db';
 import {
   persons,
   tournaments,
-  tournamentParticipants,
-  roundParticipants,
+  players,
+  roundPlayers,
   rounds,
 } from '@/db/schema';
 import { createSupabaseServerClient } from './supabase-client.server';
@@ -44,10 +44,10 @@ export async function requireCommissioner(tournamentId: string) {
   });
   if (!person) throw new Error('No person record found for your account');
 
-  const tp = await db.query.tournamentParticipants.findFirst({
+  const tp = await db.query.players.findFirst({
     where: and(
-      eq(tournamentParticipants.tournamentId, tournamentId),
-      eq(tournamentParticipants.personId, person.id),
+      eq(players.tournamentId, tournamentId),
+      eq(players.personId, person.id),
     ),
   });
   if (!tp || tp.role !== 'commissioner') {
@@ -82,10 +82,10 @@ export async function verifyTournamentMembership(
   });
   if (!person) throw new Error('Unauthorized');
 
-  const tp = await db.query.tournamentParticipants.findFirst({
+  const tp = await db.query.players.findFirst({
     where: and(
-      eq(tournamentParticipants.tournamentId, tournamentId),
-      eq(tournamentParticipants.personId, person.id),
+      eq(players.tournamentId, tournamentId),
+      eq(players.personId, person.id),
     ),
     columns: { id: true },
   });
@@ -106,8 +106,8 @@ export async function requireTournamentParticipant(tournamentId: string) {
 
 // ──────────────────────────────────────────────
 // Require commissioner role, or marker status for the round
-// Marker is now a round-level flag (roundParticipants.isMarker).
-// Used by functions like awardBonusFn that markers can also perform.
+// Marker is a round-level flag (roundPlayers.isMarker).
+// Used by functions like awardSideGameFn that markers can also perform.
 // ──────────────────────────────────────────────
 
 export async function requireCommissionerOrRoundMarker(
@@ -130,10 +130,10 @@ export async function requireCommissionerOrRoundMarker(
   if (!person) throw new Error('No person record found for your account');
 
   // Check commissioner tournament role
-  const tp = await db.query.tournamentParticipants.findFirst({
+  const tp = await db.query.players.findFirst({
     where: and(
-      eq(tournamentParticipants.tournamentId, tournamentId),
-      eq(tournamentParticipants.personId, person.id),
+      eq(players.tournamentId, tournamentId),
+      eq(players.personId, person.id),
     ),
     columns: { role: true },
   });
@@ -146,10 +146,10 @@ export async function requireCommissionerOrRoundMarker(
   });
   if (!round) throw new Error('Round not found');
 
-  const rp = await db.query.roundParticipants.findFirst({
+  const rp = await db.query.roundPlayers.findFirst({
     where: and(
-      eq(roundParticipants.roundId, roundId),
-      eq(roundParticipants.personId, person.id),
+      eq(roundPlayers.roundId, roundId),
+      eq(roundPlayers.personId, person.id),
     ),
     columns: { isMarker: true },
   });

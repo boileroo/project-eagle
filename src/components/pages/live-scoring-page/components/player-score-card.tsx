@@ -40,7 +40,7 @@ export function PlayerScoreCard({
     if (!isEditable) return;
     scoreMutation.mutate({
       roundId,
-      roundParticipantId,
+      roundPlayerId: roundParticipantId,
       holeNumber,
       strokes: s,
       recordedByRole,

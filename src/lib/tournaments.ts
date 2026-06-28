@@ -6,9 +6,9 @@ import {
   createGuestPersonFn,
   updateGuestFn,
   deleteGuestFn,
-  addParticipantFn,
-  updateParticipantFn,
-  removeParticipantFn,
+  addPlayerFn,
+  updatePlayerFn,
+  removePlayerFn,
   ensureMyPersonFn,
   lockTournamentFn,
   unlockTournamentFn,
@@ -18,18 +18,14 @@ import type { getTournamentJoinStateFn } from '@/lib/tournaments.server';
 import type {
   CreateTournamentInput,
   UpdateTournamentInput,
-  AddParticipantInput,
-  UpdateParticipantInput,
+  AddPlayerInput,
+  UpdatePlayerInput,
   CreateGuestInput,
   UpdateGuestInput,
   DeleteGuestInput,
   JoinByCodeInput,
 } from '@/lib/validators';
 import type { MutationCallOptions, MutationHookReturn } from '@/lib/mutation';
-
-// ──────────────────────────────────────────────
-// useCreateTournament
-// ──────────────────────────────────────────────
 
 type CreateTournamentVariables = CreateTournamentInput;
 type CreateTournamentResult = { tournamentId: string };
@@ -69,10 +65,6 @@ export function useCreateTournament(): MutationHookReturn<
   ] as const;
 }
 
-// ──────────────────────────────────────────────
-// useUpdateTournament
-// ──────────────────────────────────────────────
-
 type UpdateTournamentVariables = UpdateTournamentInput;
 type UpdateTournamentResult = { tournamentId: string };
 
@@ -110,10 +102,6 @@ export function useUpdateTournament(): MutationHookReturn<
     },
   ] as const;
 }
-
-// ──────────────────────────────────────────────
-// useDeleteTournament
-// ──────────────────────────────────────────────
 
 type DeleteTournamentVariables = { tournamentId: string };
 type DeleteTournamentResult = { success: boolean };
@@ -153,10 +141,6 @@ export function useDeleteTournament(): MutationHookReturn<
   ] as const;
 }
 
-// ──────────────────────────────────────────────
-// useCreateGuestPerson
-// ──────────────────────────────────────────────
-
 type CreateGuestVariables = CreateGuestInput;
 type CreateGuestResult = { personId: string };
 
@@ -191,10 +175,6 @@ export function useCreateGuestPerson(): MutationHookReturn<
     },
   ] as const;
 }
-
-// ──────────────────────────────────────────────
-// useUpdateGuest
-// ──────────────────────────────────────────────
 
 type UpdateGuestVariables = UpdateGuestInput;
 type UpdateGuestResult = { success: boolean };
@@ -231,10 +211,6 @@ export function useUpdateGuest(): MutationHookReturn<
   ] as const;
 }
 
-// ──────────────────────────────────────────────
-// useDeleteGuest
-// ──────────────────────────────────────────────
-
 type DeleteGuestVariables = DeleteGuestInput;
 type DeleteGuestResult = { success: boolean };
 
@@ -270,27 +246,23 @@ export function useDeleteGuest(): MutationHookReturn<
   ] as const;
 }
 
-// ──────────────────────────────────────────────
-// useAddParticipant
-// ──────────────────────────────────────────────
+type AddPlayerVariables = AddPlayerInput;
+type AddPlayerResult = { playerId: string };
 
-type AddParticipantVariables = AddParticipantInput;
-type AddParticipantResult = { participantId: string };
-
-export function useAddParticipant(): MutationHookReturn<
-  AddParticipantVariables,
-  AddParticipantResult
+export function useAddPlayer(): MutationHookReturn<
+  AddPlayerVariables,
+  AddPlayerResult
 > {
   const mutation = useMutation({
-    mutationFn: (variables: AddParticipantVariables) =>
-      addParticipantFn({ data: variables }),
+    mutationFn: (variables: AddPlayerVariables) =>
+      addPlayerFn({ data: variables }),
   });
 
   const mutate = async ({
     variables,
     onSuccess,
     onError,
-  }: MutationCallOptions<AddParticipantVariables, AddParticipantResult>) => {
+  }: MutationCallOptions<AddPlayerVariables, AddPlayerResult>) => {
     try {
       const result = await mutation.mutateAsync(variables);
       await onSuccess?.(result);
@@ -309,30 +281,23 @@ export function useAddParticipant(): MutationHookReturn<
   ] as const;
 }
 
-// ──────────────────────────────────────────────
-// useUpdateParticipant
-// ──────────────────────────────────────────────
+type UpdatePlayerVariables = UpdatePlayerInput;
+type UpdatePlayerResult = { success: boolean };
 
-type UpdateParticipantVariables = UpdateParticipantInput;
-type UpdateParticipantResult = { success: boolean };
-
-export function useUpdateParticipant(): MutationHookReturn<
-  UpdateParticipantVariables,
-  UpdateParticipantResult
+export function useUpdatePlayer(): MutationHookReturn<
+  UpdatePlayerVariables,
+  UpdatePlayerResult
 > {
   const mutation = useMutation({
-    mutationFn: (variables: UpdateParticipantVariables) =>
-      updateParticipantFn({ data: variables }),
+    mutationFn: (variables: UpdatePlayerVariables) =>
+      updatePlayerFn({ data: variables }),
   });
 
   const mutate = async ({
     variables,
     onSuccess,
     onError,
-  }: MutationCallOptions<
-    UpdateParticipantVariables,
-    UpdateParticipantResult
-  >) => {
+  }: MutationCallOptions<UpdatePlayerVariables, UpdatePlayerResult>) => {
     try {
       const result = await mutation.mutateAsync(variables);
       await onSuccess?.(result);
@@ -351,30 +316,23 @@ export function useUpdateParticipant(): MutationHookReturn<
   ] as const;
 }
 
-// ──────────────────────────────────────────────
-// useRemoveParticipant
-// ──────────────────────────────────────────────
+type RemovePlayerVariables = { playerId: string };
+type RemovePlayerResult = { success: boolean };
 
-type RemoveParticipantVariables = { participantId: string };
-type RemoveParticipantResult = { success: boolean };
-
-export function useRemoveParticipant(): MutationHookReturn<
-  RemoveParticipantVariables,
-  RemoveParticipantResult
+export function useRemovePlayer(): MutationHookReturn<
+  RemovePlayerVariables,
+  RemovePlayerResult
 > {
   const mutation = useMutation({
-    mutationFn: (variables: RemoveParticipantVariables) =>
-      removeParticipantFn({ data: variables }),
+    mutationFn: (variables: RemovePlayerVariables) =>
+      removePlayerFn({ data: variables }),
   });
 
   const mutate = async ({
     variables,
     onSuccess,
     onError,
-  }: MutationCallOptions<
-    RemoveParticipantVariables,
-    RemoveParticipantResult
-  >) => {
+  }: MutationCallOptions<RemovePlayerVariables, RemovePlayerResult>) => {
     try {
       const result = await mutation.mutateAsync(variables);
       await onSuccess?.(result);
@@ -393,14 +351,6 @@ export function useRemoveParticipant(): MutationHookReturn<
   ] as const;
 }
 
-// ──────────────────────────────────────────────
-// useEnsureMyPerson
-// ──────────────────────────────────────────────
-
-/**
- * Ensures the current user has a person record, creating one if needed.
- * No input variables — this is a POST with no body.
- */
 type EnsureMyPersonVariables = void;
 type EnsureMyPersonResult = {
   id: string;
@@ -444,10 +394,6 @@ export function useEnsureMyPerson(): MutationHookReturn<
   ] as const;
 }
 
-// ──────────────────────────────────────────────
-// useLockTournament
-// ──────────────────────────────────────────────
-
 type LockTournamentVariables = { tournamentId: string };
 type LockTournamentResult = { success: boolean };
 
@@ -482,10 +428,6 @@ export function useLockTournament(): MutationHookReturn<
     },
   ] as const;
 }
-
-// ──────────────────────────────────────────────
-// useUnlockTournament
-// ──────────────────────────────────────────────
 
 type UnlockTournamentVariables = { tournamentId: string };
 type UnlockTournamentResult = { success: boolean };
@@ -524,10 +466,6 @@ export function useUnlockTournament(): MutationHookReturn<
     },
   ] as const;
 }
-
-// ──────────────────────────────────────────────
-// useJoinTournamentByCode
-// ──────────────────────────────────────────────
 
 type JoinByCodeVariables = JoinByCodeInput;
 type JoinByCodeResult = {

@@ -8,7 +8,7 @@ import type { MutationCallOptions, MutationHookReturn } from '@/lib/mutation';
 
 type BulkSubmitScoresVariables = {
   roundId: string;
-  roundParticipantId: string;
+  roundPlayerId: string;
   scores: Array<{ holeNumber: number; strokes: number }>;
 };
 

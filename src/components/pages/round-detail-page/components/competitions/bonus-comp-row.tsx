@@ -1,40 +1,30 @@
 import { useState } from 'react';
-import { useAwardBonus, useRemoveBonusAward } from '@/lib/competitions';
+import { useAwardSideGame, useRemoveSideGameAward } from '@/lib/games';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { EditCompetitionDialog } from './edit-competition-dialog';
-import type { RoundData, RoundCompetitionsData } from '../types';
+import type { RoundData, SideGameData } from '../types';
 
 export function BonusCompRow({
-  comp,
-  holeNumber,
-  award,
-  participants,
+  sideGame,
+  players,
   isCommissioner,
-  roundStatus,
   onChanged,
 }: {
-  comp: RoundCompetitionsData[number];
-  holeNumber: number;
-  award: RoundCompetitionsData[number]['bonusAwards'][number] | undefined;
-  participants: RoundData['participants'];
+  sideGame: SideGameData;
+  players: RoundData['players'];
   isCommissioner: boolean;
-  roundStatus: string;
   onChanged: () => void;
 }) {
   const [awarding, setAwarding] = useState(false);
-  const [awardBonus] = useAwardBonus();
-  const [removeBonusAward] = useRemoveBonusAward();
+  const [awardSideGame] = useAwardSideGame();
+  const [removeSideGameAward] = useRemoveSideGameAward();
 
-  const handleAward = async (roundParticipantId: string) => {
+  const handleAward = async (roundPlayerId: string) => {
     setAwarding(true);
-    await awardBonus({
-      variables: {
-        competitionId: comp.id,
-        roundParticipantId,
-      },
+    await awardSideGame({
+      variables: { sideGameId: sideGame.id, roundPlayerId },
       onSuccess: () => {
         toast.success('Award saved.');
         onChanged();
@@ -48,8 +38,8 @@ export function BonusCompRow({
 
   const handleRemoveAward = async () => {
     setAwarding(true);
-    await removeBonusAward({
-      variables: { competitionId: comp.id },
+    await removeSideGameAward({
+      variables: { sideGameId: sideGame.id },
       onSuccess: () => {
         toast.success('Award removed.');
         onChanged();
@@ -61,14 +51,8 @@ export function BonusCompRow({
     setAwarding(false);
   };
 
-  const typeLabel = comp.formatType === 'nearest_pin' ? 'NTP' : 'LD';
-  const config = comp.configJson as {
-    holeNumber?: number;
-    bonusMode?: string;
-    bonusPoints?: number;
-  } | null;
-  const isContributor = config?.bonusMode === 'contributor';
-  const isDraft = roundStatus === 'draft';
+  const typeLabel = sideGame.format === 'nearest_pin' ? 'NTP' : 'LD';
+  const isContributor = sideGame.bonusMode === 'contributor';
 
   return (
     <div className="flex items-center justify-between rounded-md border px-3 py-2">
@@ -78,22 +62,23 @@ export function BonusCompRow({
         </Badge>
         {isContributor && (
           <Badge variant="secondary" className="text-xs">
-            +{config?.bonusPoints ?? 1} pts
+            +{sideGame.bonusPoints ?? 1} pts
           </Badge>
         )}
         <span className="text-sm">
-          {comp.name}{' '}
-          <span className="text-muted-foreground">(Hole {holeNumber})</span>
+          {sideGame.name}{' '}
+          {sideGame.holeNumber != null && (
+            <span className="text-muted-foreground">
+              (Hole {sideGame.holeNumber})
+            </span>
+          )}
         </span>
       </div>
       <div className="flex items-center gap-2">
-        {isCommissioner && isDraft && (
-          <EditCompetitionDialog comp={comp} onSaved={onChanged} />
-        )}
-        {award && (
+        {sideGame.winner && (
           <>
             <Badge variant="default">
-              🏆 {award.roundParticipant?.person?.displayName ?? 'Unknown'}
+              🏆 {sideGame.winner.person?.displayName ?? 'Unknown'}
             </Badge>
             {isCommissioner && (
               <Button
@@ -108,7 +93,7 @@ export function BonusCompRow({
             )}
           </>
         )}
-        {!award && isCommissioner && (
+        {!sideGame.winner && isCommissioner && (
           <Select
             className="h-8 px-2 text-sm"
             value=""
@@ -118,14 +103,14 @@ export function BonusCompRow({
             disabled={awarding}
           >
             <option value="">Award to…</option>
-            {participants.map((rp) => (
+            {players.map((rp) => (
               <option key={rp.id} value={rp.id}>
                 {rp.person.displayName}
               </option>
             ))}
           </Select>
         )}
-        {!award && !isCommissioner && (
+        {!sideGame.winner && !isCommissioner && (
           <span className="text-muted-foreground text-sm">—</span>
         )}
       </div>

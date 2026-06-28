@@ -7,7 +7,16 @@
 // them into tournament-wide standings.
 // ──────────────────────────────────────────────
 
-import type { AggregationConfig } from '../competitions';
+type AggregationConfig =
+  | { method: 'sum_stableford' }
+  | {
+      method: 'lowest_strokes';
+      config: { scoringBasis: 'net_strokes' | 'gross_strokes' };
+    }
+  | {
+      method: 'match_wins';
+      config: { pointsPerWin: number; pointsPerHalf: number };
+    };
 import type { CompetitionResult, CompetitionInput, GroupData } from './index';
 import { calculateCompetitionResults } from './index';
 import { calculateStableford } from './stableford';

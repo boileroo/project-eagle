@@ -27,7 +27,7 @@ import {
 import { toast } from 'sonner';
 
 const updateRoundHandicapSchema = z.object({
-  roundParticipantId: z.string().uuid(),
+  roundPlayerId: z.string().uuid(),
   handicapOverride: handicapField,
 });
 
@@ -55,7 +55,7 @@ export function EditRoundHandicapDialog({
   const form = useForm<UpdateRoundHandicapInput>({
     resolver: zodResolver(updateRoundHandicapSchema),
     defaultValues: {
-      roundParticipantId: roundParticipant.id,
+      roundPlayerId: roundParticipant.id,
       handicapOverride: parseHandicap(roundParticipant.handicapOverride),
     },
   });
@@ -64,7 +64,7 @@ export function EditRoundHandicapDialog({
   useEffect(() => {
     if (open) {
       form.reset({
-        roundParticipantId: roundParticipant.id,
+        roundPlayerId: roundParticipant.id,
         handicapOverride: parseHandicap(roundParticipant.handicapOverride),
       });
     }
@@ -73,7 +73,7 @@ export function EditRoundHandicapDialog({
   const handleSubmit = async (data: UpdateRoundHandicapInput) => {
     await updateRoundParticipant({
       variables: {
-        roundParticipantId: data.roundParticipantId,
+        roundPlayerId: data.roundPlayerId,
         handicapOverride: data.handicapOverride ?? null,
       },
       onSuccess: () => {
@@ -94,7 +94,7 @@ export function EditRoundHandicapDialog({
         setOpen(v);
         if (v) {
           form.reset({
-            roundParticipantId: roundParticipant.id,
+            roundPlayerId: roundParticipant.id,
             handicapOverride: parseHandicap(roundParticipant.handicapOverride),
           });
         }

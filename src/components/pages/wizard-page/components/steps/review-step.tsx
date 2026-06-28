@@ -1,5 +1,5 @@
 import type { WizardState } from '../../types';
-import { FORMAT_TYPE_LABELS } from '@/lib/competition-config';
+import { GAME_FORMAT_LABELS } from '@/lib/game-config';
 import { Button } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
@@ -153,7 +153,7 @@ export function ReviewStep({
                   {round.competitions
                     .map(
                       (c) =>
-                        `${c.name} (${FORMAT_TYPE_LABELS[c.competitionConfig.formatType]})`,
+                        `${c.name} (${GAME_FORMAT_LABELS[c.competitionConfig.formatType]})`,
                     )
                     .join(', ')}
                 </div>

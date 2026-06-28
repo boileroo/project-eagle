@@ -1,3 +1,7 @@
-export type { RoundData, ScorecardData } from '@/types';
-
-export type { RoundCompetitionsData } from '@/types/round';
+export type {
+  RoundData,
+  ScorecardData,
+  RoundGamesData,
+  SideGamesData,
+  SideGameData,
+} from '@/types';

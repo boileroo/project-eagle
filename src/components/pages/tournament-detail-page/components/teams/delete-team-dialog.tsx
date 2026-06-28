@@ -1,15 +1,15 @@
 import { useDeleteTeam } from '@/lib/teams';
-import { isTeamFormat, useDeleteCompetition } from '@/lib/competitions';
+import { isTeamFormat, useDeleteGame } from '@/lib/games';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { toast } from 'sonner';
-import { type CompetitionData } from '@/types';
+import { type GameData } from '@/types';
 
 type DeleteTeamDialogProps = {
   open: boolean;
   teamId: string;
   teamName: string;
-  competitions: CompetitionData[];
+  competitions: GameData[];
   onClose: () => void;
   onDeleted: () => void;
 };
@@ -23,18 +23,18 @@ export function DeleteTeamDialog({
   onDeleted,
 }: DeleteTeamDialogProps) {
   const { loading, handleConfirm } = useConfirmDialog();
-  const [deleteCompetition] = useDeleteCompetition();
+  const [deleteGame] = useDeleteGame();
   const [deleteTeam] = useDeleteTeam();
 
   const handleDelete = () =>
     handleConfirm(async () => {
-      const teamGames = competitions.filter((c: CompetitionData) =>
-        isTeamFormat(c.formatType as 'best_ball' | 'hi_lo' | 'rumble'),
+      const teamGames = competitions.filter((c: GameData) =>
+        isTeamFormat(c.format as 'best_ball' | 'hi_lo' | 'rumble'),
       );
 
       for (const comp of teamGames) {
-        await deleteCompetition({
-          variables: { competitionId: comp.id },
+        await deleteGame({
+          variables: { gameId: comp.id },
           onError: (error) => {
             console.error('Failed to delete game:', error);
           },

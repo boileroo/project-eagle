@@ -2,12 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
-import {
-  tournamentTeams,
-  tournamentTeamMembers,
-  tournamentParticipants,
-  tournaments,
-} from '@/db/schema';
+import { teams, teamMembers, players, tournaments } from '@/db/schema';
 import { requireCommissioner } from './server/auth.helpers.server';
 import {
   createTeamSchema,
@@ -16,16 +11,11 @@ import {
 } from './validators';
 import { requireTournamentSetup } from './server/tournament-status.server';
 
-// ──────────────────────────────────────────────
-// Create a team
-// ──────────────────────────────────────────────
-
 export const createTeamFn = createServerFn({ method: 'POST' })
   .inputValidator(createTeamSchema)
   .handler(async ({ data }) => {
     await requireCommissioner(data.tournamentId);
 
-    // Verify tournament exists and is in setup
     const tournament = await db.query.tournaments.findFirst({
       where: eq(tournaments.id, data.tournamentId),
     });
@@ -33,7 +23,7 @@ export const createTeamFn = createServerFn({ method: 'POST' })
     await requireTournamentSetup(data.tournamentId);
 
     const [team] = await db
-      .insert(tournamentTeams)
+      .insert(teams)
       .values({
         tournamentId: data.tournamentId,
         name: data.name,
@@ -43,15 +33,11 @@ export const createTeamFn = createServerFn({ method: 'POST' })
     return { teamId: team.id };
   });
 
-// ──────────────────────────────────────────────
-// Update a team (rename)
-// ──────────────────────────────────────────────
-
 export const updateTeamFn = createServerFn({ method: 'POST' })
   .inputValidator(updateTeamSchema)
   .handler(async ({ data }) => {
-    const existing = await db.query.tournamentTeams.findFirst({
-      where: eq(tournamentTeams.id, data.teamId),
+    const existing = await db.query.teams.findFirst({
+      where: eq(teams.id, data.teamId),
     });
     if (!existing) throw new Error('Team not found');
 
@@ -59,90 +45,78 @@ export const updateTeamFn = createServerFn({ method: 'POST' })
     await requireTournamentSetup(existing.tournamentId);
 
     await db
-      .update(tournamentTeams)
+      .update(teams)
       .set({ name: data.name })
-      .where(eq(tournamentTeams.id, data.teamId));
+      .where(eq(teams.id, data.teamId));
 
     return { success: true };
   });
 
-// ──────────────────────────────────────────────
-// Delete a team
-// ──────────────────────────────────────────────
-
 export const deleteTeamFn = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ teamId: z.string().uuid() }))
   .handler(async ({ data }) => {
-    const existing = await db.query.tournamentTeams.findFirst({
-      where: eq(tournamentTeams.id, data.teamId),
+    const existing = await db.query.teams.findFirst({
+      where: eq(teams.id, data.teamId),
     });
     if (!existing) throw new Error('Team not found');
 
     await requireCommissioner(existing.tournamentId);
     await requireTournamentSetup(existing.tournamentId);
 
-    await db.delete(tournamentTeams).where(eq(tournamentTeams.id, data.teamId));
+    await db.delete(teams).where(eq(teams.id, data.teamId));
 
     return { success: true };
   });
 
-// ──────────────────────────────────────────────
-// Add a member to a team
-// ──────────────────────────────────────────────
-
 export const addTeamMemberFn = createServerFn({ method: 'POST' })
   .inputValidator(addTeamMemberSchema)
   .handler(async ({ data }) => {
-    // Verify team exists
-    const team = await db.query.tournamentTeams.findFirst({
-      where: eq(tournamentTeams.id, data.teamId),
+    const team = await db.query.teams.findFirst({
+      where: eq(teams.id, data.teamId),
     });
     if (!team) throw new Error('Team not found');
 
     await requireCommissioner(team.tournamentId);
     await requireTournamentSetup(team.tournamentId);
 
-    // Verify participant exists and belongs to the same tournament
-    const participant = await db.query.tournamentParticipants.findFirst({
-      where: eq(tournamentParticipants.id, data.participantId),
+    const player = await db.query.players.findFirst({
+      where: eq(players.id, data.playerId),
     });
-    if (!participant) throw new Error('Participant not found');
-    if (participant.tournamentId !== team.tournamentId) {
-      throw new Error('Participant is not in this tournament');
+    if (!player) throw new Error('Player not found');
+    if (player.tournamentId !== team.tournamentId) {
+      throw new Error('Player is not in this tournament');
     }
 
-    // Check not already in this team
-    const existingMembership = await db.query.tournamentTeamMembers.findFirst({
+    const existingMembership = await db.query.teamMembers.findFirst({
       where: and(
-        eq(tournamentTeamMembers.teamId, data.teamId),
-        eq(tournamentTeamMembers.participantId, data.participantId),
+        eq(teamMembers.teamId, data.teamId),
+        eq(teamMembers.playerId, data.playerId),
       ),
     });
     if (existingMembership) throw new Error('Already a member of this team');
 
     return db.transaction(async (tx) => {
-      // Remove from any other team in the same tournament first
-      const otherTeams = await tx.query.tournamentTeams.findMany({
-        where: and(eq(tournamentTeams.tournamentId, team.tournamentId)),
+      const otherTeams = await tx.query.teams.findMany({
+        where: and(eq(teams.tournamentId, team.tournamentId)),
       });
       const otherTeamIds = otherTeams.map((t) => t.id);
       for (const otherTeamId of otherTeamIds) {
         if (otherTeamId === data.teamId) continue;
         await tx
-          .delete(tournamentTeamMembers)
+          .delete(teamMembers)
           .where(
             and(
-              eq(tournamentTeamMembers.teamId, otherTeamId),
-              eq(tournamentTeamMembers.participantId, data.participantId),
+              eq(teamMembers.teamId, otherTeamId),
+              eq(teamMembers.playerId, data.playerId),
             ),
           );
       }
 
       const [member] = await tx
-        .insert(tournamentTeamMembers)
+        .insert(teamMembers)
         .values({
           teamId: data.teamId,
-          participantId: data.participantId,
+          playerId: data.playerId,
         })
         .returning();
 
@@ -150,37 +124,26 @@ export const addTeamMemberFn = createServerFn({ method: 'POST' })
     });
   });
 
-// ──────────────────────────────────────────────
-// Remove a member from a team
-// ──────────────────────────────────────────────
-
 export const removeTeamMemberFn = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ memberId: z.string().uuid() }))
   .handler(async ({ data }) => {
-    const existing = await db.query.tournamentTeamMembers.findFirst({
-      where: eq(tournamentTeamMembers.id, data.memberId),
+    const existing = await db.query.teamMembers.findFirst({
+      where: eq(teamMembers.id, data.memberId),
     });
     if (!existing) throw new Error('Team member not found');
 
-    // Look up team to get tournamentId
-    const team = await db.query.tournamentTeams.findFirst({
-      where: eq(tournamentTeams.id, existing.teamId),
+    const team = await db.query.teams.findFirst({
+      where: eq(teams.id, existing.teamId),
     });
     if (!team) throw new Error('Team not found');
 
     await requireCommissioner(team.tournamentId);
     await requireTournamentSetup(team.tournamentId);
 
-    await db
-      .delete(tournamentTeamMembers)
-      .where(eq(tournamentTeamMembers.id, data.memberId));
+    await db.delete(teamMembers).where(eq(teamMembers.id, data.memberId));
 
     return { success: true };
   });
-
-// ──────────────────────────────────────────────
-// Move a team member to a different team
-// ──────────────────────────────────────────────
 
 export const moveTeamMemberFn = createServerFn({ method: 'POST' })
   .inputValidator(
@@ -190,18 +153,18 @@ export const moveTeamMemberFn = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    const existing = await db.query.tournamentTeamMembers.findFirst({
-      where: eq(tournamentTeamMembers.id, data.memberId),
+    const existing = await db.query.teamMembers.findFirst({
+      where: eq(teamMembers.id, data.memberId),
     });
     if (!existing) throw new Error('Team member not found');
 
-    const targetTeam = await db.query.tournamentTeams.findFirst({
-      where: eq(tournamentTeams.id, data.targetTeamId),
+    const targetTeam = await db.query.teams.findFirst({
+      where: eq(teams.id, data.targetTeamId),
     });
     if (!targetTeam) throw new Error('Target team not found');
 
-    const sourceTeam = await db.query.tournamentTeams.findFirst({
-      where: eq(tournamentTeams.id, existing.teamId),
+    const sourceTeam = await db.query.teams.findFirst({
+      where: eq(teams.id, existing.teamId),
     });
     if (!sourceTeam) throw new Error('Source team not found');
 
@@ -217,22 +180,16 @@ export const moveTeamMemberFn = createServerFn({ method: 'POST' })
     }
 
     await db.transaction(async (tx) => {
-      await tx
-        .delete(tournamentTeamMembers)
-        .where(eq(tournamentTeamMembers.id, data.memberId));
+      await tx.delete(teamMembers).where(eq(teamMembers.id, data.memberId));
 
-      await tx.insert(tournamentTeamMembers).values({
+      await tx.insert(teamMembers).values({
         teamId: data.targetTeamId,
-        participantId: existing.participantId,
+        playerId: existing.playerId,
       });
     });
 
     return { success: true };
   });
-
-// ──────────────────────────────────────────────
-// Delete all teams for a tournament
-// ──────────────────────────────────────────────
 
 export const deleteAllTeamsFn = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ tournamentId: z.string().uuid() }))
@@ -240,10 +197,7 @@ export const deleteAllTeamsFn = createServerFn({ method: 'POST' })
     await requireCommissioner(data.tournamentId);
     await requireTournamentSetup(data.tournamentId);
 
-    // Cascade on tournament_team_members.team_id handles member cleanup
-    await db
-      .delete(tournamentTeams)
-      .where(eq(tournamentTeams.tournamentId, data.tournamentId));
+    await db.delete(teams).where(eq(teams.tournamentId, data.tournamentId));
 
     return { success: true };
   });

@@ -6,7 +6,7 @@ import type {
   TeamData,
   HoleData,
 } from './index';
-import type { HiLoConfig } from '../competitions';
+import type { HiLoConfig } from '../games';
 
 function makeHoles(count = 3): HoleData[] {
   return Array.from({ length: count }, (_, i) => ({

@@ -8,13 +8,13 @@ import {
   persons,
   profiles,
   tournaments,
-  tournamentParticipants,
-  tournamentTeams,
-  tournamentTeamMembers,
+  players,
+  teams,
+  teamMembers,
   rounds,
-  roundGroups,
-  roundParticipants,
-  competitions,
+  groups,
+  roundPlayers,
+  games,
 } from '@/db/schema';
 import { requireAuth } from './server/auth.helpers.server';
 import { generateInviteCode } from './server/invite-codes.server';
@@ -38,10 +38,6 @@ function assertDevMode() {
   }
 }
 
-/**
- * Ensure a test course exists in the DB, creating it with holes if missing.
- * Returns the course ID.
- */
 async function ensureTestCourse(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   courseIndex: 0 | 1,
@@ -78,10 +74,6 @@ async function ensureTestCourse(
   return created.id;
 }
 
-/**
- * Look up a test user's person record by their email.
- * Creates the person record if it doesn't exist yet.
- */
 async function resolveTestUserPerson(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   email: string,
@@ -118,10 +110,6 @@ async function resolveTestUserPerson(
 
   return { personId: person.id, userId: profile.id };
 }
-
-// ──────────────────────────────────────────────
-// Setup a scenario from a preset config
-// ──────────────────────────────────────────────
 
 const scenarioPresetSchema = z.object({
   id: z.string(),
@@ -172,7 +160,6 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
     const user = await requireAuth();
 
     const result = await db.transaction(async (tx) => {
-      // 1. Determine which course indices are needed
       const courseIndices = [
         ...new Set(preset.rounds.map((r) => r.courseIndex)),
       ] as (0 | 1)[];
@@ -181,11 +168,9 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
         courseIds[idx] = await ensureTestCourse(tx, idx, user.id);
       }
 
-      // 2. Resolve test user persons
       const testUserA = await resolveTestUserPerson(tx, TEST_ACCOUNTS.A.email);
       const testUserB = await resolveTestUserPerson(tx, TEST_ACCOUNTS.B.email);
 
-      // 3. Create tournament
       const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 16);
       const inviteCode = generateInviteCode();
       const [tournament] = await tx
@@ -198,7 +183,6 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
         })
         .returning();
 
-      // 4. Add the current user as commissioner
       const currentUserPerson = await tx.query.persons.findFirst({
         where: eq(persons.userId, user.id),
         columns: { id: true },
@@ -208,7 +192,7 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
       }
 
       await tx
-        .insert(tournamentParticipants)
+        .insert(players)
         .values({
           tournamentId: tournament.id,
           personId: currentUserPerson.id,
@@ -216,15 +200,12 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
         })
         .returning();
 
-      // 5. Create all player person records and tournament participants
-      // Track: playerIndex -> { personId, tournamentParticipantId }
       const playerRecords: Array<{
         personId: string;
-        tournamentParticipantId: string;
+        playerId: string;
         handicap: number;
       }> = [];
 
-      // Track which test users are already added (the current user might be one)
       const addedPersonIds = new Set<string>();
       addedPersonIds.add(currentUserPerson.id);
 
@@ -236,7 +217,6 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
         } else if (player.slot === 'test_b') {
           personId = testUserB.personId;
         } else {
-          // Create guest person
           const guestName =
             player.guestName ?? `Guest ${playerRecords.length + 1}`;
           const [guest] = await tx
@@ -250,24 +230,21 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
           personId = guest.id;
         }
 
-        // Add as tournament participant if not already added
         if (addedPersonIds.has(personId)) {
-          // Already added (e.g. current user is test_a or test_b)
-          // Update their handicap override
-          const existingTp = await tx.query.tournamentParticipants.findFirst({
+          const existingPlayer = await tx.query.players.findFirst({
             where: and(
-              eq(tournamentParticipants.tournamentId, tournament.id),
-              eq(tournamentParticipants.personId, personId),
+              eq(players.tournamentId, tournament.id),
+              eq(players.personId, personId),
             ),
           });
-          if (existingTp) {
+          if (existingPlayer) {
             await tx
-              .update(tournamentParticipants)
+              .update(players)
               .set({ handicapOverride: player.handicap.toString() })
-              .where(eq(tournamentParticipants.id, existingTp.id));
+              .where(eq(players.id, existingPlayer.id));
             playerRecords.push({
               personId,
-              tournamentParticipantId: existingTp.id,
+              playerId: existingPlayer.id,
               handicap: player.handicap,
             });
             continue;
@@ -277,7 +254,7 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
         const role =
           personId === currentUserPerson.id ? 'commissioner' : 'player';
         const [tp] = await tx
-          .insert(tournamentParticipants)
+          .insert(players)
           .values({
             tournamentId: tournament.id,
             personId,
@@ -289,17 +266,16 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
         addedPersonIds.add(personId);
         playerRecords.push({
           personId,
-          tournamentParticipantId: tp.id,
+          playerId: tp.id,
           handicap: player.handicap,
         });
       }
 
-      // 6. Create teams (if any)
       const teamRecords: Array<{ teamId: string; name: string }> = [];
       if (preset.teams) {
         for (const teamSetup of preset.teams) {
           const [team] = await tx
-            .insert(tournamentTeams)
+            .insert(teams)
             .values({
               tournamentId: tournament.id,
               name: teamSetup.name,
@@ -309,9 +285,9 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
           for (const memberIdx of teamSetup.memberIndices) {
             const player = playerRecords[memberIdx];
             if (!player) continue;
-            await tx.insert(tournamentTeamMembers).values({
+            await tx.insert(teamMembers).values({
               teamId: team.id,
-              participantId: player.tournamentParticipantId,
+              playerId: player.playerId,
             });
           }
 
@@ -319,7 +295,6 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
         }
       }
 
-      // 7. Create rounds with groups, participants, and competitions
       const roundIds: string[] = [];
 
       for (let roundIdx = 0; roundIdx < preset.rounds.length; roundIdx++) {
@@ -337,35 +312,33 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
           .returning();
         roundIds.push(round.id);
 
-        // Add all players as round participants
-        const roundParticipantRecords: Array<{
-          roundParticipantId: string;
+        const roundPlayerRecords: Array<{
+          roundPlayerId: string;
           playerIndex: number;
         }> = [];
 
         for (let pIdx = 0; pIdx < playerRecords.length; pIdx++) {
           const player = playerRecords[pIdx];
           const [rp] = await tx
-            .insert(roundParticipants)
+            .insert(roundPlayers)
             .values({
               roundId: round.id,
               personId: player.personId,
-              tournamentParticipantId: player.tournamentParticipantId,
+              playerId: player.playerId,
               handicapSnapshot: player.handicap.toString(),
             })
             .returning();
-          roundParticipantRecords.push({
-            roundParticipantId: rp.id,
+          roundPlayerRecords.push({
+            roundPlayerId: rp.id,
             playerIndex: pIdx,
           });
         }
 
-        // Create groups and assign participants
         const groupRecords: Array<{ groupId: string; groupIndex: number }> = [];
         for (let gIdx = 0; gIdx < roundSetup.groups.length; gIdx++) {
           const groupSetup = roundSetup.groups[gIdx];
           const [group] = await tx
-            .insert(roundGroups)
+            .insert(groups)
             .values({
               roundId: round.id,
               groupNumber: gIdx + 1,
@@ -374,52 +347,47 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
             .returning();
           groupRecords.push({ groupId: group.id, groupIndex: gIdx });
 
-          // Assign players to this group
           for (const playerIdx of groupSetup.playerIndices) {
-            const rpRecord = roundParticipantRecords.find(
+            const rpRecord = roundPlayerRecords.find(
               (r) => r.playerIndex === playerIdx,
             );
             if (!rpRecord) continue;
             await tx
-              .update(roundParticipants)
-              .set({ roundGroupId: group.id })
-              .where(eq(roundParticipants.id, rpRecord.roundParticipantId));
+              .update(roundPlayers)
+              .set({ groupId: group.id })
+              .where(eq(roundPlayers.id, rpRecord.roundPlayerId));
           }
         }
 
-        // Create competitions
         for (const compSetup of roundSetup.competitions) {
+          if (compSetup.competitionCategory === 'bonus') continue;
+
           const configJson: Record<string, JsonValue> = {
             ...compSetup.config,
           } as Record<string, JsonValue>;
 
-          // Resolve pairings if needed
           if (compSetup.requiresPairingResolution) {
             if (
               compSetup.formatType === 'match_play' &&
               'pairings' in configJson
             ) {
-              // Match play pairings use player indices — resolve to round participant IDs
               const rawPairings = configJson.pairings as Array<{
                 playerA: number;
                 playerB: number;
               }>;
               configJson.pairings = rawPairings.map((p) => ({
                 playerA:
-                  roundParticipantRecords.find(
-                    (r) => r.playerIndex === p.playerA,
-                  )?.roundParticipantId ?? '',
+                  roundPlayerRecords.find((r) => r.playerIndex === p.playerA)
+                    ?.roundPlayerId ?? '',
                 playerB:
-                  roundParticipantRecords.find(
-                    (r) => r.playerIndex === p.playerB,
-                  )?.roundParticipantId ?? '',
+                  roundPlayerRecords.find((r) => r.playerIndex === p.playerB)
+                    ?.roundPlayerId ?? '',
               }));
             } else if (
               (compSetup.formatType === 'best_ball' ||
                 compSetup.formatType === 'hi_lo') &&
               'pairings' in configJson
             ) {
-              // Best ball / hi-lo pairings use team indices — resolve to team IDs
               const rawPairings = configJson.pairings as Array<{
                 teamA: number;
                 teamB: number;
@@ -437,18 +405,13 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
                   ?.groupId ?? null)
               : null;
 
-          await tx.insert(competitions).values({
+          await tx.insert(games).values({
             tournamentId: tournament.id,
             roundId: round.id,
-            roundGroupId: resolvedGroupId,
+            groupId: resolvedGroupId,
             name: compSetup.name,
-            competitionCategory: compSetup.competitionCategory,
-            groupScope:
-              compSetup.competitionCategory === 'bonus'
-                ? 'all'
-                : 'within_group',
-            formatType: compSetup.formatType,
-            configJson,
+            format: compSetup.formatType,
+            config: configJson,
           });
         }
       }
@@ -462,10 +425,6 @@ export const setupScenarioFn = createServerFn({ method: 'POST' })
 
     return result;
   });
-
-// ──────────────────────────────────────────────
-// Teardown a single test tournament
-// ──────────────────────────────────────────────
 
 export const teardownScenarioFn = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ tournamentId: z.string().uuid() }))
@@ -482,9 +441,8 @@ export const teardownScenarioFn = createServerFn({ method: 'POST' })
       throw new Error('Can only tear down DEV tournaments');
     }
 
-    // Collect guest person IDs before deletion
-    const tps = await db.query.tournamentParticipants.findMany({
-      where: eq(tournamentParticipants.tournamentId, data.tournamentId),
+    const tps = await db.query.players.findMany({
+      where: eq(players.tournamentId, data.tournamentId),
       with: {
         person: { columns: { id: true, userId: true } },
       },
@@ -493,10 +451,8 @@ export const teardownScenarioFn = createServerFn({ method: 'POST' })
       .filter((tp) => tp.person.userId === null)
       .map((tp) => tp.person.id);
 
-    // Delete tournament (CASCADE handles everything)
     await db.delete(tournaments).where(eq(tournaments.id, data.tournamentId));
 
-    // Soft-delete guest persons created for this scenario
     for (const personId of guestPersonIds) {
       await db
         .update(persons)
@@ -507,16 +463,11 @@ export const teardownScenarioFn = createServerFn({ method: 'POST' })
     return { success: true };
   });
 
-// ──────────────────────────────────────────────
-// Teardown all test data (all DEV tournaments)
-// ──────────────────────────────────────────────
-
 export const teardownAllTestDataFn = createServerFn({ method: 'POST' }).handler(
   async () => {
     assertDevMode();
     await requireAuth();
 
-    // Find all DEV tournaments
     const devTournaments = await db.query.tournaments.findMany({
       where: like(tournaments.name, `${DEV_TOURNAMENT_PREFIX}%`),
       columns: { id: true },
@@ -526,11 +477,10 @@ export const teardownAllTestDataFn = createServerFn({ method: 'POST' }).handler(
       return { deleted: 0 };
     }
 
-    // Collect all guest person IDs from these tournaments
     const allGuestPersonIds: string[] = [];
     for (const t of devTournaments) {
-      const tps = await db.query.tournamentParticipants.findMany({
-        where: eq(tournamentParticipants.tournamentId, t.id),
+      const tps = await db.query.players.findMany({
+        where: eq(players.tournamentId, t.id),
         with: {
           person: { columns: { id: true, userId: true } },
         },
@@ -542,12 +492,10 @@ export const teardownAllTestDataFn = createServerFn({ method: 'POST' }).handler(
       }
     }
 
-    // Delete all DEV tournaments
     for (const t of devTournaments) {
       await db.delete(tournaments).where(eq(tournaments.id, t.id));
     }
 
-    // Soft-delete guest persons
     const uniqueGuestIds = [...new Set(allGuestPersonIds)];
     for (const personId of uniqueGuestIds) {
       await db

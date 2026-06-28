@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateSixPoint } from './six-point';
 import type { CompetitionInput, ParticipantData, HoleData } from './index';
-import type { SixPointConfig } from '../competitions';
+import type { SixPointConfig } from '../games';
 
 function makeHoles(count = 3): HoleData[] {
   return Array.from({ length: count }, (_, i) => ({

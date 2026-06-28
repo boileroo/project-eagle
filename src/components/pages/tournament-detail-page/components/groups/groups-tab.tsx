@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import {
   useCreateRoundGroup,
   useDeleteRoundGroup,
-  useAssignParticipantToGroup,
+  useAssignPlayerToGroup,
 } from '@/lib/groups';
 import { useToggleRoundMarker } from '@/lib/rounds';
 import { Plus, Shuffle } from 'lucide-react';
@@ -38,12 +38,12 @@ export function GroupsTab({
 
   const [createRoundGroup, { isPending: addingGroup }] = useCreateRoundGroup();
   const [deleteRoundGroup] = useDeleteRoundGroup();
-  const [assignParticipantToGroup] = useAssignParticipantToGroup();
+  const [assignPlayerToGroup] = useAssignPlayerToGroup();
   const [toggleRoundMarker] = useToggleRoundMarker();
 
   const isDraft = round.status === 'draft';
   const canEditGroups = canEdit && isDraft;
-  const hasEnoughPlayersForGroups = round.participants.length > 4;
+  const hasEnoughPlayersForGroups = round.players.length > 4;
   const canConfigureGroups = canEditGroups && hasEnoughPlayersForGroups;
   const showGroups = hasEnoughPlayersForGroups;
 
@@ -52,32 +52,28 @@ export function GroupsTab({
   const canAddGroups = canConfigureGroups;
 
   const byName = (
-    a: RoundData['participants'][number],
-    b: RoundData['participants'][number],
+    a: RoundData['players'][number],
+    b: RoundData['players'][number],
   ) =>
     a.person.displayName.localeCompare(b.person.displayName, undefined, {
       sensitivity: 'base',
     });
 
-  const ungrouped = round.participants
-    .filter((rp) => !rp.roundGroupId)
-    .sort(byName);
+  const ungrouped = round.players.filter((rp) => !rp.groupId).sort(byName);
 
   const groupParticipantsMap = useMemo(() => {
     const g = round.groups ?? [];
-    const map = new Map<string, RoundData['participants']>();
+    const map = new Map<string, RoundData['players']>();
     for (const group of g) {
       map.set(
         group.id,
-        round.participants
-          .filter((rp) => rp.roundGroupId === group.id)
-          .sort(byName),
+        round.players.filter((rp) => rp.groupId === group.id).sort(byName),
       );
     }
     return map;
     // byName is a stable inline comparator — no need to list it as a dependency
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [round.groups, round.participants]);
+  }, [round.groups, round.players]);
 
   const fullGroupIds = useMemo(() => {
     const ids = new Set<string>();
@@ -88,19 +84,18 @@ export function GroupsTab({
   }, [groupParticipantsMap]);
 
   const handleAssignToGroup = async (
-    roundParticipantId: string,
-    roundGroupId: string | null,
+    roundPlayerId: string,
+    groupId: string | null,
   ) => {
-    setAssigning(roundParticipantId);
-    await assignParticipantToGroup({
-      variables: { roundParticipantId, roundGroupId },
+    setAssigning(roundPlayerId);
+    await assignPlayerToGroup({
+      variables: { roundPlayerId, groupId },
       onSuccess: () => onChanged(),
       onError: (error) =>
         toast.error(error.message || 'Failed to assign player'),
     });
     setAssigning(null);
   };
-
   const handleAddGroup = async () => {
     const nextNumber =
       groups.length > 0 ? Math.max(...groups.map((g) => g.groupNumber)) + 1 : 1;
@@ -121,7 +116,7 @@ export function GroupsTab({
   const handleDeleteGroup = async (groupId: string) => {
     setDeletingGroupId(groupId);
     await deleteRoundGroup({
-      variables: { roundGroupId: groupId },
+      variables: { groupId },
       onSuccess: () => {
         toast.success('Group deleted.');
         onChanged();
@@ -138,7 +133,7 @@ export function GroupsTab({
   ) => {
     setTogglingMarker(roundParticipantId);
     await toggleRoundMarker({
-      variables: { roundParticipantId, isMarker },
+      variables: { roundPlayerId: roundParticipantId, isMarker },
       onSuccess: () => onChanged(),
       onError: (error) =>
         toast.error(error.message || 'Failed to update marker'),
@@ -146,7 +141,7 @@ export function GroupsTab({
     setTogglingMarker(null);
   };
 
-  if (round.participants.length === 0) {
+  if (round.players.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">No players in this round.</p>
     );
@@ -159,7 +154,7 @@ export function GroupsTab({
         size="icon-sm"
         className="rounded-full"
         aria-label="Auto-assign groups"
-        disabled={round.participants.length === 0}
+        disabled={round.players.length === 0}
         onClick={() => setAutoAssignOpen(true)}
       >
         <Shuffle />
@@ -189,7 +184,7 @@ export function GroupsTab({
         <AutoAssignDialog
           open={autoAssignOpen}
           roundId={round.id}
-          participantsCount={round.participants.length}
+          participantsCount={round.players.length}
           onClose={() => setAutoAssignOpen(false)}
           onAssigned={() => {
             setAutoAssignOpen(false);
@@ -290,7 +285,7 @@ export function GroupsTab({
       <AutoAssignDialog
         open={autoAssignOpen}
         roundId={round.id}
-        participantsCount={round.participants.length}
+        participantsCount={round.players.length}
         onClose={() => setAutoAssignOpen(false)}
         onAssigned={() => {
           setAutoAssignOpen(false);

@@ -13,7 +13,7 @@
 import { getStrokesOnHole } from '../handicaps';
 import { stablefordPoints, buildScoreLookup } from './stableford';
 import type { CompetitionInput, HoleData, ParticipantData } from './index';
-import type { HiLoConfig } from '../competitions';
+import type { HiLoConfig } from '../games';
 
 // ──────────────────────────────────────────────
 // Types

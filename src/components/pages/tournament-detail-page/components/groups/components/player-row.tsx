@@ -14,16 +14,16 @@ import { getTeamColor } from '@/config/team-colors';
 import type { RoundData } from '@/types';
 
 interface PlayerRowProps {
-  rp: RoundData['participants'][number];
+  rp: RoundData['players'][number];
   userId: string;
   groups: RoundData['groups'];
   canMoveGroup: boolean;
   assigning: string | null;
-  onAssignToGroup: (roundParticipantId: string, groupId: string | null) => void;
+  onAssignToGroup: (roundPlayerId: string, groupId: string | null) => void;
   showGroupAssign?: boolean;
   canToggleMarker?: boolean;
   togglingMarker?: boolean;
-  onToggleMarker?: (roundParticipantId: string, isMarker: boolean) => void;
+  onToggleMarker?: (roundPlayerId: string, isMarker: boolean) => void;
   teamColorMap?: Map<string, number>;
   fullGroupIds?: Set<string>;
 }
@@ -45,7 +45,7 @@ export function PlayerRow({
   const isMe = rp.person.userId === userId;
   const isMarker = rp.isMarker === true;
 
-  const team = rp.tournamentParticipant?.teamMemberships?.[0]?.team;
+  const team = rp.player?.teamMemberships?.[0]?.team;
   const teamColorIndex =
     team?.id != null ? teamColorMap?.get(team.id) : undefined;
   const teamColor =
@@ -96,7 +96,7 @@ export function PlayerRow({
 
         {canMoveGroup &&
           showGroupAssign &&
-          (rp.roundGroupId ? (
+          (rp.groupId ? (
             <RemoveButton
               label="Remove from group"
               disabled={assigning === rp.id}

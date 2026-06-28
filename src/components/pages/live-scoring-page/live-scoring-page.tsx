@@ -1,8 +1,3 @@
-// ──────────────────────────────────────────────
-// LiveScoringPage — hole-by-hole mobile score entry
-// Route: /tournaments/$tournamentId/rounds/$roundId/play
-// ──────────────────────────────────────────────
-
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -23,16 +18,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { useRoundPermissions } from '@/hooks/use-round-permissions';
 import { useScoringResume } from '@/hooks/use-scoring-resume';
-import type { RoundData, ScorecardData, RoundCompetitionsData } from '@/types';
-
-// ──────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────
+import type {
+  RoundData,
+  ScorecardData,
+  RoundGamesData,
+  SideGamesData,
+} from '@/types';
 
 type LiveScoringPageProps = {
   round: RoundData;
   scorecard: ScorecardData;
-  competitions: RoundCompetitionsData;
+  games: RoundGamesData;
+  sideGames: SideGamesData;
   userId: string;
   /** Current hole number from URL search params (defaults handled in route) */
   currentHole: number;
@@ -42,14 +39,11 @@ type LiveScoringPageProps = {
   onGroupChange: (groupId: string) => void;
 };
 
-// ──────────────────────────────────────────────
-// Component
-// ──────────────────────────────────────────────
-
 export function LiveScoringPage({
   round,
   scorecard,
-  competitions,
+  games,
+  sideGames,
   userId,
   currentHole,
   selectedGroupId,
@@ -72,7 +66,7 @@ export function LiveScoringPage({
   // ── Group selection ──────────────────────────
   const myGroupId = myParticipant
     ? round.groups.find((g) =>
-        g.participants.some((gp) => gp.id === myParticipant.id),
+        g.players.some((gp) => gp.id === myParticipant.id),
       )?.id
     : undefined;
 
@@ -83,13 +77,12 @@ export function LiveScoringPage({
   // If no groups exist, show all participants
   const groupParticipants = useMemo(() => {
     if (!activeGroup) {
-      // No groups - show all participants (e.g., for quick rounds with ≤4 players)
-      return round.participants;
+      return round.players;
     }
-    return activeGroup.participants
-      .map((gp) => round.participants.find((rp) => rp.id === gp.id))
+    return activeGroup.players
+      .map((gp) => round.players.find((rp) => rp.id === gp.id))
       .filter((rp): rp is NonNullable<typeof rp> => rp != null);
-  }, [activeGroup, round.participants]);
+  }, [activeGroup, round.players]);
 
   // ── Smart resume: on mount, jump to last/first unscored hole ────────────
   useScoringResume({
@@ -120,9 +113,9 @@ export function LiveScoringPage({
   }, [holes, groupParticipants, scorecard]);
 
   // ── Invalidate competitions after bonus award change ─
-  const invalidateCompetitions = () => {
+  const invalidateGames = () => {
     void queryClient.invalidateQueries({
-      queryKey: ['competition', 'round', round.id],
+      queryKey: ['games', 'round', round.id],
     });
   };
 
@@ -223,20 +216,20 @@ export function LiveScoringPage({
 
           {/* Bonus award controls */}
           <BonusAwardControl
-            competitions={competitions}
+            sideGames={sideGames}
             holeNumber={currentHole}
-            participants={groupParticipants}
+            players={groupParticipants}
             canAward={isMarkerOrCommissioner}
             canRemove={isCommissioner}
-            onChanged={invalidateCompetitions}
+            onChanged={invalidateGames}
           />
 
           {/* Wolf declaration */}
           <WolfDeclarationControl
             round={round}
-            competitions={competitions}
+            games={games}
             holeNumber={currentHole}
-            groupParticipants={groupParticipants}
+            groupPlayers={groupParticipants}
             canDeclare={isMarkerOrCommissioner}
           />
 

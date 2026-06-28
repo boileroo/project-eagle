@@ -59,8 +59,8 @@ export function RoundsPage({ rounds }: { rounds: RoundSummary[] }) {
                 <CardContent>
                   <div className="flex gap-2">
                     <Badge variant="secondary">
-                      {round.participants.length} player
-                      {round.participants.length !== 1 ? 's' : ''}
+                      {round.players.length} player
+                      {round.players.length !== 1 ? 's' : ''}
                     </Badge>
                     {round.status !== 'draft' && (
                       <Badge variant="secondary">{round.status}</Badge>

@@ -33,7 +33,7 @@ import { getStrokesOnHole } from '../handicaps';
 import { stablefordPoints, buildScoreLookup } from './stableford';
 import { assignRanks } from './rank';
 import type { CompetitionInput, GameDecisionData } from './index';
-import type { WolfConfig } from '../competitions';
+import type { WolfConfig } from '../games';
 
 // ──────────────────────────────────────────────
 // Types

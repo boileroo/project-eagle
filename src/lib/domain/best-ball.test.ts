@@ -6,7 +6,7 @@ import type {
   ParticipantData,
   HoleData,
 } from './index';
-import type { BestBallConfig } from '../competitions';
+import type { BestBallConfig } from '../games';
 
 function makeHoles(count = 3): HoleData[] {
   return Array.from({ length: count }, (_, i) => ({

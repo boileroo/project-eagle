@@ -1,41 +1,37 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getGameDecisionsFn } from '@/lib/game-decisions.server';
-import { useSubmitGameDecision } from '@/lib/game-decisions';
+import { getDecisionsFn } from '@/lib/decisions.server';
+import { useSubmitDecision } from '@/lib/decisions';
 import { wolfIndexForHole } from '@/lib/domain/wolf';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import type { RoundData, RoundCompetitionsData } from '@/types';
+import type { RoundData, RoundGamesData } from '@/types';
 
 type WolfDeclarationPanelProps = {
-  wolfComp: RoundCompetitionsData[number];
-  /** Participants in the group, in rotation order (group position order). */
-  groupParticipants: RoundData['participants'];
+  wolfGame: RoundGamesData[number];
+  groupParticipants: RoundData['players'];
   round: RoundData;
   holeCount: number;
-  /** Whether the current user can submit wolf declarations. */
   canDeclare: boolean;
 };
 
 export function WolfDeclarationPanel({
-  wolfComp,
+  wolfGame,
   groupParticipants,
   round,
   holeCount,
   canDeclare,
 }: WolfDeclarationPanelProps) {
   const queryClient = useQueryClient();
-  const [submitGameDecision, { isPending: submitting }] =
-    useSubmitGameDecision();
+  const [submitDecision, { isPending: submitting }] = useSubmitDecision();
 
-  // Get the roundGroupId from the first participant (all in the group should have the same)
-  const roundGroupId = groupParticipants[0]?.roundGroupId || '';
+  const groupId = groupParticipants[0]?.groupId || '';
 
   const { data: decisions } = useQuery({
-    queryKey: ['game-decisions', wolfComp.id, roundGroupId],
+    queryKey: ['decisions', wolfGame.id, groupId],
     queryFn: () =>
-      getGameDecisionsFn({
-        data: { competitionId: wolfComp.id, roundGroupId },
+      getDecisionsFn({
+        data: { gameId: wolfGame.id, groupId },
       }),
     staleTime: 30_000,
   });
@@ -47,11 +43,11 @@ export function WolfDeclarationPanel({
     isBlindLoneWolf = false,
   ) => {
     if (!canDeclare || submitting) return;
-    await submitGameDecision({
+    await submitDecision({
       variables: {
-        competitionId: wolfComp.id,
+        gameId: wolfGame.id,
         roundId: round.id,
-        roundGroupId,
+        groupId,
         holeNumber,
         wolfPlayerId: wolfParticipantId,
         partnerPlayerId,
@@ -65,7 +61,7 @@ export function WolfDeclarationPanel({
             : 'Going lone wolf';
         toast.success(label);
         void queryClient.invalidateQueries({
-          queryKey: ['game-decisions', wolfComp.id],
+          queryKey: ['decisions', wolfGame.id],
         });
       },
       onError: (error) =>
@@ -78,7 +74,7 @@ export function WolfDeclarationPanel({
   return (
     <div className="space-y-1">
       <p className="text-muted-foreground px-4 pb-1 text-xs font-medium sm:px-0">
-        Wolf — {wolfComp.name}
+        Wolf — {wolfGame.name}
       </p>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">

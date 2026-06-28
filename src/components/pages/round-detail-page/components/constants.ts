@@ -1,4 +1,4 @@
-import type { CompetitionConfig } from '@/lib/competitions';
+import type { GameConfig } from '@/lib/game-config';
 
 export const statusColors: Record<
   string,
@@ -38,7 +38,7 @@ export const nextTransitions: Record<
 };
 
 export const INDIVIDUAL_FORMATS: {
-  value: CompetitionConfig['formatType'];
+  value: GameConfig['formatType'];
   label: string;
 }[] = [
   { value: 'wolf', label: 'Wolf' },
@@ -48,7 +48,7 @@ export const INDIVIDUAL_FORMATS: {
 ];
 
 export const TEAM_FORMATS: {
-  value: CompetitionConfig['formatType'];
+  value: GameConfig['formatType'];
   label: string;
 }[] = [
   { value: 'best_ball', label: 'Best Ball' },
@@ -58,7 +58,7 @@ export const TEAM_FORMATS: {
 ];
 
 export const BONUS_FORMATS: {
-  value: CompetitionConfig['formatType'];
+  value: GameConfig['formatType'];
   label: string;
 }[] = [
   { value: 'nearest_pin', label: 'Nearest the Pin' },

@@ -22,7 +22,7 @@ export function TournamentDetailPage({
   const isCommissioner =
     isCreator ||
     (myPerson
-      ? tournament.participants.some(
+      ? tournament.players.some(
           (p) => p.personId === myPerson.id && p.role === 'commissioner',
         )
       : false);
@@ -43,7 +43,6 @@ export function TournamentDetailPage({
         myPerson={myPerson}
         onChanged={() => router.invalidate()}
         defaultOpen={isSetup}
-        competitions={[]}
       />
 
       <RoundsSection

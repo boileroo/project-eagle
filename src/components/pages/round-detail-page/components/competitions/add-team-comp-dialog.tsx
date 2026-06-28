@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useCreateCompetition } from '@/lib/competitions';
-import type { CompetitionConfig } from '@/lib/competitions';
+import { useCreateGame } from '@/lib/games';
+import type { GameConfig } from '@/lib/games';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -16,41 +16,39 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { TEAM_FORMATS } from '../constants';
-import type { RoundData, RoundCompetitionsData } from '../types';
+import type { RoundData, RoundGamesData } from '../types';
 import { PointsFields } from './competition-fields/points-fields';
 
 export function AddTeamCompDialog({
   tournamentId,
   roundId,
   round,
-  competitions,
+  games,
   onSaved,
 }: {
   tournamentId: string;
   roundId: string;
   round: RoundData;
-  competitions: RoundCompetitionsData;
+  games: RoundGamesData;
   onSaved: () => void;
   disabled?: boolean;
 }) {
-  // parent can render the trigger disabled via `disabled` prop; preserve
-  // backward compatibility by reading it from the arguments if provided
-
   const disabledProp = (arguments[0] as any).disabled as boolean | undefined;
   const [open, setOpen] = useState(false);
-  const [createCompetition, { isPending: saving }] = useCreateCompetition();
+  const [createGame] = useCreateGame();
+  const [saving, setSaving] = useState(false);
   const [formatType, setFormatType] =
-    useState<CompetitionConfig['formatType']>('best_ball');
-
-  const hasMatchPlayComp = competitions.some(
-    (c) => c.formatType === 'match_play',
-  );
+    useState<GameConfig['formatType']>('best_ball');
 
   const [pointsPerWin, setPointsPerWin] = useState(1);
   const [pointsPerHalf, setPointsPerHalf] = useState(0.5);
   const [rumbleScoringBasis, setRumbleScoringBasis] = useState<
     'stableford' | 'net' | 'gross'
   >('stableford');
+
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+
+  const groups = round.groups ?? [];
 
   const getFormatLabel = () => {
     return (
@@ -63,18 +61,18 @@ export function AddTeamCompDialog({
     setPointsPerWin(1);
     setPointsPerHalf(0.5);
     setRumbleScoringBasis('stableford');
+    setSelectedGroupId('');
   };
 
-  const bestBallPairings = useMemo(() => {
-    const pairings: { teamA: string; teamB: string }[] = [];
+  const bestBallGroupPairings = useMemo(() => {
+    const result = new Map<string, { teamA: string; teamB: string }>();
 
-    const checkPool = (poolParticipants: typeof round.participants) => {
+    for (const group of groups) {
+      const pool = round.players.filter((rp) => rp.groupId === group.id);
       const teamCounts = new Map<string, number>();
-      for (const rp of poolParticipants) {
-        const teamId = rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id;
-        if (teamId) {
-          teamCounts.set(teamId, (teamCounts.get(teamId) ?? 0) + 1);
-        }
+      for (const rp of pool) {
+        const teamId = rp.player?.teamMemberships?.[0]?.team?.id;
+        if (teamId) teamCounts.set(teamId, (teamCounts.get(teamId) ?? 0) + 1);
       }
       const teamIds = [...teamCounts.keys()];
       if (
@@ -82,34 +80,27 @@ export function AddTeamCompDialog({
         teamCounts.get(teamIds[0]) === 2 &&
         teamCounts.get(teamIds[1]) === 2
       ) {
-        pairings.push({ teamA: teamIds[0], teamB: teamIds[1] });
+        result.set(group.id, { teamA: teamIds[0]!, teamB: teamIds[1]! });
       }
-    };
-
-    if ((round.groups ?? []).length > 0) {
-      for (const group of round.groups ?? []) {
-        checkPool(
-          round.participants.filter((rp) => rp.roundGroupId === group.id),
-        );
-      }
-    } else {
-      // No groups: treat all participants as a single pool
-      checkPool(round.participants);
     }
 
-    return pairings;
-  }, [round.groups, round.participants]);
+    return result;
+  }, [groups, round.players]);
 
-  const validBestBallGroups = useMemo(() => {
-    let count = 0;
+  const validBestBallGroupIds = useMemo(
+    () => [...bestBallGroupPairings.keys()],
+    [bestBallGroupPairings],
+  );
+  const validBestBallGroups = validBestBallGroupIds.length;
 
-    const checkPool = (poolParticipants: typeof round.participants) => {
+  const hiLoGroupIds = useMemo(() => {
+    const result: string[] = [];
+    for (const group of groups) {
+      const pool = round.players.filter((rp) => rp.groupId === group.id);
       const teamCounts = new Map<string, number>();
-      for (const rp of poolParticipants) {
-        const teamId = rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id;
-        if (teamId) {
-          teamCounts.set(teamId, (teamCounts.get(teamId) ?? 0) + 1);
-        }
+      for (const rp of pool) {
+        const teamId = rp.player?.teamMemberships?.[0]?.team?.id;
+        if (teamId) teamCounts.set(teamId, (teamCounts.get(teamId) ?? 0) + 1);
       }
       const teamIds = [...teamCounts.keys()];
       if (
@@ -117,61 +108,45 @@ export function AddTeamCompDialog({
         teamCounts.get(teamIds[0]) === 2 &&
         teamCounts.get(teamIds[1]) === 2
       ) {
-        count++;
+        result.push(group.id);
       }
-    };
-
-    if ((round.groups ?? []).length > 0) {
-      for (const group of round.groups ?? []) {
-        checkPool(
-          round.participants.filter((rp) => rp.roundGroupId === group.id),
-        );
-      }
-    } else {
-      // No groups: treat all participants as a single pool
-      checkPool(round.participants);
     }
+    return result;
+  }, [groups, round.players]);
+  const validHiLoGroups = hiLoGroupIds.length;
 
-    return count;
-  }, [round.groups, round.participants]);
-
-  /** Valid Hi-Lo groups: exactly 2 teams with exactly 2 players each per group */
-  const validHiLoGroups = validBestBallGroups;
-
-  /** Valid Rumble groups: exactly 4 players from the same team per group */
-  const validRumbleGroups = useMemo(() => {
-    let count = 0;
-
-    const checkPool = (poolParticipants: typeof round.participants) => {
-      if (poolParticipants.length !== 4) return;
+  const rumbleGroupIds = useMemo(() => {
+    const result: string[] = [];
+    for (const group of groups) {
+      const pool = round.players.filter((rp) => rp.groupId === group.id);
+      if (pool.length !== 4) continue;
       const teams = new Set(
-        poolParticipants
-          .map((rp) => rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id)
+        pool
+          .map((rp) => rp.player?.teamMemberships?.[0]?.team?.id)
           .filter(Boolean),
       );
-      if (teams.size === 1) count++;
-    };
-
-    if ((round.groups ?? []).length > 0) {
-      for (const group of round.groups ?? []) {
-        checkPool(
-          round.participants.filter((rp) => rp.roundGroupId === group.id),
-        );
-      }
-    } else {
-      checkPool(round.participants);
+      if (teams.size === 1) result.push(group.id);
     }
+    return result;
+  }, [groups, round.players]);
+  const validRumbleGroups = rumbleGroupIds.length;
 
-    return count;
-  }, [round.groups, round.participants]);
+  const hasMatchPlayCompInGroup = (groupId: string) =>
+    games.some((g) => g.format === 'match_play' && g.groupId === groupId);
 
-  const buildConfig = (): CompetitionConfig => {
+  const buildConfig = (groupId: string): GameConfig => {
     switch (formatType) {
-      case 'best_ball':
+      case 'best_ball': {
+        const pairing = bestBallGroupPairings.get(groupId);
         return {
           formatType: 'best_ball',
-          config: { pointsPerWin, pointsPerHalf, pairings: bestBallPairings },
+          config: {
+            pointsPerWin,
+            pointsPerHalf,
+            pairings: pairing ? [pairing] : [],
+          },
         };
+      }
       case 'hi_lo':
         return {
           formatType: 'hi_lo',
@@ -195,7 +170,7 @@ export function AddTeamCompDialog({
       default:
         return {
           formatType: 'best_ball',
-          config: { pointsPerWin, pointsPerHalf, pairings: bestBallPairings },
+          config: { pointsPerWin, pointsPerHalf, pairings: [] },
         };
     }
   };
@@ -205,29 +180,66 @@ export function AddTeamCompDialog({
     if (formatType === 'best_ball' && validBestBallGroups === 0) return true;
     if (formatType === 'hi_lo' && validHiLoGroups === 0) return true;
     if (formatType === 'rumble' && validRumbleGroups === 0) return true;
-    if (formatType === 'match_play' && hasMatchPlayComp) return true;
+    if (formatType === 'match_play') {
+      if (!selectedGroupId) return true;
+      if (hasMatchPlayCompInGroup(selectedGroupId)) return true;
+    }
     return false;
   };
 
   const handleSave = async () => {
-    await createCompetition({
-      variables: {
-        tournamentId,
-        name: getFormatLabel(),
-        competitionCategory: 'match',
-        roundId,
-        competitionConfig: buildConfig(),
-      },
-      onSuccess: () => {
-        toast.success('Competition created.');
-        setOpen(false);
-        resetForm();
-        onSaved();
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    });
+    setSaving(true);
+    try {
+      if (formatType === 'match_play') {
+        if (!selectedGroupId) return;
+        await createGame({
+          variables: {
+            tournamentId,
+            roundId,
+            groupId: selectedGroupId,
+            name: getFormatLabel(),
+            gameConfig: buildConfig(selectedGroupId),
+          },
+          onError: (error) => {
+            toast.error(error.message);
+          },
+        });
+      } else {
+        const validGroupIds =
+          formatType === 'best_ball'
+            ? validBestBallGroupIds
+            : formatType === 'hi_lo'
+              ? hiLoGroupIds
+              : formatType === 'rumble'
+                ? rumbleGroupIds
+                : [];
+
+        let failed = false;
+        for (const groupId of validGroupIds) {
+          await createGame({
+            variables: {
+              tournamentId,
+              roundId,
+              groupId,
+              name: getFormatLabel(),
+              gameConfig: buildConfig(groupId),
+            },
+            onError: (error) => {
+              toast.error(error.message);
+              failed = true;
+            },
+          });
+          if (failed) return;
+        }
+      }
+
+      toast.success('Competition created.');
+      setOpen(false);
+      resetForm();
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -257,7 +269,7 @@ export function AddTeamCompDialog({
               id="team-comp-format"
               value={formatType}
               onChange={(e) =>
-                setFormatType(e.target.value as CompetitionConfig['formatType'])
+                setFormatType(e.target.value as GameConfig['formatType'])
               }
               autoFocus
             >
@@ -269,7 +281,6 @@ export function AddTeamCompDialog({
             </Select>
           </div>
 
-          {/* Best Ball */}
           {formatType === 'best_ball' && (
             <div className="space-y-3">
               <PointsFields
@@ -293,7 +304,6 @@ export function AddTeamCompDialog({
             </div>
           )}
 
-          {/* Hi-Lo */}
           {formatType === 'hi_lo' && (
             <div className="space-y-3">
               <p className="text-muted-foreground text-xs">
@@ -320,7 +330,6 @@ export function AddTeamCompDialog({
             </div>
           )}
 
-          {/* Rumble */}
           {formatType === 'rumble' && (
             <div className="space-y-3">
               <p className="text-muted-foreground text-xs">
@@ -368,13 +377,28 @@ export function AddTeamCompDialog({
             </div>
           )}
 
-          {/* Singles */}
           {formatType === 'match_play' && (
             <div className="space-y-3">
-              {hasMatchPlayComp && (
+              <div className="space-y-2">
+                <Label htmlFor="match-play-group">Group</Label>
+                <Select
+                  id="match-play-group"
+                  value={selectedGroupId}
+                  onChange={(e) => setSelectedGroupId(e.target.value)}
+                >
+                  <option value="" disabled>
+                    Select a group…
+                  </option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name ?? `Group ${g.groupNumber}`}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              {selectedGroupId && hasMatchPlayCompInGroup(selectedGroupId) && (
                 <p className="text-destructive text-xs">
-                  A Singles competition already exists for this round. Only one
-                  is allowed.
+                  This group already has a Singles competition.
                 </p>
               )}
               <PointsFields

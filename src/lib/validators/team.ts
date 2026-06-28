@@ -14,6 +14,6 @@ export type UpdateTeamInput = z.infer<typeof updateTeamSchema>;
 
 export const addTeamMemberSchema = z.object({
   teamId: z.string().uuid(),
-  participantId: z.string().uuid(),
+  playerId: z.string().uuid(),
 });
 export type AddTeamMemberInput = z.infer<typeof addTeamMemberSchema>;

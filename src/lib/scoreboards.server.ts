@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { eq, desc, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
-import { rounds, scoreEvents, tournaments } from '@/db/schema';
+import { rounds, scores, tournaments } from '@/db/schema';
 import {
   requireAuth,
   verifyTournamentMembership,
@@ -29,10 +29,10 @@ import {
   type TournamentLeaderboardRoundInput,
 } from './domain/tournament-leaderboard';
 import {
-  FORMAT_TYPE_LABELS,
+  GAME_FORMAT_LABELS,
   isTeamFormat,
-  type CompetitionConfig,
-} from './competition-config';
+  type GameConfig,
+} from './game-config';
 import { collectTeamPoints, type TeamPointsEntry } from './domain/team-points';
 
 type OutcomeCategory = 'individual' | 'team';
@@ -74,7 +74,7 @@ function getGroupLabel(group: {
 function getLatestGameDecisions(
   decisions: Array<{
     holeNumber: number;
-    roundGroupId: string | null;
+    groupId: string | null;
     data: Record<string, unknown>;
     createdAt: Date;
   }>,
@@ -85,7 +85,7 @@ function getLatestGameDecisions(
   const seen = new Map<string, Set<number>>();
 
   return latest.flatMap((decision) => {
-    const groupKey = decision.roundGroupId ?? '__null__';
+    const groupKey = decision.groupId ?? '__null__';
     if (!seen.has(groupKey)) seen.set(groupKey, new Set());
     const seenHoles = seen.get(groupKey)!;
     if (seenHoles.has(decision.holeNumber)) return [];
@@ -94,7 +94,7 @@ function getLatestGameDecisions(
     return [
       {
         holeNumber: decision.holeNumber,
-        roundGroupId: decision.roundGroupId,
+        roundGroupId: decision.groupId,
         data: {
           wolfPlayerId: String(decision.data.wolfPlayerId ?? ''),
           partnerPlayerId:
@@ -109,9 +109,9 @@ function getLatestGameDecisions(
 }
 
 function buildRoundTeams(
-  participants: Array<{
+  players: Array<{
     id: string;
-    tournamentParticipant?: {
+    player?: {
       teamMemberships?: Array<{
         team: { id: string; name: string };
       }>;
@@ -123,17 +123,16 @@ function buildRoundTeams(
     { teamId: string; name: string; memberParticipantIds: string[] }
   >();
 
-  for (const participant of participants) {
-    for (const membership of participant.tournamentParticipant
-      ?.teamMemberships ?? []) {
+  for (const rp of players) {
+    for (const membership of rp.player?.teamMemberships ?? []) {
       const entry = teamMap.get(membership.team.id) ?? {
         teamId: membership.team.id,
         name: membership.team.name,
         memberParticipantIds: [],
       };
 
-      if (!entry.memberParticipantIds.includes(participant.id)) {
-        entry.memberParticipantIds.push(participant.id);
+      if (!entry.memberParticipantIds.includes(rp.id)) {
+        entry.memberParticipantIds.push(rp.id);
       }
 
       teamMap.set(membership.team.id, entry);
@@ -227,7 +226,7 @@ function combineCompetitionSummaries(
   summary: CompetitionOutcomeSummary;
   teamPoints: TeamPointsEntry[];
 } | null {
-  const ft = formatType as CompetitionConfig['formatType'];
+  const ft = formatType as GameConfig['formatType'];
   const category: OutcomeCategory =
     isTeamFormat(ft) || (ft === 'match_play' && teams.length > 0)
       ? 'team'
@@ -295,7 +294,7 @@ function combineCompetitionSummaries(
   }
 
   const formatLabel =
-    FORMAT_TYPE_LABELS[formatType as keyof typeof FORMAT_TYPE_LABELS] ??
+    GAME_FORMAT_LABELS[formatType as keyof typeof GAME_FORMAT_LABELS] ??
     formatType;
   const competitionName =
     inputs.length === 1
@@ -339,13 +338,13 @@ function rankTeamRows(rows: TeamLeaderboardRowSummary[]) {
 
 type RoundCompetitionSource = {
   id: string;
-  participants: Array<{
+  players: Array<{
     id: string;
     person: { id: string; displayName: string };
     handicapOverride: string | null;
     handicapSnapshot: string;
-    roundGroupId: string | null;
-    tournamentParticipant: {
+    groupId: string | null;
+    player: {
       handicapOverride: string | null;
       teamMemberships: Array<{
         team: { id: string; name: string };
@@ -364,16 +363,15 @@ type RoundCompetitionSource = {
       strokeIndex: number;
     }>;
   };
-  competitions: Array<{
+  games: Array<{
     id: string;
     name: string;
-    formatType: string;
-    configJson: Record<string, unknown> | null;
-    groupScope: 'all' | 'within_group' | null;
-    roundGroupId: string | null;
-    gameDecisions: Array<{
+    format: string;
+    config: Record<string, unknown> | null;
+    groupId: string | null;
+    decisions: Array<{
       holeNumber: number;
-      roundGroupId: string | null;
+      groupId: string | null;
       data: Record<string, unknown>;
       createdAt: Date;
     }>;
@@ -392,12 +390,12 @@ function buildRoundCompetitionInput(args: {
     strokeIndex: hole.strokeIndex,
   }));
 
-  const participants: ParticipantData[] = round.participants.map((rp) => {
+  const participants: ParticipantData[] = round.players.map((rp) => {
     const effectiveHC = resolveEffectiveHandicap({
       handicapOverride: rp.handicapOverride,
       handicapSnapshot: rp.handicapSnapshot,
-      tournamentParticipant: rp.tournamentParticipant
-        ? { handicapOverride: rp.tournamentParticipant.handicapOverride }
+      tournamentParticipant: rp.player
+        ? { handicapOverride: rp.player.handicapOverride }
         : null,
     });
 
@@ -407,7 +405,7 @@ function buildRoundCompetitionInput(args: {
       displayName: rp.person.displayName,
       effectiveHandicap: effectiveHC,
       playingHandicap: getPlayingHandicap(effectiveHC),
-      roundGroupId: rp.roundGroupId ?? null,
+      roundGroupId: rp.groupId ?? null,
     };
   });
 
@@ -415,31 +413,28 @@ function buildRoundCompetitionInput(args: {
     roundGroupId: group.id,
     groupNumber: group.groupNumber,
     name: group.name ?? null,
-    memberParticipantIds: round.participants
-      .filter((participant) => participant.roundGroupId === group.id)
-      .map((participant) => participant.id),
+    memberParticipantIds: round.players
+      .filter((rp) => rp.groupId === group.id)
+      .map((rp) => rp.id),
   }));
 
-  const teams = buildRoundTeams(round.participants);
+  const teams = buildRoundTeams(round.players);
 
-  const competitionInputs: CompetitionInput[] = round.competitions
+  const competitionInputs: CompetitionInput[] = round.games
     .filter(
-      (competition) =>
-        competition.formatType !== 'nearest_pin' &&
-        competition.formatType !== 'longest_drive',
+      (game) =>
+        game.format !== 'nearest_pin' && game.format !== 'longest_drive',
     )
-    .map((competition) => ({
+    .map((game) => ({
       competition: {
-        id: competition.id,
-        name: competition.name,
+        id: game.id,
+        name: game.name,
         config: {
-          formatType: competition.formatType as CompetitionConfig['formatType'],
-          config: competition.configJson ?? {},
-        } as CompetitionConfig,
-        groupScope: (competition.formatType === 'rumble'
-          ? 'all'
-          : (competition.groupScope ?? 'all')) as 'all' | 'within_group',
-        roundGroupId: competition.roundGroupId ?? null,
+          formatType: game.format as GameConfig['formatType'],
+          config: game.config ?? {},
+        } as GameConfig,
+        groupScope: game.groupId != null ? 'within_group' : 'all',
+        roundGroupId: game.groupId ?? null,
       },
       holes,
       participants,
@@ -447,9 +442,7 @@ function buildRoundCompetitionInput(args: {
       teams,
       groups,
       gameDecisions:
-        competition.formatType === 'wolf'
-          ? getLatestGameDecisions(competition.gameDecisions)
-          : [],
+        game.format === 'wolf' ? getLatestGameDecisions(game.decisions) : [],
     }));
 
   return { holes, participants, teams, competitionInputs };
@@ -464,29 +457,25 @@ async function buildRoundScoreboardInput(roundId: string) {
           holes: { orderBy: (h, { asc }) => [asc(h.holeNumber)] },
         },
       },
-      participants: {
+      players: {
         with: {
           person: true,
-          tournamentParticipant: true,
+          player: true,
         },
       },
-      competitions: {
-        with: {
-          bonusAwards: true,
-        },
-      },
+      sideGames: true,
     },
   });
   if (!round) throw new Error('Round not found');
 
-  const events = await db.query.scoreEvents.findMany({
-    where: eq(scoreEvents.roundId, roundId),
-    orderBy: [desc(scoreEvents.createdAt)],
+  const events = await db.query.scores.findMany({
+    where: eq(scores.roundId, roundId),
+    orderBy: [desc(scores.createdAt)],
   });
 
   const resolvedScores: ResolvedScore[] = resolveLatestScores(events).map(
     (e) => ({
-      roundParticipantId: e.roundParticipantId,
+      roundParticipantId: e.roundPlayerId,
       holeNumber: e.holeNumber,
       strokes: e.strokes,
     }),
@@ -498,12 +487,12 @@ async function buildRoundScoreboardInput(roundId: string) {
     strokeIndex: h.strokeIndex,
   }));
 
-  const participants: ParticipantData[] = round.participants.map((rp) => {
+  const participants: ParticipantData[] = round.players.map((rp) => {
     const effectiveHC = resolveEffectiveHandicap({
       handicapOverride: rp.handicapOverride,
       handicapSnapshot: rp.handicapSnapshot,
-      tournamentParticipant: rp.tournamentParticipant
-        ? { handicapOverride: rp.tournamentParticipant.handicapOverride }
+      tournamentParticipant: rp.player
+        ? { handicapOverride: rp.player.handicapOverride }
         : null,
     });
     return {
@@ -512,48 +501,26 @@ async function buildRoundScoreboardInput(roundId: string) {
       displayName: rp.person.displayName,
       effectiveHandicap: effectiveHC,
       playingHandicap: getPlayingHandicap(effectiveHC),
-      roundGroupId: rp.roundGroupId ?? null,
+      roundGroupId: rp.groupId ?? null,
     };
   });
 
   const bonusAwardInputs: BonusAwardInput[] = [];
-  for (const comp of round.competitions) {
-    if (
-      comp.formatType !== 'nearest_pin' &&
-      comp.formatType !== 'longest_drive'
-    )
-      continue;
-    const cfg = comp.configJson as {
-      bonusMode?: string;
-      bonusPoints?: number;
-      holeNumber?: number;
-    } | null;
+  for (const sg of round.sideGames) {
+    const formatType = sg.format as 'nearest_pin' | 'longest_drive';
     const bonusMode =
-      cfg?.bonusMode === 'standalone' ? 'standalone' : 'contributor';
-    const bonusPoints = cfg?.bonusPoints ?? 1;
-    const holeNumber = cfg?.holeNumber ?? 0;
-    for (const award of comp.bonusAwards) {
-      bonusAwardInputs.push({
-        competitionId: comp.id,
-        competitionName: comp.name,
-        formatType: comp.formatType as 'nearest_pin' | 'longest_drive',
-        bonusMode,
-        bonusPoints,
-        holeNumber,
-        roundParticipantId: award.roundParticipantId,
-      });
-    }
-    if (comp.bonusAwards.length === 0) {
-      bonusAwardInputs.push({
-        competitionId: comp.id,
-        competitionName: comp.name,
-        formatType: comp.formatType as 'nearest_pin' | 'longest_drive',
-        bonusMode,
-        bonusPoints,
-        holeNumber,
-        roundParticipantId: null,
-      });
-    }
+      sg.bonusMode === 'standalone' ? 'standalone' : 'contributor';
+    const bonusPoints = sg.bonusPoints ?? 1;
+    const holeNumber = sg.holeNumber ?? 0;
+    bonusAwardInputs.push({
+      competitionId: sg.id,
+      competitionName: sg.name,
+      formatType,
+      bonusMode,
+      bonusPoints,
+      holeNumber,
+      roundParticipantId: sg.winnerId ?? null,
+    });
   }
 
   const input: IndividualScoreboardInput = {
@@ -580,12 +547,17 @@ export const getIndividualScoreboardFn = createServerFn({ method: 'GET' })
     const { round, input } = await buildRoundScoreboardInput(data.roundId);
     const result = calculateIndividualScoreboard(input);
 
+    const tournament = await db.query.tournaments.findFirst({
+      where: eq(tournaments.id, roundForAuth.tournamentId),
+      columns: { scoringBasis: true },
+    });
+
     return {
       roundId: round.id,
       roundNumber: round.roundNumber,
       courseName: round.course.name,
       totalHoles: round.course.holes.length,
-      primaryScoringBasis: round.primaryScoringBasis ?? null,
+      scoringBasis: tournament?.scoringBasis ?? null,
       ...result,
     };
   });
@@ -598,7 +570,7 @@ export const getTournamentLeaderboardFn = createServerFn({ method: 'GET' })
 
     const tournament = await db.query.tournaments.findFirst({
       where: eq(tournaments.id, data.tournamentId),
-      columns: { primaryScoringBasis: true, name: true },
+      columns: { scoringBasis: true, name: true },
     });
     if (!tournament) throw new Error('Tournament not found');
 
@@ -614,10 +586,10 @@ export const getTournamentLeaderboardFn = createServerFn({ method: 'GET' })
         groups: {
           orderBy: (g, { asc }) => [asc(g.groupNumber)],
         },
-        participants: {
+        players: {
           with: {
             person: true,
-            tournamentParticipant: {
+            player: {
               with: {
                 teamMemberships: {
                   with: {
@@ -628,21 +600,21 @@ export const getTournamentLeaderboardFn = createServerFn({ method: 'GET' })
             },
           },
         },
-        competitions: {
+        games: {
           with: {
-            bonusAwards: true,
-            gameDecisions: true,
+            decisions: true,
           },
         },
+        sideGames: true,
       },
     });
 
     const allRoundIds = tournamentRounds.map((r) => r.id);
     const allEvents =
       allRoundIds.length > 0
-        ? await db.query.scoreEvents.findMany({
-            where: inArray(scoreEvents.roundId, allRoundIds),
-            orderBy: [desc(scoreEvents.createdAt)],
+        ? await db.query.scores.findMany({
+            where: inArray(scores.roundId, allRoundIds),
+            orderBy: [desc(scores.createdAt)],
           })
         : [];
 
@@ -666,7 +638,7 @@ export const getTournamentLeaderboardFn = createServerFn({ method: 'GET' })
       const events = eventsByRound.get(round.id) ?? [];
       const resolvedScores: ResolvedScore[] = resolveLatestScores(events).map(
         (e) => ({
-          roundParticipantId: e.roundParticipantId,
+          roundParticipantId: e.roundPlayerId,
           holeNumber: e.holeNumber,
           strokes: e.strokes,
         }),
@@ -679,43 +651,21 @@ export const getTournamentLeaderboardFn = createServerFn({ method: 'GET' })
         });
 
       const bonusAwardInputs: BonusAwardInput[] = [];
-      for (const comp of round.competitions) {
-        if (
-          comp.formatType !== 'nearest_pin' &&
-          comp.formatType !== 'longest_drive'
-        )
-          continue;
-        const cfg = comp.configJson as {
-          bonusMode?: string;
-          bonusPoints?: number;
-          holeNumber?: number;
-        } | null;
+      for (const sg of round.sideGames) {
+        const formatType = sg.format as 'nearest_pin' | 'longest_drive';
         const bonusMode =
-          cfg?.bonusMode === 'standalone' ? 'standalone' : 'contributor';
-        const bonusPoints = cfg?.bonusPoints ?? 1;
-        const holeNumber = cfg?.holeNumber ?? 0;
-        for (const award of comp.bonusAwards) {
-          bonusAwardInputs.push({
-            competitionId: comp.id,
-            competitionName: comp.name,
-            formatType: comp.formatType as 'nearest_pin' | 'longest_drive',
-            bonusMode,
-            bonusPoints,
-            holeNumber,
-            roundParticipantId: award.roundParticipantId,
-          });
-        }
-        if (comp.bonusAwards.length === 0) {
-          bonusAwardInputs.push({
-            competitionId: comp.id,
-            competitionName: comp.name,
-            formatType: comp.formatType as 'nearest_pin' | 'longest_drive',
-            bonusMode,
-            bonusPoints,
-            holeNumber,
-            roundParticipantId: null,
-          });
-        }
+          sg.bonusMode === 'standalone' ? 'standalone' : 'contributor';
+        const bonusPoints = sg.bonusPoints ?? 1;
+        const holeNumber = sg.holeNumber ?? 0;
+        bonusAwardInputs.push({
+          competitionId: sg.id,
+          competitionName: sg.name,
+          formatType,
+          bonusMode,
+          bonusPoints,
+          holeNumber,
+          roundParticipantId: sg.winnerId ?? null,
+        });
       }
 
       const scoreboardResult = calculateIndividualScoreboard({
@@ -821,7 +771,7 @@ export const getTournamentLeaderboardFn = createServerFn({ method: 'GET' })
     return {
       tournamentId: data.tournamentId,
       tournamentName: tournament.name,
-      primaryScoringBasis: tournament.primaryScoringBasis ?? null,
+      scoringBasis: tournament.scoringBasis ?? null,
       rounds: leaderboardRounds.map((r) => ({
         roundId: r.roundId,
         roundName: r.roundName,
@@ -834,33 +784,9 @@ export const getTournamentLeaderboardFn = createServerFn({ method: 'GET' })
     };
   });
 
-const primaryScoringBasisSchema = z
+const scoringBasisSchema = z
   .enum(['gross_strokes', 'net_strokes', 'stableford', 'total'])
   .nullable();
-
-export const setRoundPrimaryScoringBasisFn = createServerFn({ method: 'POST' })
-  .inputValidator(
-    z.object({
-      roundId: z.string().uuid(),
-      basis: primaryScoringBasisSchema,
-    }),
-  )
-  .handler(async ({ data }) => {
-    const user = await requireAuth();
-    const round = await db.query.rounds.findFirst({
-      where: eq(rounds.id, data.roundId),
-      columns: { tournamentId: true },
-    });
-    if (!round) throw new Error('Round not found');
-    await verifyTournamentMembership(user.id, round.tournamentId);
-
-    await db
-      .update(rounds)
-      .set({ primaryScoringBasis: data.basis })
-      .where(eq(rounds.id, data.roundId));
-
-    return { success: true };
-  });
 
 export const setTournamentPrimaryScoringBasisFn = createServerFn({
   method: 'POST',
@@ -868,7 +794,7 @@ export const setTournamentPrimaryScoringBasisFn = createServerFn({
   .inputValidator(
     z.object({
       tournamentId: z.string().uuid(),
-      basis: primaryScoringBasisSchema,
+      basis: scoringBasisSchema,
     }),
   )
   .handler(async ({ data }) => {
@@ -877,7 +803,7 @@ export const setTournamentPrimaryScoringBasisFn = createServerFn({
 
     await db
       .update(tournaments)
-      .set({ primaryScoringBasis: data.basis })
+      .set({ scoringBasis: data.basis })
       .where(eq(tournaments.id, data.tournamentId));
 
     return { success: true };

@@ -77,30 +77,31 @@ Person { id, displayName, userId (nullable), currentHandicap }
 
 > Guests are not a role. They are a `Person` without a `userId`.
 
-**TournamentParticipant** — links a person to a tournament:
+**Player** — links a person to a tournament:
 
 ```
-TournamentParticipant { id, tournamentId, personId, handicapOverride (nullable) }
+Player { id, tournamentId, personId, role, handicapOverride (nullable) }
 ```
 
+- `role` — `'player'` | `'commissioner'`
 - `handicapOverride` — a commissioner may set this to override the player's handicap for the entire tournament
 
-**RoundParticipant** — links a tournament participant to a specific round:
+**RoundPlayer** — links a tournament player to a specific round:
 
 ```
-RoundParticipant { id, roundId, tournamentParticipantId, handicapSnapshot, handicapOverride (nullable) }
+RoundPlayer { id, roundId, playerId, groupId (nullable), handicapSnapshot, handicapOverride (nullable) }
 ```
 
 - `handicapSnapshot` — captured from `Person.currentHandicap` when the round is created
 - `handicapOverride` — a commissioner may override for this specific round
-- Not every participant plays every round (golf holidays have rest days, late arrivals, etc.)
+- Not every player plays every round (golf holidays have rest days, late arrivals, etc.)
 
 **Effective handicap** for scoring is resolved as:
 
 ```
-RoundParticipant.handicapOverride
-  ?? TournamentParticipant.handicapOverride
-    ?? RoundParticipant.handicapSnapshot
+RoundPlayer.handicapOverride
+  ?? Player.handicapOverride
+    ?? RoundPlayer.handicapSnapshot
 ```
 
 This allows:
@@ -135,16 +136,16 @@ Matches and Games are overlaid on the same raw scorecard data. Neither affects s
 
 ```
 Tournament (mandatory)
-  → TournamentParticipants → Person
-  → TournamentTeams (optional, persistent team identities)
-    → TournamentTeamMembers → TournamentParticipant
+  → Players → Person
+  → Teams (optional, persistent team identities)
+    → TeamMembers → Player
   → Rounds
-    → RoundGroups (playing groups / fourballs, 1–4 players each)
-    → RoundParticipants (with handicap snapshot, assigned to a group)
+    → Groups (playing groups / fourballs, 1–4 players each)
+    → RoundPlayers (with handicap snapshot, assigned to a group)
       → ScoreEvents
-    → Competitions (optional — matches, games, bonuses)
-      → BonusAwards (for NTP/LD competitions)
-      → GameDecisions (for Wolf — per-hole declarations)
+    → Games (optional — matches and individual games; one game per group)
+      → Decisions (for Wolf — per-hole declarations; append-only)
+    → SideGames (optional — NTP/LD; one winner per side game)
 ```
 
 Every round belongs to a tournament (`tournament_id` NOT NULL). A casual round is simply a 1-round tournament.
@@ -156,7 +157,7 @@ Each round stores:
 - Course reference
 - Round number / date
 - Status: `draft` | `scheduled` | `open` | `finalized`
-- `primaryScoringBasis` — the column the commissioner designates as the trophy metric (`gross_strokes` | `net_strokes` | `stableford` | `total` | null)
+- `label` — optional display label (e.g. "Round 1: Irish Rumble")
 
 ### Course Library
 
@@ -173,39 +174,42 @@ CourseHole { id, courseId, holeNumber, par, strokeIndex, yardage (optional) }
 
 ### Core Entities
 
-| Entity                | Purpose                                                                    |
-| --------------------- | -------------------------------------------------------------------------- |
-| Tournament            | Top-level container (mandatory, even for a single round)                   |
-| Round                 | A single round of golf within a tournament                                 |
-| RoundGroup            | A playing group / fourball within a round (1–4 players)                    |
-| Course                | A golf course (shared library)                                             |
-| CourseHole            | Hole-level data for a course (par, SI, yardage)                            |
-| Person                | A human identity (guest or registered) with handicap                       |
-| TournamentParticipant | Links a Person to a Tournament (+ HC override)                             |
-| TournamentTeam        | A persistent team identity for the tournament                              |
-| TournamentTeamMember  | Links a TournamentParticipant to a TournamentTeam                          |
-| RoundParticipant      | Links a TournamentParticipant to a Round + Group (+ HC snapshot)           |
-| ScoreEvent            | An immutable record of strokes on a hole                                   |
-| Competition           | A round-scoped scoring format config (match, game, or bonus)               |
-| BonusAward            | Winner of a bonus competition (NTP/LD) — single award per comp             |
-| GameDecision          | An immutable record of a per-hole game decision (e.g. Wolf partner choice) |
+| Entity      | Purpose                                                                    |
+| ----------- | -------------------------------------------------------------------------- |
+| Tournament  | Top-level container (mandatory, even for a single round)                   |
+| Round       | A single round of golf within a tournament                                 |
+| Group       | A playing group / fourball within a round (1–4 players)                    |
+| Course      | A golf course (shared library)                                             |
+| CourseHole  | Hole-level data for a course (par, SI, yardage)                            |
+| Person      | A human identity (guest or registered) with handicap                       |
+| Player      | Links a Person to a Tournament (role + HC override)                        |
+| Team        | A persistent team identity for the tournament                              |
+| TeamMember  | Links a Player to a Team                                                   |
+| RoundPlayer | Links a Player to a Round + Group (+ HC snapshot)                          |
+| ScoreEvent  | An immutable record of strokes on a hole                                   |
+| Game        | A round+group-scoped scoring format config (match or individual game)      |
+| SideGame    | A round-scoped bonus prize (NTP/LD) with optional bonus points             |
+| Decision    | An immutable record of a per-hole game decision (e.g. Wolf partner choice) |
 
 ### Key Relationships
 
 - Tournament → many Rounds (mandatory, `tournament_id` NOT NULL)
-- Tournament → many TournamentParticipants → Person
-- Tournament → many TournamentTeams → TournamentTeamMembers → TournamentParticipants
+- Tournament → many Players → Person
+- Tournament → many Teams → TeamMembers → Players
 - Round → one Course
-- Round → many RoundGroups (playing fourballs)
-- Round → many RoundParticipants → TournamentParticipant
-- RoundParticipant → one RoundGroup (nullable)
-- Round → many Competitions → BonusAwards / GameDecisions
+- Round → many Groups (playing fourballs)
+- Round → many RoundPlayers → Player
+- RoundPlayer → one Group (nullable)
+- Group → at most one Game → Decisions
+- Round → many SideGames
 
-> **Why RoundParticipant?** Not everyone plays every round. Handicap snapshots are per-round. This is the natural join.
+> **Why RoundPlayer?** Not everyone plays every round. Handicap snapshots are per-round. This is the natural join.
 
-> **Why RoundGroup?** Groups are the operational unit on the course — who physically plays together. They are distinct from teams (a group of 4 may contain 2 players from each team).
+> **Why Group?** Groups are the operational unit on the course — who physically plays together. They are distinct from teams (a group of 4 may contain 2 players from each team).
 
 > **Why tournament-level teams only?** Teams are a persistent identity for the tournament ("Team Europe"). Playing partners change round to round but team membership does not. Having a single source of truth avoids sync and consistency problems.
+
+> **Why one game per group?** Each group plays one format at a time. Having `groupId` required on `games` makes this explicit and eliminates the need for a separate `groupScope` column.
 
 ---
 
@@ -296,36 +300,42 @@ The commissioner can designate one column as the **trophy column** — the metri
 
 ## Competition Model
 
-Competitions are **configuration objects**, not stored results. They are always **round-scoped**.
+Competitions are split into two tables: **games** (scored formats) and **sideGames** (NTP/LD bonus prizes). Both are always **round-scoped**.
 
 ```
-Competition {
+Game {
   id
   tournamentId
-  roundId (NOT NULL)        // always bound to a specific round
+  roundId (NOT NULL)
+  groupId (NOT NULL)      // each game belongs to exactly one group
   name
-  competitionCategory       // "match" | "game" | "bonus"
-  groupScope                // "all" | "within_group"
-  formatType                // discriminant (see below)
-  configJson                // typed per formatType (Zod discriminated union)
+  format                  // discriminant (see below)
+  config                  // typed per format (Zod discriminated union)
+}
+
+SideGame {
+  id
+  tournamentId
+  roundId (NOT NULL)
+  name
+  format                  // 'ntp' | 'ld'
+  holeNumber (nullable)
+  bonusMode               // 'standalone' | 'contributor'
+  bonusPoints
+  winnerId (nullable)     // → RoundPlayer
 }
 ```
 
-### Competition Categories
+### Game Formats
 
-| Category  | Formats                                      | Max per round | Requirement                |
-| --------- | -------------------------------------------- | ------------- | -------------------------- |
-| **Match** | `match_play`, `best_ball`, `hi_lo`, `rumble` | 1             | Tournament must have teams |
-| **Game**  | `wolf`, `six_point`, `chair`                 | 1             | None                       |
-| **Bonus** | `nearest_pin`, `longest_drive`               | Unlimited     | None                       |
+| Category       | Formats                                      | Requirement                |
+| -------------- | -------------------------------------------- | -------------------------- |
+| **Team Match** | `match_play`, `best_ball`, `hi_lo`, `rumble` | Tournament must have teams |
+| **Game**       | `wolf`, `six_point`, `chair`, `match_play`   | None                       |
 
-A round may have at most 1 match and at most 1 game competition simultaneously. If both are configured, the UI warns that tournament-level team scoring will not aggregate (since team and individual game results are incompatible in the leaderboard).
-
-> `stableford` and `stroke_play` are retired format types. Individual scoring is now always provided by the auto-computed Individual Scoreboard.
+Each group may have at most one game. The `groupId` is required, making scope always `'within_group'`.
 
 ### Pre-Round Availability Matrix
-
-The competition setup UI filters available formats based on the round's actual group composition:
 
 | Condition                                  | Available match formats                                              |
 | ------------------------------------------ | -------------------------------------------------------------------- |
@@ -334,7 +344,7 @@ The competition setup UI filters available formats based on the round's actual g
 | All groups have exactly 2 players per team | Best Ball, Match Play, Hi-Lo                                         |
 | Mixed group makeup                         | All formats shown; a warning indicates which groups will be excluded |
 
-Games (Wolf, Six Point, Chair) are always available regardless of team configuration. Bonuses (NTP/LD) are always available. If no groups have been set up yet, match formats are not shown.
+Games (Wolf, Six Point, Chair) are always available regardless of team configuration. Bonus side games (NTP/LD) are always available.
 
 ### Format Config Schemas
 
@@ -424,44 +434,47 @@ This keeps the database schema flexible (`jsonb`) while giving full type safety 
 - **Team membership auto-derived** — Best Ball, Hi-Lo, and Rumble derive team pairings from group membership and `TournamentTeamMembers`; only Match Play requires explicit 1v1 pairings
 - **Rounds can exist without competitions** — casual scorecard + Individual Scoreboard is always available
 
-### Bonus Competitions (NTP/LD)
+### Bonus Side Games (NTP/LD)
 
-Bonus competitions are **award-based**, not score-derived. They are configured during round setup (which hole + type) and awarded by a commissioner or marker during the round via a dropdown on the scoring UI for that hole.
+Side games are **award-based**, not score-derived. They are configured during round setup (which hole + type) and awarded by a commissioner during the round.
 
 ```
-BonusAward {
+SideGame {
   id
-  competitionId
-  roundParticipantId
-  awardedByUserId
-  createdAt
+  roundId
+  format: 'ntp' | 'ld'
+  holeNumber (nullable)
+  bonusMode: 'standalone' | 'contributor'
+  bonusPoints
+  winnerId → RoundPlayer
 }
 ```
 
-Only one winner per bonus competition — awarding a new winner replaces the previous one.
+Only one winner per side game — awarding a new winner replaces the previous one.
 
 | Mode          | Behaviour                                                                                                                                 |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `standalone`  | Records a winner. Displayed as a badge in the Individual Scoreboard bonus column. No impact on point totals.                              |
 | `contributor` | Records a winner AND adds bonus points (e.g. +1 stableford) to the winner's Individual Scoreboard Bonus column. Adds to the Total column. |
 
-### Game Decisions (Wolf)
+### Decisions (Wolf)
 
 Wolf requires per-hole declarations that cannot be derived from scores. These are stored as **append-only immutable events** — the same pattern as score events.
 
 ```
-GameDecision {
+Decision {
   id
-  competitionId
+  gameId
   roundId
+  groupId
   holeNumber
-  data: jsonb         // format-specific: Wolf = { wolfPlayerId, partnerPlayerId | null }
+  data: jsonb         // Wolf = { wolfPlayerId, partnerPlayerId | null }
   recordedByUserId
   createdAt
 }
 ```
 
-Latest record per `(competitionId, holeNumber)` wins. The Wolf declaration UI appears in the live scoring view on each wolf hole — the wolf selects a partner or confirms going alone before scores are submitted.
+Latest record per `(gameId, groupId, holeNumber)` wins. The Wolf declaration UI appears in the live scoring view on each wolf hole — the wolf selects a partner or confirms going alone before scores are submitted.
 
 ### Tournament-Level Team Leaderboard
 
@@ -567,16 +580,16 @@ This section records how the original scenario-based design (raw notes) maps to 
 
 ### What Aligns Well
 
-| Their concept                                 | Our model                                                               |
-| --------------------------------------------- | ----------------------------------------------------------------------- |
-| Tournament, Players, Teams                    | `tournaments`, `tournamentParticipants`, `tournamentTeams`              |
-| Rounds, Groups                                | `rounds`, `roundGroups`, `roundParticipants` (with `roundGroupId`)      |
-| Individual hole scores                        | `scoreEvents` (append-only)                                             |
-| Individual competition (aggregate stableford) | Auto-computed Individual Scoreboard (not a `competitions` row)          |
-| Team competition (match wins)                 | `competitions` with `competitionCategory: 'match'`                      |
-| Points per win / per half                     | `pointsPerWin` / `pointsPerHalf` on match configs                       |
-| Multiple competitions simultaneously          | Multiple `competitions` per round (1 match + 1 game + N bonuses)        |
-| Per-hole game decisions (Wolf)                | `gameDecisions` table (append-only; latest per competitionId+hole wins) |
+| Their concept                                 | Our model                                                            |
+| --------------------------------------------- | -------------------------------------------------------------------- |
+| Tournament, Players, Teams                    | `tournaments`, `players`, `teams`                                    |
+| Rounds, Groups                                | `rounds`, `groups`, `roundPlayers` (with `groupId`)                  |
+| Individual hole scores                        | `scoreEvents` (append-only)                                          |
+| Individual competition (aggregate stableford) | Auto-computed Individual Scoreboard (not a `games` row)              |
+| Team competition (match wins)                 | `games` with a team format (`best_ball`, `match_play`, etc.)         |
+| Points per win / per half                     | `pointsPerWin` / `pointsPerHalf` on match configs                    |
+| Multiple competitions simultaneously          | Multiple `games` per round + multiple `sideGames`                    |
+| Per-hole game decisions (Wolf)                | `decisions` table (append-only; latest per gameId+groupId+hole wins) |
 
 ### Resolved Gaps
 
@@ -602,11 +615,11 @@ This section records how the original scenario-based design (raw notes) maps to 
 
 All items identified during reconciliation have been implemented:
 
-1. **`gameDecisions` table** ✅ — Schema in `src/db/schema.ts`. Server functions `submitGameDecisionFn` / `getGameDecisionsFn` in `src/lib/game-decisions.server.ts`.
+1. **`decisions` table** ✅ — Schema in `src/db/schema.ts`. Server functions `submitDecisionFn` / `getDecisionsFn` / `getAllDecisionsFn` in `src/lib/decisions.server.ts`.
 
-2. **`primaryScoringBasis` field** ✅ — `primary_scoring_basis` enum column on both `rounds` and `tournaments`. `setRoundPrimaryScoringBasisFn` / `setTournamentPrimaryScoringBasisFn` in `src/lib/scoreboards.server.ts`.
+2. **`scoringBasis` field** ✅ — `scoring_basis` enum column on `tournaments`. `trackIndividualScoreboard` flag on `tournaments`.
 
-3. **`competitionCategory` enum** ✅ — `competitions.competitionCategory` stores `'match' | 'game' | 'bonus'`.
+3. **Game / SideGame split** ✅ — `games` table stores scored formats; `sideGames` table stores NTP/LD with inline winner.
 
 4. **Wolf declaration UI** ✅ — `WolfDeclarationControl` component in `src/components/pages/live-scoring-page/components/wolf-declaration-control.tsx`.
 
@@ -618,6 +631,6 @@ All items identified during reconciliation have been implemented:
 
 8. **Chair engine** ✅ — `src/lib/domain/chair.ts`.
 
-9. **Auto-computed leaderboards** ✅ — `tournamentStandings` table deprecated (no new writes). `getIndividualScoreboardFn` / `getTournamentLeaderboardFn` in `src/lib/scoreboards.server.ts` replace it.
+9. **Auto-computed leaderboards** ✅ — `getIndividualScoreboardFn` / `getTournamentLeaderboardFn` in `src/lib/scoreboards.server.ts`.
 
 10. **Foursomes** — Still deferred. See `TODO.md` → Foursomes.

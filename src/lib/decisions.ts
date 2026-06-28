@@ -1,44 +1,41 @@
 import { useMutation } from '@tanstack/react-query';
-import { submitGameDecisionFn } from '@/lib/game-decisions.server';
+import { submitDecisionFn } from '@/lib/decisions.server';
 import type { MutationCallOptions, MutationHookReturn } from '@/lib/mutation';
 
-type SubmitGameDecisionVariables = {
-  competitionId: string;
+type SubmitDecisionVariables = {
+  gameId: string;
   roundId: string;
-  roundGroupId: string;
+  groupId: string;
   holeNumber: number;
   wolfPlayerId: string;
   partnerPlayerId: string | null;
   isBlindLoneWolf?: boolean;
 };
-type SubmitGameDecisionResult = {
+type SubmitDecisionResult = {
   id: string;
-  competitionId: string;
+  gameId: string;
   roundId: string;
-  roundGroupId: string | null;
+  groupId: string | null;
   holeNumber: number;
   data: Record<string, unknown>;
   recordedByUserId: string;
   createdAt: Date;
 };
 
-export function useSubmitGameDecision(): MutationHookReturn<
-  SubmitGameDecisionVariables,
-  SubmitGameDecisionResult
+export function useSubmitDecision(): MutationHookReturn<
+  SubmitDecisionVariables,
+  SubmitDecisionResult
 > {
   const mutation = useMutation({
-    mutationFn: (variables: SubmitGameDecisionVariables) =>
-      submitGameDecisionFn({ data: variables }),
+    mutationFn: (variables: SubmitDecisionVariables) =>
+      submitDecisionFn({ data: variables }),
   });
 
   const mutate = async ({
     variables,
     onSuccess,
     onError,
-  }: MutationCallOptions<
-    SubmitGameDecisionVariables,
-    SubmitGameDecisionResult
-  >) => {
+  }: MutationCallOptions<SubmitDecisionVariables, SubmitDecisionResult>) => {
     try {
       const result = await mutation.mutateAsync(variables);
       await onSuccess?.(result);

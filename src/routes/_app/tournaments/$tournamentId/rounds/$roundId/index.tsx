@@ -8,7 +8,8 @@ import {
   roundQueryOptions,
   coursesQueryOptions,
   scorecardQueryOptions,
-  competitionsQueryOptions,
+  gamesQueryOptions,
+  sideGamesQueryOptions,
   individualScoreboardQueryOptions,
   tournamentQueryOptions,
   myPersonQueryOptions,
@@ -21,11 +22,12 @@ export const Route = createFileRoute(
   loader: async ({ params, context }) => {
     const queryClient = context.queryClient;
 
-    const [round, courses, scorecard, competitions] = await Promise.all([
+    const [round, courses, scorecard, games, sideGames] = await Promise.all([
       queryClient.ensureQueryData(roundQueryOptions(params.roundId)),
       queryClient.ensureQueryData(coursesQueryOptions()),
       queryClient.ensureQueryData(scorecardQueryOptions(params.roundId)),
-      queryClient.ensureQueryData(competitionsQueryOptions(params.roundId)),
+      queryClient.ensureQueryData(gamesQueryOptions(params.roundId)),
+      queryClient.ensureQueryData(sideGamesQueryOptions(params.roundId)),
       queryClient.ensureQueryData(
         individualScoreboardQueryOptions(params.roundId),
       ),
@@ -38,7 +40,15 @@ export const Route = createFileRoute(
       queryClient.ensureQueryData(myPersonQueryOptions()),
     ]);
 
-    return { round, courses, scorecard, competitions, tournament, myPerson };
+    return {
+      round,
+      courses,
+      scorecard,
+      games,
+      sideGames,
+      tournament,
+      myPerson,
+    };
   },
   component: RouteComponent,
 });
@@ -48,9 +58,8 @@ function RouteComponent() {
   const { data: round } = useSuspenseQuery(roundQueryOptions(roundId));
   const { data: courses } = useSuspenseQuery(coursesQueryOptions());
   const { data: scorecard } = useSuspenseQuery(scorecardQueryOptions(roundId));
-  const { data: competitions } = useSuspenseQuery(
-    competitionsQueryOptions(roundId),
-  );
+  const { data: games } = useSuspenseQuery(gamesQueryOptions(roundId));
+  const { data: sideGames } = useSuspenseQuery(sideGamesQueryOptions(roundId));
   // Always load tournament data for all rounds (not just single rounds)
   const { data: tournament } = useQuery(
     tournamentQueryOptions(round.tournamentId),
@@ -67,7 +76,8 @@ function RouteComponent() {
       round={round}
       courses={courses}
       scorecard={scorecard}
-      competitions={competitions}
+      games={games}
+      sideGames={sideGames}
       tournament={tournament ?? null}
       myPerson={myPerson ?? null}
       userId={user!.id}

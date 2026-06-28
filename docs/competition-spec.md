@@ -65,17 +65,17 @@ Bonus games span **all players** across all groups. Each bonus can optionally aw
 
 There is no limit on the number of bonus games per round.
 
-### 1.4 Group Scope (Simplified)
+### 1.4 Group Scope
 
-The current `groupScope` field (`'all'` | `'within_group'`) on the `competitions` table is unnecessary for user configuration. The scope is **always derivable**:
+Group scope is not a user-configurable field. The scope is determined by the table:
 
-| Category   | Effective Scope                      |
-| ---------- | ------------------------------------ |
-| Game       | Always per-group (within each group) |
-| Team Match | Always per-group (within each group) |
-| Bonus      | Always across all players            |
+| Category   | Table       | Effective Scope                     |
+| ---------- | ----------- | ----------------------------------- |
+| Game       | `games`     | Always per-group (groupId required) |
+| Team Match | `games`     | Always per-group (groupId required) |
+| Bonus      | `sideGames` | Always across all players           |
 
-The `groupScope` field should be removed from the competition creation UI and derived automatically on the server side. The DB column can be retained for backward compatibility but should be auto-set, never user-selectable.
+Each game has a required `groupId` linking it to exactly one group. Each group may have at most one game. Side games have no group constraint and span all players in the round.
 
 ---
 
@@ -326,35 +326,35 @@ The server currently does **not** validate most competition constraints — only
 
 ---
 
-## 7. Data Model Changes
+## 7. Data Model
 
-### 7.1 `groupScope` Deprecation
+### 7.1 Two Tables: `games` and `sideGames`
 
-- Stop exposing `groupScope` in the competition creation/edit UI.
-- Auto-set on the server:
-  - `'within_group'` for games and team matches.
-  - `'all'` for bonus competitions.
-- Retain the DB column for backward compatibility.
-- Consider a migration to set existing values correctly.
+Games (scored formats) and side games (NTP/LD) live in separate tables:
 
-### 7.2 `competitionCategory` Enum Update
+- `games` — `format`, `config` (JSON), `groupId` (required), `roundId`, `tournamentId`
+- `sideGames` — `format: 'ntp'|'ld'`, `holeNumber`, `bonusMode`, `bonusPoints`, `winnerId → roundPlayers`
 
-**Current values:** `'match'` | `'game'` | `'bonus'`
+The `groupId` on `games` is always required. Each group can have at most one game. This replaces the old `groupScope`/`roundGroupId` columns on the former `competitions` table.
 
-**Proposed change:** The `'match'` category should be repurposed to mean "team match" exclusively. Individual singles match play should use category `'game'`.
+### 7.2 `decisions` Table
 
-- Existing `match_play` competitions with `competitionCategory = 'match'` that are individual (no teams) should be migrated to `'game'`.
-- New singles match play created without teams → `'game'`.
-- New singles match play created with teams → `'match'` (team match).
-- The `'match'` category label in the UI should display as "Team Match".
+Per-hole game decisions (Wolf) are stored in the `decisions` table with `gameId`, `groupId`, `holeNumber`, and `data` (JSONB). Latest record per `(gameId, groupId, holeNumber)` wins.
 
-### 7.3 Per-Group Competition Link
+### 7.3 Naming
 
-The `roundGroupId` column on `competitions` already exists and links a competition to a specific group. This needs to be:
-
-- **Required** for games (links the game to its target group).
-- **NULL** for team matches (since the same match type spans all groups, the engine runs per-group automatically).
-- **NULL** for bonus (spans all players).
+| Old                      | New                   |
+| ------------------------ | --------------------- |
+| `competitions`           | `games` + `sideGames` |
+| `tournamentParticipants` | `players`             |
+| `roundParticipants`      | `roundPlayers`        |
+| `roundGroups`            | `groups`              |
+| `bonusAwards`            | winner on `sideGames` |
+| `gameDecisions`          | `decisions`           |
+| `formatType` column      | `format` column       |
+| `configJson` column      | `config` column       |
+| `competitionCategory`    | table determines it   |
+| `groupScope` column      | removed (groupId)     |
 
 ---
 
@@ -400,20 +400,20 @@ Note: Since `match_play` can be either a game or a team match depending on conte
 
 ## 9. Current Code vs Desired State — Gap Analysis
 
-| Area                              | Current State                                       | Desired State                                                      | Gap                                                   |
-| --------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------- |
-| Competition buttons               | 4 buttons (Game, Match, Team Match, Bonus)          | 3 buttons (Game, Team Match, Bonus)                                | Remove Match button, fold singles into Game           |
-| Group scope                       | User-selectable toggle                              | Auto-derived from category                                         | Remove UI, auto-set server-side                       |
-| Per-group game selection          | Games are per-competition, loosely linked to groups | Each group has at most 1 game, explicitly linked                   | Add group selector to game dialog, enforce constraint |
-| Team match uniformity             | No constraint that all groups play same type        | Enforced: exactly 1 team match type for the round                  | Add server-side validation                            |
-| Combined leaderboard              | Not implemented                                     | Merge results across groups when same format                       | New domain logic + display component                  |
-| Server-side validation            | Minimal (only schema check)                         | Full constraint validation                                         | Significant new validation code                       |
-| `competitionCategory`             | `match` covers both individual and team match play  | `match` = team match only; individual match play = `game`          | DB migration + code updates                           |
-| Game disabled with teams          | UI disables button                                  | UI hides + server rejects                                          | Add server-side guard                                 |
-| Team match disabled without teams | UI disables button                                  | UI hides + server rejects                                          | Add server-side guard                                 |
-| Exactly 1 team match              | Not enforced                                        | Enforced server-side + UI                                          | New validation                                        |
-| Tournament game display           | Aggregated competition summaries                    | Per-round standalone results, no cross-round aggregation for games | Change tournament leaderboard display                 |
-| Tournament team aggregation       | Exists but may need alignment                       | Sum of per-round team points → tournament team winner              | Verify and align                                      |
+| Area                              | Status                                                                                  |
+| --------------------------------- | --------------------------------------------------------------------------------------- |
+| Competition buttons               | ✅ 3 buttons (Game, Team Match, Bonus) implemented                                      |
+| Group scope                       | ✅ Removed — `groupId` required on `games`, `sideGames` span all players                |
+| Per-group game selection          | ✅ `groupId` required on game creation; at most 1 game per group                        |
+| Two-table split                   | ✅ `games` + `sideGames` tables replace old `competitions`                              |
+| Naming refactor                   | ✅ All layers updated: DB, server functions, types, hooks, components                   |
+| Combined leaderboard              | ✅ `calculateGroupedResults` returns per-group + `combined` result                      |
+| Server-side validation            | Partial — schema validated; full group/team composition checks still pending            |
+| Game disabled with teams          | UI disables button; server-side guard still pending                                     |
+| Team match disabled without teams | UI disables button; server-side guard still pending                                     |
+| Exactly 1 team match              | Not yet enforced server-side                                                            |
+| Tournament game display           | Per-round standalone results shown; no cross-round aggregation for games                |
+| Tournament team aggregation       | ✅ `getTournamentTeamPointsFn` aggregates per-round team points across finalised rounds |
 
 ---
 

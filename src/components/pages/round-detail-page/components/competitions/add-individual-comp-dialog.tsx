@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useCreateCompetition } from '@/lib/competitions';
-import type { CompetitionConfig } from '@/lib/competitions';
+import { useCreateGame } from '@/lib/games';
+import type { GameConfig } from '@/lib/games';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -38,9 +38,9 @@ export function AddIndividualCompDialog({
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [createCompetition, { isPending }] = useCreateCompetition();
+  const [createGame, { isPending }] = useCreateGame();
   const [formatType, setFormatType] =
-    useState<CompetitionConfig['formatType']>('wolf');
+    useState<GameConfig['formatType']>('wolf');
 
   const [sixPointScoringBasis, setSixPointScoringBasis] = useState<
     'stableford' | 'gross' | 'net'
@@ -70,10 +70,8 @@ export function AddIndividualCompDialog({
 
   const selectedGroupPlayerCount = useMemo(() => {
     if (!selectedGroupId) return 0;
-    return round.participants.filter(
-      (rp) => rp.roundGroupId === selectedGroupId,
-    ).length;
-  }, [selectedGroupId, round.participants]);
+    return round.players.filter((rp) => rp.groupId === selectedGroupId).length;
+  }, [selectedGroupId, round.players]);
 
   const groupSizeValidation = useMemo(() => {
     if (!selectedGroupId) return { valid: true, message: null };
@@ -121,7 +119,7 @@ export function AddIndividualCompDialog({
     setSelectedGroupId(groups.length === 1 ? (groups[0]?.id ?? '') : '');
   };
 
-  const buildConfig = (): CompetitionConfig => {
+  const buildConfig = (): GameConfig => {
     switch (formatType) {
       case 'wolf':
         return {
@@ -160,14 +158,13 @@ export function AddIndividualCompDialog({
     (formatType !== 'match_play' || selectedGroupPlayerCount >= 2);
 
   const handleSave = async () => {
-    await createCompetition({
+    await createGame({
       variables: {
         tournamentId,
-        name: getFormatLabel(),
-        competitionCategory: 'game',
-        roundGroupId: selectedGroupId || null,
         roundId,
-        competitionConfig: buildConfig(),
+        groupId: selectedGroupId,
+        name: getFormatLabel(),
+        gameConfig: buildConfig(),
       },
       onSuccess: () => {
         toast.success('Game created.');
@@ -229,7 +226,7 @@ export function AddIndividualCompDialog({
               id="game-format"
               value={formatType}
               onChange={(e) =>
-                setFormatType(e.target.value as CompetitionConfig['formatType'])
+                setFormatType(e.target.value as GameConfig['formatType'])
               }
               autoFocus={!hasMultipleGroups}
             >

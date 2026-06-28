@@ -39,19 +39,9 @@ export const tournamentStatusEnum = pgEnum('tournament_status', [
   'complete',
 ]);
 
-/**
- * @deprecated participantTypeEnum is kept for legacy data only.
- * New competitions use competitionCategoryEnum instead.
- */
-export const participantTypeEnum = pgEnum('participant_type', [
+export const tournamentModeEnum = pgEnum('tournament_mode', [
   'individual',
   'team',
-]);
-
-export const competitionCategoryEnum = pgEnum('competition_category', [
-  'match',
-  'game',
-  'bonus',
 ]);
 
 export const primaryScoringBasisEnum = pgEnum('primary_scoring_basis', [
@@ -66,8 +56,6 @@ export const recordedByRoleEnum = pgEnum('recorded_by_role', [
   'marker',
   'commissioner',
 ]);
-
-export const groupScopeEnum = pgEnum('group_scope', ['all', 'within_group']);
 
 export const tournamentRoleEnum = pgEnum('tournament_role', [
   'commissioner',
@@ -170,9 +158,13 @@ export const tournaments = pgTable(
     name: text('name').notNull(),
     description: text('description'),
     status: tournamentStatusEnum('status').notNull().default('setup'),
+    mode: tournamentModeEnum('mode').notNull().default('individual'),
     isSingleRound: boolean('is_single_round').notNull().default(false),
     inviteCode: text('invite_code').notNull(),
-    primaryScoringBasis: primaryScoringBasisEnum('primary_scoring_basis'),
+    scoringBasis: primaryScoringBasisEnum('scoring_basis'),
+    trackIndividualScoreboard: boolean('track_individual_scoreboard')
+      .notNull()
+      .default(true),
     createdByUserId: uuid('created_by_user_id')
       .references(() => profiles.id, { onDelete: 'set null' })
       .notNull(),
@@ -191,11 +183,11 @@ export const tournaments = pgTable(
 );
 
 // ──────────────────────────────────────────────
-// Tournament Participants
+// Players (tournament roster)
 // ──────────────────────────────────────────────
 
-export const tournamentParticipants = pgTable(
-  'tournament_participants',
+export const players = pgTable(
+  'players',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     tournamentId: uuid('tournament_id')
@@ -214,17 +206,18 @@ export const tournamentParticipants = pgTable(
       .notNull(),
   },
   (table) => ({
-    tournamentPersonUnique: uniqueIndex(
-      'tournament_participants_tournament_person_unique',
-    ).on(table.tournamentId, table.personId),
+    tournamentPersonUnique: uniqueIndex('players_tournament_person_unique').on(
+      table.tournamentId,
+      table.personId,
+    ),
   }),
 );
 
 // ──────────────────────────────────────────────
-// Tournament Teams (persistent identity)
+// Teams (persistent tournament teams)
 // ──────────────────────────────────────────────
 
-export const tournamentTeams = pgTable('tournament_teams', {
+export const teams = pgTable('teams', {
   id: uuid('id').primaryKey().defaultRandom(),
   tournamentId: uuid('tournament_id')
     .references(() => tournaments.id, { onDelete: 'cascade' })
@@ -236,27 +229,28 @@ export const tournamentTeams = pgTable('tournament_teams', {
 });
 
 // ──────────────────────────────────────────────
-// Tournament Team Members
+// Team Members
 // ──────────────────────────────────────────────
 
-export const tournamentTeamMembers = pgTable(
-  'tournament_team_members',
+export const teamMembers = pgTable(
+  'team_members',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     teamId: uuid('team_id')
-      .references(() => tournamentTeams.id, { onDelete: 'cascade' })
+      .references(() => teams.id, { onDelete: 'cascade' })
       .notNull(),
-    participantId: uuid('participant_id')
-      .references(() => tournamentParticipants.id, { onDelete: 'cascade' })
+    playerId: uuid('player_id')
+      .references(() => players.id, { onDelete: 'cascade' })
       .notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
   (table) => ({
-    teamParticipantUnique: uniqueIndex(
-      'tournament_team_members_team_participant_unique',
-    ).on(table.teamId, table.participantId),
+    teamPlayerUnique: uniqueIndex('team_members_team_player_unique').on(
+      table.teamId,
+      table.playerId,
+    ),
   }),
 );
 
@@ -275,9 +269,8 @@ export const rounds = pgTable('rounds', {
   roundNumber: integer('round_number'),
   date: timestamp('date', { withTimezone: true }),
   teeTime: text('tee_time'), // HH:mm format
-  format: text('format'), // display label e.g. "Irish Rumble", "Singles"
+  label: text('label'), // optional display label e.g. "Day 1 - Irish Rumble"
   status: roundStatusEnum('status').notNull().default('draft'),
-  primaryScoringBasis: primaryScoringBasisEnum('primary_scoring_basis'),
   createdByUserId: uuid('created_by_user_id').references(() => profiles.id, {
     onDelete: 'set null',
   }),
@@ -290,11 +283,11 @@ export const rounds = pgTable('rounds', {
 });
 
 // ──────────────────────────────────────────────
-// Round Groups (playing groups / fourballs)
+// Groups (playing groups / fourballs within a round)
 // ──────────────────────────────────────────────
 
-export const roundGroups = pgTable(
-  'round_groups',
+export const groups = pgTable(
+  'groups',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     roundId: uuid('round_id')
@@ -307,7 +300,7 @@ export const roundGroups = pgTable(
       .notNull(),
   },
   (table) => ({
-    roundGroupNumberUnique: uniqueIndex('round_groups_round_group_unique').on(
+    roundGroupNumberUnique: uniqueIndex('groups_round_group_unique').on(
       table.roundId,
       table.groupNumber,
     ),
@@ -315,26 +308,25 @@ export const roundGroups = pgTable(
 );
 
 // ──────────────────────────────────────────────
-// Round Participants (with handicap snapshot)
+// Round Players (with handicap snapshot)
 // ──────────────────────────────────────────────
 
-export const roundParticipants = pgTable(
-  'round_participants',
+export const roundPlayers = pgTable(
+  'round_players',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     roundId: uuid('round_id')
       .references(() => rounds.id, { onDelete: 'cascade' })
       .notNull(),
-    roundGroupId: uuid('round_group_id').references(() => roundGroups.id, {
+    groupId: uuid('group_id').references(() => groups.id, {
       onDelete: 'set null',
     }),
     personId: uuid('person_id')
       .references(() => persons.id, { onDelete: 'cascade' })
       .notNull(),
-    tournamentParticipantId: uuid('tournament_participant_id').references(
-      () => tournamentParticipants.id,
-      { onDelete: 'cascade' },
-    ),
+    playerId: uuid('player_id').references(() => players.id, {
+      onDelete: 'cascade',
+    }),
     handicapSnapshot: numeric('handicap_snapshot', {
       precision: 4,
       scale: 1,
@@ -349,7 +341,7 @@ export const roundParticipants = pgTable(
       .notNull(),
   },
   (table) => ({
-    roundPersonUnique: uniqueIndex('round_participants_round_person_unique').on(
+    roundPersonUnique: uniqueIndex('round_players_round_person_unique').on(
       table.roundId,
       table.personId,
     ),
@@ -357,16 +349,16 @@ export const roundParticipants = pgTable(
 );
 
 // ──────────────────────────────────────────────
-// Score Events (immutable, append-only)
+// Scores (immutable, append-only)
 // ──────────────────────────────────────────────
 
-export const scoreEvents = pgTable('score_events', {
+export const scores = pgTable('scores', {
   id: uuid('id').primaryKey().defaultRandom(),
   roundId: uuid('round_id')
     .references(() => rounds.id, { onDelete: 'cascade' })
     .notNull(),
-  roundParticipantId: uuid('round_participant_id')
-    .references(() => roundParticipants.id, { onDelete: 'cascade' })
+  roundPlayerId: uuid('round_player_id')
+    .references(() => roundPlayers.id, { onDelete: 'cascade' })
     .notNull(),
   holeNumber: integer('hole_number').notNull(),
   strokes: integer('strokes').notNull(),
@@ -381,10 +373,10 @@ export const scoreEvents = pgTable('score_events', {
 });
 
 // ──────────────────────────────────────────────
-// Competitions (configuration objects)
+// Games (format configuration for a group in a round)
 // ──────────────────────────────────────────────
 
-export const competitions = pgTable('competitions', {
+export const games = pgTable('games', {
   id: uuid('id').primaryKey().defaultRandom(),
   tournamentId: uuid('tournament_id')
     .references(() => tournaments.id, { onDelete: 'cascade' })
@@ -392,16 +384,12 @@ export const competitions = pgTable('competitions', {
   roundId: uuid('round_id')
     .references(() => rounds.id, { onDelete: 'cascade' })
     .notNull(),
-  roundGroupId: uuid('round_group_id').references(() => roundGroups.id, {
+  groupId: uuid('group_id').references(() => groups.id, {
     onDelete: 'set null',
   }),
   name: text('name').notNull(),
-  competitionCategory: competitionCategoryEnum(
-    'competition_category',
-  ).notNull(),
-  groupScope: groupScopeEnum('group_scope').notNull().default('all'),
-  formatType: text('format_type').notNull(),
-  configJson: jsonb('config_json').$type<Record<string, JsonValue>>(),
+  format: text('format').notNull(),
+  config: jsonb('config').$type<Record<string, JsonValue>>(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -411,65 +399,51 @@ export const competitions = pgTable('competitions', {
 });
 
 // ──────────────────────────────────────────────
-// Tournament Standings (DEPRECATED — legacy read only)
-// No new writes. Auto-computed leaderboards replace this table.
-// Kept for legacy data display only.
+// Side Games (NTP / LD — one winner per round across all groups)
 // ──────────────────────────────────────────────
 
-export const tournamentStandings = pgTable('tournament_standings', {
+export const sideGames = pgTable('side_games', {
   id: uuid('id').primaryKey().defaultRandom(),
   tournamentId: uuid('tournament_id')
     .references(() => tournaments.id, { onDelete: 'cascade' })
     .notNull(),
+  roundId: uuid('round_id')
+    .references(() => rounds.id, { onDelete: 'cascade' })
+    .notNull(),
   name: text('name').notNull(),
-  participantType: participantTypeEnum('participant_type').notNull(),
-  /** Aggregation method + config */
-  aggregationConfig: jsonb('aggregation_config')
-    .$type<Record<string, JsonValue>>()
-    .notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
-
-// ──────────────────────────────────────────────
-// Bonus Awards (NTP / LD winners)
-// ──────────────────────────────────────────────
-
-export const bonusAwards = pgTable('bonus_awards', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  competitionId: uuid('competition_id')
-    .references(() => competitions.id, { onDelete: 'cascade' })
-    .notNull(),
-  roundParticipantId: uuid('round_participant_id')
-    .references(() => roundParticipants.id, { onDelete: 'cascade' })
-    .notNull(),
+  format: text('format').notNull(), // e.g. "nearest_pin", "longest_drive"
+  holeNumber: integer('hole_number'),
+  bonusMode: text('bonus_mode'), // e.g. "points"
+  bonusPoints: integer('bonus_points'),
+  winnerId: uuid('winner_id').references(() => roundPlayers.id, {
+    onDelete: 'set null',
+  }),
   awardedByUserId: uuid('awarded_by_user_id').references(() => profiles.id, {
     onDelete: 'set null',
   }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 // ──────────────────────────────────────────────
-// Game Decisions (immutable, append-only)
+// Decisions (immutable, append-only)
 // Per-hole game declarations (e.g. Wolf partner choice).
-// Latest record per (competitionId, holeNumber) wins.
+// Latest record per (gameId, holeNumber) wins.
 // ──────────────────────────────────────────────
 
-export const gameDecisions = pgTable('game_decisions', {
+export const decisions = pgTable('decisions', {
   id: uuid('id').primaryKey().defaultRandom(),
-  competitionId: uuid('competition_id')
-    .references(() => competitions.id, { onDelete: 'cascade' })
+  gameId: uuid('game_id')
+    .references(() => games.id, { onDelete: 'cascade' })
     .notNull(),
   roundId: uuid('round_id')
     .references(() => rounds.id, { onDelete: 'cascade' })
     .notNull(),
-  roundGroupId: uuid('round_group_id').references(() => roundGroups.id, {
+  groupId: uuid('group_id').references(() => groups.id, {
     onDelete: 'cascade',
   }),
   holeNumber: integer('hole_number').notNull(),
@@ -503,8 +477,8 @@ export const personsRelations = relations(persons, ({ one, many }) => ({
     references: [profiles.id],
     relationName: 'personCreator',
   }),
-  tournamentParticipants: many(tournamentParticipants),
-  roundParticipants: many(roundParticipants),
+  players: many(players),
+  roundPlayers: many(roundPlayers),
 }));
 
 export const coursesRelations = relations(courses, ({ one, many }) => ({
@@ -527,53 +501,44 @@ export const tournamentsRelations = relations(tournaments, ({ one, many }) => ({
     fields: [tournaments.createdByUserId],
     references: [profiles.id],
   }),
-  participants: many(tournamentParticipants),
-  teams: many(tournamentTeams),
+  players: many(players),
+  teams: many(teams),
   rounds: many(rounds),
-  competitions: many(competitions),
-  standings: many(tournamentStandings),
+  games: many(games),
+  sideGames: many(sideGames),
 }));
 
-export const tournamentParticipantsRelations = relations(
-  tournamentParticipants,
-  ({ one, many }) => ({
-    tournament: one(tournaments, {
-      fields: [tournamentParticipants.tournamentId],
-      references: [tournaments.id],
-    }),
-    person: one(persons, {
-      fields: [tournamentParticipants.personId],
-      references: [persons.id],
-    }),
-    roundParticipants: many(roundParticipants),
-    teamMemberships: many(tournamentTeamMembers),
+export const playersRelations = relations(players, ({ one, many }) => ({
+  tournament: one(tournaments, {
+    fields: [players.tournamentId],
+    references: [tournaments.id],
   }),
-);
+  person: one(persons, {
+    fields: [players.personId],
+    references: [persons.id],
+  }),
+  roundPlayers: many(roundPlayers),
+  teamMemberships: many(teamMembers),
+}));
 
-export const tournamentTeamsRelations = relations(
-  tournamentTeams,
-  ({ one, many }) => ({
-    tournament: one(tournaments, {
-      fields: [tournamentTeams.tournamentId],
-      references: [tournaments.id],
-    }),
-    members: many(tournamentTeamMembers),
+export const teamsRelations = relations(teams, ({ one, many }) => ({
+  tournament: one(tournaments, {
+    fields: [teams.tournamentId],
+    references: [tournaments.id],
   }),
-);
+  members: many(teamMembers),
+}));
 
-export const tournamentTeamMembersRelations = relations(
-  tournamentTeamMembers,
-  ({ one }) => ({
-    team: one(tournamentTeams, {
-      fields: [tournamentTeamMembers.teamId],
-      references: [tournamentTeams.id],
-    }),
-    participant: one(tournamentParticipants, {
-      fields: [tournamentTeamMembers.participantId],
-      references: [tournamentParticipants.id],
-    }),
+export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
+  team: one(teams, {
+    fields: [teamMembers.teamId],
+    references: [teams.id],
   }),
-);
+  player: one(players, {
+    fields: [teamMembers.playerId],
+    references: [players.id],
+  }),
+}));
 
 export const roundsRelations = relations(rounds, ({ one, many }) => ({
   tournament: one(tournaments, {
@@ -588,115 +553,110 @@ export const roundsRelations = relations(rounds, ({ one, many }) => ({
     fields: [rounds.createdByUserId],
     references: [profiles.id],
   }),
-  groups: many(roundGroups),
-  participants: many(roundParticipants),
-  scoreEvents: many(scoreEvents),
-  competitions: many(competitions),
-  gameDecisions: many(gameDecisions),
+  groups: many(groups),
+  players: many(roundPlayers),
+  scores: many(scores),
+  games: many(games),
+  sideGames: many(sideGames),
+  decisions: many(decisions),
 }));
 
-export const roundGroupsRelations = relations(roundGroups, ({ one, many }) => ({
+export const groupsRelations = relations(groups, ({ one, many }) => ({
   round: one(rounds, {
-    fields: [roundGroups.roundId],
+    fields: [groups.roundId],
     references: [rounds.id],
   }),
-  participants: many(roundParticipants),
+  players: many(roundPlayers),
 }));
 
-export const roundParticipantsRelations = relations(
-  roundParticipants,
+export const roundPlayersRelations = relations(
+  roundPlayers,
   ({ one, many }) => ({
     round: one(rounds, {
-      fields: [roundParticipants.roundId],
+      fields: [roundPlayers.roundId],
       references: [rounds.id],
     }),
-    group: one(roundGroups, {
-      fields: [roundParticipants.roundGroupId],
-      references: [roundGroups.id],
+    group: one(groups, {
+      fields: [roundPlayers.groupId],
+      references: [groups.id],
     }),
     person: one(persons, {
-      fields: [roundParticipants.personId],
+      fields: [roundPlayers.personId],
       references: [persons.id],
     }),
-    tournamentParticipant: one(tournamentParticipants, {
-      fields: [roundParticipants.tournamentParticipantId],
-      references: [tournamentParticipants.id],
+    player: one(players, {
+      fields: [roundPlayers.playerId],
+      references: [players.id],
     }),
-    scoreEvents: many(scoreEvents),
+    scores: many(scores),
   }),
 );
 
-export const scoreEventsRelations = relations(scoreEvents, ({ one }) => ({
+export const scoresRelations = relations(scores, ({ one }) => ({
   round: one(rounds, {
-    fields: [scoreEvents.roundId],
+    fields: [scores.roundId],
     references: [rounds.id],
   }),
-  roundParticipant: one(roundParticipants, {
-    fields: [scoreEvents.roundParticipantId],
-    references: [roundParticipants.id],
+  roundPlayer: one(roundPlayers, {
+    fields: [scores.roundPlayerId],
+    references: [roundPlayers.id],
   }),
   recordedBy: one(profiles, {
-    fields: [scoreEvents.recordedByUserId],
+    fields: [scores.recordedByUserId],
     references: [profiles.id],
   }),
 }));
 
-export const competitionsRelations = relations(
-  competitions,
-  ({ one, many }) => ({
-    tournament: one(tournaments, {
-      fields: [competitions.tournamentId],
-      references: [tournaments.id],
-    }),
-    round: one(rounds, {
-      fields: [competitions.roundId],
-      references: [rounds.id],
-    }),
-    roundGroup: one(roundGroups, {
-      fields: [competitions.roundGroupId],
-      references: [roundGroups.id],
-    }),
-    bonusAwards: many(bonusAwards),
-    gameDecisions: many(gameDecisions),
+export const gamesRelations = relations(games, ({ one, many }) => ({
+  tournament: one(tournaments, {
+    fields: [games.tournamentId],
+    references: [tournaments.id],
   }),
-);
+  round: one(rounds, {
+    fields: [games.roundId],
+    references: [rounds.id],
+  }),
+  group: one(groups, {
+    fields: [games.groupId],
+    references: [groups.id],
+  }),
+  decisions: many(decisions),
+}));
 
-export const bonusAwardsRelations = relations(bonusAwards, ({ one }) => ({
-  competition: one(competitions, {
-    fields: [bonusAwards.competitionId],
-    references: [competitions.id],
+export const sideGamesRelations = relations(sideGames, ({ one }) => ({
+  tournament: one(tournaments, {
+    fields: [sideGames.tournamentId],
+    references: [tournaments.id],
   }),
-  roundParticipant: one(roundParticipants, {
-    fields: [bonusAwards.roundParticipantId],
-    references: [roundParticipants.id],
+  round: one(rounds, {
+    fields: [sideGames.roundId],
+    references: [rounds.id],
+  }),
+  winner: one(roundPlayers, {
+    fields: [sideGames.winnerId],
+    references: [roundPlayers.id],
   }),
   awardedBy: one(profiles, {
-    fields: [bonusAwards.awardedByUserId],
+    fields: [sideGames.awardedByUserId],
     references: [profiles.id],
   }),
 }));
 
-export const gameDecisionsRelations = relations(gameDecisions, ({ one }) => ({
-  competition: one(competitions, {
-    fields: [gameDecisions.competitionId],
-    references: [competitions.id],
+export const decisionsRelations = relations(decisions, ({ one }) => ({
+  game: one(games, {
+    fields: [decisions.gameId],
+    references: [games.id],
   }),
   round: one(rounds, {
-    fields: [gameDecisions.roundId],
+    fields: [decisions.roundId],
     references: [rounds.id],
   }),
+  group: one(groups, {
+    fields: [decisions.groupId],
+    references: [groups.id],
+  }),
   recordedBy: one(profiles, {
-    fields: [gameDecisions.recordedByUserId],
+    fields: [decisions.recordedByUserId],
     references: [profiles.id],
   }),
 }));
-
-export const tournamentStandingsRelations = relations(
-  tournamentStandings,
-  ({ one }) => ({
-    tournament: one(tournaments, {
-      fields: [tournamentStandings.tournamentId],
-      references: [tournaments.id],
-    }),
-  }),
-);

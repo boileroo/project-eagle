@@ -1,5 +1,5 @@
-import type { CompetitionConfig } from '../competitions';
-import { isBonusFormat, isTeamFormat } from '../competition-config';
+import type { GameConfig as CompetitionConfig } from '../game-config';
+import { isBonusFormat, isTeamFormat } from '../game-config';
 import { calculateMatchPlay, type MatchPlayResult } from './match-play';
 import { calculateBestBall, type BestBallResult } from './best-ball';
 import { calculateRumble, type RumbleResult } from './rumble';

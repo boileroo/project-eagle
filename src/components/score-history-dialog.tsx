@@ -44,7 +44,7 @@ export function ScoreHistoryDialog({
     if (!open) return;
     setLoading(true);
     getScoreHistoryFn({
-      data: { roundParticipantId, holeNumber },
+      data: { roundPlayerId: roundParticipantId, holeNumber },
     })
       .then((data) => setHistory(data as HistoryEntry[]))
       .catch(() => setHistory([]))

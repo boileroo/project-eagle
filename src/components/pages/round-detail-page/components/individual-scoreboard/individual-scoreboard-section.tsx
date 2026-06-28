@@ -57,8 +57,8 @@ export function IndividualScoreboardSection({ roundId }: { roundId: string }) {
     );
   }
 
-  const { rows, hasContributorBonuses, primaryScoringBasis } = scoreboard;
-  const trophyCol = primaryScoringBasis;
+  const { rows, hasContributorBonuses, scoringBasis } = scoreboard;
+  const trophyCol = scoringBasis;
 
   const colClass = (col: string) =>
     trophyCol === col

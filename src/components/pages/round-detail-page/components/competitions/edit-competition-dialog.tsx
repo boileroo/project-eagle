@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { useUpdateCompetition } from '@/lib/competitions';
-import { FORMAT_TYPE_LABELS } from '@/lib/competitions';
-import type { CompetitionConfig } from '@/lib/competitions';
+import { useUpdateGame, GAME_FORMAT_LABELS, isTeamFormat } from '@/lib/games';
+import type { GameConfig } from '@/lib/games';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -16,23 +15,22 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import type { RoundCompetitionsData } from '../types';
+import type { RoundGamesData } from '../types';
 import { PointsFields } from './competition-fields/points-fields';
-import { BonusModeFields } from './competition-fields/bonus-mode-fields';
 import { ScoringBasisRadio } from './competition-fields/scoring-basis-radio';
 
 export function EditCompetitionDialog({
   comp,
   onSaved,
 }: {
-  comp: RoundCompetitionsData[number];
+  comp: RoundGamesData[number];
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [updateCompetition, { isPending: saving }] = useUpdateCompetition();
+  const [updateGame, { isPending: saving }] = useUpdateGame();
 
-  const formatType = comp.formatType as CompetitionConfig['formatType'];
-  const existingConfig = (comp.configJson ?? {}) as Record<string, unknown>;
+  const formatType = comp.format as GameConfig['formatType'];
+  const existingConfig = (comp.config ?? {}) as Record<string, unknown>;
 
   const [name, setName] = useState(comp.name);
   const [pointsPerWin, setPointsPerWin] = useState<number>(
@@ -41,36 +39,24 @@ export function EditCompetitionDialog({
   const [pointsPerHalf, setPointsPerHalf] = useState<number>(
     (existingConfig.pointsPerHalf as number) ?? 0.5,
   );
-  const [holeNumber, setHoleNumber] = useState<number>(
-    (existingConfig.holeNumber as number) ?? 1,
-  );
-  const [bonusMode, setBonusMode] = useState<'standalone' | 'contributor'>(
-    (existingConfig.bonusMode as 'standalone' | 'contributor') ?? 'standalone',
-  );
-  const [bonusPoints, setBonusPoints] = useState<number>(
-    (existingConfig.bonusPoints as number) ?? 1,
-  );
   const [sixPointScoringBasis, setSixPointScoringBasis] = useState<
     'stableford' | 'gross' | 'net'
   >(
     (existingConfig.scoringBasis as 'stableford' | 'gross' | 'net') ??
       'stableford',
   );
-
   const [wolfScoringBasis, setWolfScoringBasis] = useState<
     'stableford' | 'gross' | 'net'
   >(
     (existingConfig.scoringBasis as 'stableford' | 'gross' | 'net') ??
       'stableford',
   );
-
   const [chairScoringBasis, setChairScoringBasis] = useState<
     'stableford' | 'gross' | 'net'
   >(
     (existingConfig.scoringBasis as 'stableford' | 'gross' | 'net') ??
       'stableford',
   );
-
   const [rumbleScoringBasis, setRumbleScoringBasis] = useState<
     'stableford' | 'net' | 'gross'
   >(
@@ -82,12 +68,6 @@ export function EditCompetitionDialog({
     setName(comp.name);
     setPointsPerWin((existingConfig.pointsPerWin as number) ?? 1);
     setPointsPerHalf((existingConfig.pointsPerHalf as number) ?? 0.5);
-    setHoleNumber((existingConfig.holeNumber as number) ?? 1);
-    setBonusMode(
-      (existingConfig.bonusMode as 'standalone' | 'contributor') ??
-        'standalone',
-    );
-    setBonusPoints((existingConfig.bonusPoints as number) ?? 1);
     setSixPointScoringBasis(
       (existingConfig.scoringBasis as 'stableford' | 'gross' | 'net') ??
         'stableford',
@@ -102,7 +82,7 @@ export function EditCompetitionDialog({
     );
   };
 
-  const buildConfig = (): CompetitionConfig => {
+  const buildConfig = (): GameConfig => {
     switch (formatType) {
       case 'match_play':
         return {
@@ -141,18 +121,7 @@ export function EditCompetitionDialog({
           formatType: 'rumble',
           config: { pointsPerWin, scoringBasis: rumbleScoringBasis },
         };
-      case 'nearest_pin':
-        return {
-          formatType: 'nearest_pin',
-          config: { holeNumber, bonusMode, bonusPoints },
-        };
-      case 'longest_drive':
-        return {
-          formatType: 'longest_drive',
-          config: { holeNumber, bonusMode, bonusPoints },
-        };
       default:
-        // wolf, chair: name-only edit (no config fields needed)
         if (formatType === 'wolf')
           return {
             formatType: 'wolf',
@@ -177,11 +146,11 @@ export function EditCompetitionDialog({
       toast.error('Competition name is required.');
       return;
     }
-    await updateCompetition({
+    await updateGame({
       variables: {
         id: comp.id,
         name: name.trim(),
-        competitionConfig: buildConfig(),
+        gameConfig: buildConfig(),
       },
       onSuccess: () => {
         toast.success('Competition updated.');
@@ -194,7 +163,8 @@ export function EditCompetitionDialog({
     });
   };
 
-  const formatLabel = FORMAT_TYPE_LABELS[formatType] ?? formatType;
+  const formatLabel = GAME_FORMAT_LABELS[formatType] ?? formatType;
+  const categoryLabel = isTeamFormat(formatType) ? 'Team Match' : 'Game';
 
   return (
     <Dialog
@@ -213,12 +183,7 @@ export function EditCompetitionDialog({
         <DialogHeader>
           <DialogTitle>Edit Competition</DialogTitle>
           <DialogDescription>
-            {formatLabel} ·{' '}
-            {comp.competitionCategory === 'match'
-              ? 'Team Match'
-              : comp.competitionCategory === 'game'
-                ? 'Game'
-                : 'Bonus'}
+            {formatLabel} · {categoryLabel}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -322,19 +287,6 @@ export function EditCompetitionDialog({
                   <option value="gross">Gross Strokes</option>
                 </Select>
               </div>
-            </div>
-          )}
-
-          {(formatType === 'nearest_pin' || formatType === 'longest_drive') && (
-            <div className="space-y-3">
-              <BonusModeFields
-                holeNumber={holeNumber}
-                bonusMode={bonusMode}
-                bonusPoints={bonusPoints}
-                onHoleNumberChange={setHoleNumber}
-                onBonusModeChange={setBonusMode}
-                onBonusPointsChange={setBonusPoints}
-              />
             </div>
           )}
         </div>

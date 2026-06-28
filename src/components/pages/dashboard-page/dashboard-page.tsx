@@ -21,7 +21,6 @@ import {
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { JoinTournamentForm } from './components/join-tournament-form';
-import { CreateEventContent } from './components/create-event-content';
 import type { ElementType } from 'react';
 
 function SectionLabel({ children }: { children: string }) {
@@ -69,7 +68,6 @@ export function DashboardPage({
   const navigate = useNavigate();
 
   const [joinExpanded, setJoinExpanded] = useState(false);
-  const [createExpanded, setCreateExpanded] = useState(false);
 
   return (
     <div className="flex flex-col gap-10 pb-16">
@@ -128,7 +126,7 @@ export function DashboardPage({
             title="Create Event"
             description="Set up a private event, customise rules, and invite your crew."
             linkText="Start Setup"
-            onClick={() => setCreateExpanded(true)}
+            onClick={() => navigate({ to: '/new' })}
           />
           <DashboardCard
             color="default"
@@ -184,18 +182,6 @@ export function DashboardPage({
             open={joinExpanded}
             onComplete={() => setJoinExpanded(false)}
           />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={createExpanded} onOpenChange={setCreateExpanded}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create Event</DialogTitle>
-            <DialogDescription>
-              Choose how you want to set up your event
-            </DialogDescription>
-          </DialogHeader>
-          <CreateEventContent onClose={() => setCreateExpanded(false)} />
         </DialogContent>
       </Dialog>
     </div>

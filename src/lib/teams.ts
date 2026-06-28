@@ -141,7 +141,7 @@ export function useDeleteTeam(): MutationHookReturn<
 
 type AddTeamMemberVariables = {
   teamId: string;
-  participantId: string;
+  playerId: string;
 };
 type AddTeamMemberResult = { memberId: string };
 

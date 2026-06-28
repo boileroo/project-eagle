@@ -11,14 +11,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import type { TournamentLoaderData, CompetitionData } from '@/types';
+import type { TournamentLoaderData, GameData } from '@/types';
 import { TeamItem } from './team-item';
 import { DeleteTeamDialog } from './delete-team-dialog';
 import { DisableTeamsDialog } from './disable-teams-dialog';
 
 type TeamsTabProps = {
   tournament?: TournamentLoaderData;
-  competitions?: CompetitionData[];
+  games?: GameData[];
   canEdit: boolean;
   teamColorMap?: Map<string, number>;
   onChanged: () => void;
@@ -26,7 +26,7 @@ type TeamsTabProps = {
 
 export function TeamsTab({
   tournament,
-  competitions,
+  games,
   canEdit,
   teamColorMap,
   onChanged,
@@ -71,11 +71,11 @@ export function TeamsTab({
 
   const teams = tournament.teams;
   const atTeamLimit = teams.length >= 4;
-  const assignedParticipantIds = new Set(
-    teams.flatMap((t) => t.members.map((m) => m.participantId)),
+  const assignedPlayerIds = new Set(
+    teams.flatMap((t) => t.members.map((m) => m.playerId)),
   );
-  const unassignedForTeams = tournament.participants.filter(
-    (p) => !assignedParticipantIds.has(p.id),
+  const unassignedForTeams = tournament.players.filter(
+    (p) => !assignedPlayerIds.has(p.id),
   );
 
   const handleCreateTeam = async () => {
@@ -98,7 +98,7 @@ export function TeamsTab({
 
   const handleAddTeamMember = async (teamId: string, participantId: string) => {
     await addTeamMember({
-      variables: { teamId, participantId },
+      variables: { teamId, playerId: participantId },
       onSuccess: () => {
         toast.success('Player added to team.');
         onChanged();
@@ -284,7 +284,7 @@ export function TeamsTab({
         open={deleteConfirm !== null}
         teamId={deleteConfirm?.teamId ?? ''}
         teamName={deleteConfirm?.name ?? ''}
-        competitions={competitions ?? []}
+        competitions={games ?? []}
         onClose={() => setDeleteConfirm(null)}
         onDeleted={() => {
           setDeleteConfirm(null);
@@ -296,7 +296,7 @@ export function TeamsTab({
         open={disableTeamsConfirm}
         tournamentId={tournament.id}
         teamsCount={tournament.teams.length}
-        competitions={competitions ?? []}
+        competitions={games ?? []}
         onClose={() => setDisableTeamsConfirm(false)}
         onDisabled={() => {
           setDisableTeamsConfirm(false);

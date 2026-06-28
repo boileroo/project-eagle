@@ -36,7 +36,7 @@ export type RoundItem = {
 
 export type TeamsSectionTournament = {
   id: string;
-  participants: {
+  players: {
     id: string;
     personId: string;
     role: string;
@@ -47,8 +47,8 @@ export type TeamsSectionTournament = {
     name: string;
     members: {
       id: string;
-      participantId: string;
-      participant: {
+      playerId: string;
+      player: {
         id: string;
         person: { id: string; displayName: string };
       };

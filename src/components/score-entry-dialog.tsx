@@ -51,7 +51,7 @@ export function ScoreEntryDialog({
     if (strokes == null) return;
     scoreMutation.mutate({
       roundId,
-      roundParticipantId,
+      roundPlayerId: roundParticipantId,
       holeNumber,
       strokes,
       recordedByRole,

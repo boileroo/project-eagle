@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import {
-  useAddParticipant,
-  useRemoveParticipant,
+  useAddPlayer,
+  useRemovePlayer,
   useEnsureMyPerson,
 } from '@/lib/tournaments';
 import { useRemoveRoundParticipant } from '@/lib/rounds';
@@ -45,7 +45,7 @@ function getParticipantRole(participant: any, isTournamentMode: boolean) {
 
   return isTournamentMode
     ? participant.role
-    : (participant.tournamentParticipant?.role ?? 'player');
+    : (participant.player?.role ?? 'player');
 }
 
 export function PlayersTab({
@@ -62,8 +62,8 @@ export function PlayersTab({
   const isTournamentMode = !!tournament;
   const canJoinOrLeaveInTournament = tournament?.status === 'setup';
 
-  const [addParticipant] = useAddParticipant();
-  const [removeParticipant] = useRemoveParticipant();
+  const [addPlayer] = useAddPlayer();
+  const [removePlayer] = useRemovePlayer();
   const [ensureMyPerson] = useEnsureMyPerson();
   const [removeRoundParticipant] = useRemoveRoundParticipant();
   const {
@@ -73,7 +73,7 @@ export function PlayersTab({
     handleConfirm: handleLeaveConfirm,
   } = useConfirmDialog();
   const [leavingTarget, setLeavingTarget] = useState<{
-    participantId: string;
+    playerId: string;
   } | null>(null);
   const {
     open: removeDialogOpen,
@@ -82,14 +82,14 @@ export function PlayersTab({
     handleConfirm: handleRemoveConfirm,
   } = useConfirmDialog();
   const [removeTarget, setRemoveTarget] = useState<{
-    participantId: string;
+    playerId: string;
     name: string;
   } | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const participants: any[] = isTournamentMode
-    ? (tournament?.participants ?? [])
-    : (round?.participants ?? []);
+    ? (tournament?.players ?? [])
+    : (round?.players ?? []);
 
   const iAmParticipant = myPerson
     ? participants.some((p) => p.person.userId === userId)
@@ -122,7 +122,6 @@ export function PlayersTab({
     try {
       let personId = myPerson?.id;
       if (!personId) {
-        // Need to ensure person record exists first
         let resolved = false;
         await ensureMyPerson({
           variables: undefined as void,
@@ -136,7 +135,7 @@ export function PlayersTab({
         });
         if (!resolved) return;
       }
-      await addParticipant({
+      await addPlayer({
         variables: {
           tournamentId: tournament.id,
           personId: personId!,
@@ -155,15 +154,12 @@ export function PlayersTab({
     }
   };
 
-  const handleRemoveParticipant = async (
-    participantId: string,
-    name: string,
-  ) => {
+  const handleRemoveParticipant = async (playerId: string, name: string) => {
     let removeError: Error | null = null;
 
     if (tournament) {
-      await removeParticipant({
-        variables: { participantId },
+      await removePlayer({
+        variables: { playerId },
         onSuccess: () => {
           toast.success(`${name} removed.`);
           onChanged();
@@ -175,7 +171,7 @@ export function PlayersTab({
       });
     } else if (round) {
       await removeRoundParticipant({
-        variables: { roundParticipantId: participantId },
+        variables: { roundPlayerId: playerId },
         onSuccess: () => {
           toast.success(`${name} removed.`);
           onChanged();
@@ -196,8 +192,8 @@ export function PlayersTab({
     if (!leavingTarget) return;
 
     await handleLeaveConfirm(async () => {
-      await removeParticipant({
-        variables: { participantId: leavingTarget.participantId },
+      await removePlayer({
+        variables: { playerId: leavingTarget.playerId },
         onSuccess: () => {
           if (typeof window !== 'undefined' && tournament) {
             window.sessionStorage.setItem(
@@ -222,10 +218,7 @@ export function PlayersTab({
     if (!removeTarget) return;
 
     await handleRemoveConfirm(async () => {
-      await handleRemoveParticipant(
-        removeTarget.participantId,
-        removeTarget.name,
-      );
+      await handleRemoveParticipant(removeTarget.playerId, removeTarget.name);
     });
   };
 
@@ -286,9 +279,9 @@ export function PlayersTab({
               <span className="truncate text-sm font-medium">
                 {displayName}
               </span>
-              {p.tournamentParticipant?.teamMemberships?.[0]?.team && (
+              {p.player?.teamMemberships?.[0]?.team && (
                 <Badge variant="secondary" className="text-xs">
-                  {p.tournamentParticipant.teamMemberships[0].team.name}
+                  {p.player.teamMemberships[0].team.name}
                 </Badge>
               )}
             </div>
@@ -321,7 +314,7 @@ export function PlayersTab({
                   />
                 ) : (
                   <EditRoundHandicapDialog
-                    roundParticipant={p as RoundData['participants'][number]}
+                    roundParticipant={p as RoundData['players'][number]}
                     onSaved={onChanged}
                     trigger={<HandicapPillButton value={handicapLabel} />}
                   />
@@ -337,14 +330,14 @@ export function PlayersTab({
                 onClick={() => {
                   if (canLeaveSelf) {
                     setLeavingTarget({
-                      participantId: p.id,
+                      playerId: p.id,
                     });
                     setLeaveDialogOpen(true);
                     return;
                   }
 
                   if (tournament) {
-                    setRemoveTarget({ participantId: p.id, name: displayName });
+                    setRemoveTarget({ playerId: p.id, name: displayName });
                     setRemoveDialogOpen(true);
                     return;
                   }
@@ -370,7 +363,7 @@ export function PlayersTab({
               </Button>
             }
             onAddGuest={async (personId, name) => {
-              await addParticipant({
+              await addPlayer({
                 variables: {
                   tournamentId: tournament.id,
                   personId,

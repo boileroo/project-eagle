@@ -2,11 +2,8 @@ import { type ReactNode, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { parseHandicap } from '@/lib/handicaps';
-import { useUpdateParticipant } from '@/lib/tournaments';
-import {
-  updateParticipantSchema,
-  type UpdateParticipantInput,
-} from '@/lib/validators';
+import { useUpdatePlayer } from '@/lib/tournaments';
+import { updatePlayerSchema, type UpdatePlayerInput } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { HandicapField } from '@/components/shared/handicap-field';
 import {
@@ -40,18 +37,18 @@ export function EditHandicapDialog({
   trigger,
 }: EditHandicapDialogProps) {
   const [open, setOpen] = useState(false);
-  const [updateParticipant, { isPending }] = useUpdateParticipant();
+  const [updatePlayer, { isPending }] = useUpdatePlayer();
 
-  const form = useForm<UpdateParticipantInput>({
-    resolver: zodResolver(updateParticipantSchema),
+  const form = useForm<UpdatePlayerInput>({
+    resolver: zodResolver(updatePlayerSchema),
     defaultValues: {
-      participantId: participant.id,
+      playerId: participant.id,
       handicapOverride: parseHandicap(participant.handicapOverride),
     },
   });
 
-  const handleSubmit = async (data: UpdateParticipantInput) => {
-    await updateParticipant({
+  const handleSubmit = async (data: UpdatePlayerInput) => {
+    await updatePlayer({
       variables: data,
       onSuccess: () => {
         toast.success('Handicap override updated.');
@@ -71,7 +68,7 @@ export function EditHandicapDialog({
         setOpen(v);
         if (v) {
           form.reset({
-            participantId: participant.id,
+            playerId: participant.id,
             handicapOverride: parseHandicap(participant.handicapOverride),
           });
         }

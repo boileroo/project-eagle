@@ -1,20 +1,20 @@
 import { z } from 'zod';
 import { handicapField } from './shared';
 
-export const addParticipantSchema = z.object({
+export const addPlayerSchema = z.object({
   tournamentId: z.string().uuid(),
   personId: z.string().uuid(),
   role: z.enum(['commissioner', 'player']).default('player'),
   handicapOverride: handicapField,
 });
-export type AddParticipantInput = z.infer<typeof addParticipantSchema>;
+export type AddPlayerInput = z.infer<typeof addPlayerSchema>;
 
-export const updateParticipantSchema = z.object({
-  participantId: z.string().uuid(),
+export const updatePlayerSchema = z.object({
+  playerId: z.string().uuid(),
   role: z.enum(['commissioner', 'player']).optional(),
   handicapOverride: handicapField,
 });
-export type UpdateParticipantInput = z.infer<typeof updateParticipantSchema>;
+export type UpdatePlayerInput = z.infer<typeof updatePlayerSchema>;
 
 export const createGuestSchema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters').max(100),

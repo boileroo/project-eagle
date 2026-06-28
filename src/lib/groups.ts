@@ -2,14 +2,10 @@ import { useMutation } from '@tanstack/react-query';
 import {
   createRoundGroupFn,
   deleteRoundGroupFn,
-  assignParticipantToGroupFn,
+  assignPlayerToGroupFn,
   autoAssignGroupsFn,
 } from '@/lib/groups.server';
 import type { MutationCallOptions, MutationHookReturn } from '@/lib/mutation';
-
-// ──────────────────────────────────────────────
-// useCreateRoundGroup
-// ──────────────────────────────────────────────
 
 type CreateRoundGroupVariables = {
   roundId: string;
@@ -59,12 +55,8 @@ export function useCreateRoundGroup(): MutationHookReturn<
   ] as const;
 }
 
-// ──────────────────────────────────────────────
-// useDeleteRoundGroup
-// ──────────────────────────────────────────────
-
 type DeleteRoundGroupVariables = {
-  roundGroupId: string;
+  groupId: string;
 };
 type DeleteRoundGroupResult = { success: boolean };
 
@@ -103,23 +95,19 @@ export function useDeleteRoundGroup(): MutationHookReturn<
   ] as const;
 }
 
-// ──────────────────────────────────────────────
-// useAssignParticipantToGroup
-// ──────────────────────────────────────────────
-
-type AssignParticipantToGroupVariables = {
-  roundParticipantId: string;
-  roundGroupId: string | null;
+type AssignPlayerToGroupVariables = {
+  roundPlayerId: string;
+  groupId: string | null;
 };
-type AssignParticipantToGroupResult = { success: boolean };
+type AssignPlayerToGroupResult = { success: boolean };
 
-export function useAssignParticipantToGroup(): MutationHookReturn<
-  AssignParticipantToGroupVariables,
-  AssignParticipantToGroupResult
+export function useAssignPlayerToGroup(): MutationHookReturn<
+  AssignPlayerToGroupVariables,
+  AssignPlayerToGroupResult
 > {
   const mutation = useMutation({
-    mutationFn: (variables: AssignParticipantToGroupVariables) =>
-      assignParticipantToGroupFn({ data: variables }),
+    mutationFn: (variables: AssignPlayerToGroupVariables) =>
+      assignPlayerToGroupFn({ data: variables }),
   });
 
   const mutate = async ({
@@ -127,8 +115,8 @@ export function useAssignParticipantToGroup(): MutationHookReturn<
     onSuccess,
     onError,
   }: MutationCallOptions<
-    AssignParticipantToGroupVariables,
-    AssignParticipantToGroupResult
+    AssignPlayerToGroupVariables,
+    AssignPlayerToGroupResult
   >) => {
     try {
       const result = await mutation.mutateAsync(variables);
@@ -147,10 +135,6 @@ export function useAssignParticipantToGroup(): MutationHookReturn<
     },
   ] as const;
 }
-
-// ──────────────────────────────────────────────
-// useAutoAssignGroups
-// ──────────────────────────────────────────────
 
 type AutoAssignGroupsVariables = {
   roundId: string;

@@ -63,7 +63,7 @@ function useRoundContext(): RoundContext | null {
           strokeIndex: number;
         }>;
       };
-      participants: Array<{
+      players: Array<{
         id: string;
         handicapSnapshot: string;
         person: { displayName: string; userId: string | null };
@@ -79,7 +79,7 @@ function useRoundContext(): RoundContext | null {
     roundId: round.id,
     roundStatus: liveRound?.status ?? round.status,
     tournamentName: tournament.name,
-    participants: round.participants,
+    participants: round.players,
     holes: round.course.holes.sort((a, b) => a.holeNumber - b.holeNumber),
   };
 }

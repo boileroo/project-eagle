@@ -10,7 +10,7 @@
 import { getStrokesOnHole } from '../handicaps';
 import { stablefordPoints, buildScoreLookup } from './stableford';
 import type { CompetitionInput, HoleData } from './index';
-import type { BestBallConfig } from '../competitions';
+import type { BestBallConfig } from '../games';
 
 // ──────────────────────────────────────────────
 // Types

@@ -1,5 +1,5 @@
 import type { WizardCompetition } from '@/lib/validators';
-import { FORMAT_TYPE_LABELS } from '@/lib/competition-config';
+import { GAME_FORMAT_LABELS } from '@/lib/game-config';
 import { Text } from '@/components/ui/text';
 import { X } from 'lucide-react';
 
@@ -20,7 +20,7 @@ function CompetitionItem({ comp, index, onRemove }: CompetitionItemProps) {
       <div className="space-y-0.5">
         <div className="text-sm font-medium">{comp.name}</div>
         <div className="text-muted-foreground text-xs">
-          {FORMAT_TYPE_LABELS[comp.competitionConfig.formatType]}
+          {GAME_FORMAT_LABELS[comp.competitionConfig.formatType]}
         </div>
       </div>
       <button

@@ -20,7 +20,7 @@ import { getStrokesOnHole } from '../handicaps';
 import { stablefordPoints, buildScoreLookup } from './stableford';
 import { assignRanks } from './rank';
 import type { CompetitionInput } from './index';
-import type { SixPointConfig } from '../competitions';
+import type { SixPointConfig } from '../games';
 
 // ──────────────────────────────────────────────
 // Types

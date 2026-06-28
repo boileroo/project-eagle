@@ -14,7 +14,7 @@
 import { getStrokesOnHole } from '../handicaps';
 import { stablefordPoints, buildScoreLookup } from './stableford';
 import type { CompetitionInput, HoleData, ParticipantData } from './index';
-import type { RumbleConfig } from '../competitions';
+import type { RumbleConfig } from '../games';
 
 // ──────────────────────────────────────────────
 // Types

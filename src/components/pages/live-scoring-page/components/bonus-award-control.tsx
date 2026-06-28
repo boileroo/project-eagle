@@ -1,57 +1,38 @@
-// ──────────────────────────────────────────────
-// BonusAwardControl — NTP / LD award UI for a specific hole
-// Shown when there are bonus competitions on the current hole
-// ──────────────────────────────────────────────
-
 import { useState } from 'react';
-import { useAwardBonus, useRemoveBonusAward } from '@/lib/competitions';
+import { useAwardSideGame, useRemoveSideGameAward } from '@/lib/games';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { isBonusFormat } from '@/lib/competitions';
-import type { CompetitionConfig } from '@/lib/competitions';
-import type { RoundCompetitionsData, RoundData } from '@/types';
+import type { SideGamesData, RoundData } from '@/types';
 
 type BonusAwardControlProps = {
-  competitions: RoundCompetitionsData;
+  sideGames: SideGamesData;
   holeNumber: number;
-  /** Participants to show in the award dropdown — should be scoped to the current group */
-  participants: RoundData['participants'];
-  /** Can the current user assign an award? (commissioner or marker) */
+  players: RoundData['players'];
   canAward: boolean;
-  /** Can the current user remove an award? (commissioner only) */
   canRemove: boolean;
   onChanged: () => void;
 };
 
 export function BonusAwardControl({
-  competitions,
+  sideGames,
   holeNumber,
-  participants,
+  players,
   canRemove,
   onChanged,
 }: BonusAwardControlProps) {
   const [awarding, setAwarding] = useState<string | null>(null);
-  const [awardBonus] = useAwardBonus();
-  const [removeBonusAward] = useRemoveBonusAward();
+  const [awardSideGame] = useAwardSideGame();
+  const [removeSideGameAward] = useRemoveSideGameAward();
 
-  // Filter to bonus competitions assigned to this hole
-  const bonusComps = competitions.filter((comp) => {
-    if (!isBonusFormat(comp.formatType as CompetitionConfig['formatType']))
-      return false;
-    const config = comp.configJson as { holeNumber?: number } | null;
-    return config?.holeNumber === holeNumber;
-  });
+  const bonusSideGames = sideGames.filter((sg) => sg.holeNumber === holeNumber);
 
-  if (bonusComps.length === 0) return null;
+  if (bonusSideGames.length === 0) return null;
 
-  const handleAward = async (
-    competitionId: string,
-    roundParticipantId: string,
-  ) => {
-    setAwarding(competitionId);
-    await awardBonus({
-      variables: { competitionId, roundParticipantId },
+  const handleAward = async (sideGameId: string, roundPlayerId: string) => {
+    setAwarding(sideGameId);
+    await awardSideGame({
+      variables: { sideGameId, roundPlayerId },
       onSuccess: () => {
         toast.success('Award saved.');
         onChanged();
@@ -63,10 +44,10 @@ export function BonusAwardControl({
     setAwarding(null);
   };
 
-  const handleRemove = async (competitionId: string) => {
-    setAwarding(competitionId);
-    await removeBonusAward({
-      variables: { competitionId },
+  const handleRemove = async (sideGameId: string) => {
+    setAwarding(sideGameId);
+    await removeSideGameAward({
+      variables: { sideGameId },
       onSuccess: () => {
         toast.success('Award removed.');
         onChanged();
@@ -80,28 +61,28 @@ export function BonusAwardControl({
 
   return (
     <div className="flex flex-col gap-2">
-      {bonusComps.map((comp) => {
-        const typeLabel = comp.formatType === 'nearest_pin' ? 'NTP' : 'LD';
-        const award = comp.bonusAwards[0] ?? null;
-        const isPending = awarding === comp.id;
+      {bonusSideGames.map((sg) => {
+        const typeLabel = sg.format === 'nearest_pin' ? 'NTP' : 'LD';
+        const winner = sg.winner ?? null;
+        const isPending = awarding === sg.id;
 
         return (
           <div
-            key={comp.id}
+            key={sg.id}
             className="flex items-center justify-between rounded-lg border px-3 py-2"
           >
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-xs">
                 {typeLabel}
               </Badge>
-              <span className="text-sm font-medium">{comp.name}</span>
+              <span className="text-sm font-medium">{sg.name}</span>
             </div>
 
             <div className="flex items-center gap-2">
-              {award ? (
+              {winner ? (
                 <>
                   <Badge variant="default" className="text-xs">
-                    {award.roundParticipant?.person?.displayName ?? 'Unknown'}
+                    {winner.person?.displayName ?? 'Unknown'}
                   </Badge>
                   {canRemove && (
                     <Button
@@ -109,7 +90,7 @@ export function BonusAwardControl({
                       size="sm"
                       className="text-destructive h-7 px-2 text-xs"
                       disabled={isPending}
-                      onClick={() => handleRemove(comp.id)}
+                      onClick={() => handleRemove(sg.id)}
                     >
                       Remove
                     </Button>
@@ -121,11 +102,11 @@ export function BonusAwardControl({
                   value=""
                   disabled={isPending}
                   onChange={(e) => {
-                    if (e.target.value) handleAward(comp.id, e.target.value);
+                    if (e.target.value) handleAward(sg.id, e.target.value);
                   }}
                 >
                   <option value="">Award to…</option>
-                  {participants.map((rp) => (
+                  {players.map((rp) => (
                     <option key={rp.id} value={rp.id}>
                       {rp.person.displayName}
                     </option>

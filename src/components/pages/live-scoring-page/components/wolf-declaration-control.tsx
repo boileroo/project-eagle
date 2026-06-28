@@ -1,72 +1,57 @@
-// ──────────────────────────────────────────────
-// WolfDeclarationControl — per-hole wolf partner selection
-// Shown in live scoring when a Wolf game exists for the current group
-// ──────────────────────────────────────────────
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getGameDecisionsFn } from '@/lib/game-decisions.server';
-import { useSubmitGameDecision } from '@/lib/game-decisions';
+import { getDecisionsFn } from '@/lib/decisions.server';
+import { useSubmitDecision } from '@/lib/decisions';
 import { wolfIndexForHole } from '@/lib/domain/wolf';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import type { RoundData, RoundCompetitionsData } from '@/types';
+import type { RoundData, RoundGamesData } from '@/types';
 
 type WolfDeclarationControlProps = {
   round: RoundData;
-  competitions: RoundCompetitionsData;
+  games: RoundGamesData;
   holeNumber: number;
-  /** Participants in the current group, in group position order (rotation order) */
-  groupParticipants: RoundData['participants'];
-  /** Can the current user submit a wolf declaration? (commissioner or marker) */
+  groupPlayers: RoundData['players'];
   canDeclare: boolean;
 };
 
 export function WolfDeclarationControl({
   round,
-  competitions,
+  games,
   holeNumber,
-  groupParticipants,
+  groupPlayers,
   canDeclare,
 }: WolfDeclarationControlProps) {
   const queryClient = useQueryClient();
-  const [submitGameDecision, { isPending: submitting }] =
-    useSubmitGameDecision();
+  const [submitDecision, { isPending: submitting }] = useSubmitDecision();
 
-  // Find Wolf competition for this round (within_group)
-  const wolfComp = competitions.find((c) => c.formatType === 'wolf');
+  const wolfGame = games.find((c) => c.format === 'wolf');
+  const groupId = groupPlayers[0]?.groupId ?? '';
 
-  // Get the roundGroupId from the first participant (all in the group should have the same)
-  const roundGroupId = groupParticipants[0]?.roundGroupId || '';
-
-  // Query current decisions for this Wolf competition
   const { data: decisions } = useQuery({
-    queryKey: ['game-decisions', wolfComp?.id, roundGroupId],
+    queryKey: ['decisions', wolfGame?.id, groupId],
     queryFn: () =>
-      getGameDecisionsFn({
-        data: { competitionId: wolfComp!.id, roundGroupId },
+      getDecisionsFn({
+        data: { gameId: wolfGame!.id, groupId },
       }),
-    enabled: wolfComp != null,
+    enabled: wolfGame != null,
     staleTime: 30_000,
   });
 
-  if (!wolfComp || groupParticipants.length < 2) return null;
+  if (!wolfGame || groupPlayers.length < 2) return null;
 
-  // Derive wolf player for this hole
-  const wolfIdx = wolfIndexForHole(holeNumber, groupParticipants.length);
-  const wolfParticipant = groupParticipants[wolfIdx];
+  const wolfIdx = wolfIndexForHole(holeNumber, groupPlayers.length);
+  const wolfPlayer = groupPlayers[wolfIdx];
 
-  // Find latest decision for this hole (decisions are already deduplicated by server)
   const currentDecision = decisions?.find((d) => d.holeNumber === holeNumber);
   const currentDecisionData = currentDecision?.data as {
     partnerPlayerId?: string | null;
     isBlindLoneWolf?: boolean;
   } | null;
   const currentPartnerIdRaw = currentDecisionData?.partnerPlayerId ?? null;
-  // Validate partner is still in the group
   const currentPartnerId =
     currentPartnerIdRaw !== null &&
-    groupParticipants.some((p) => p.id === currentPartnerIdRaw)
+    groupPlayers.some((p) => p.id === currentPartnerIdRaw)
       ? currentPartnerIdRaw
       : null;
 
@@ -77,22 +62,21 @@ export function WolfDeclarationControl({
   const isLoneWolf = currentPartnerId === null;
 
   const currentPartner = currentPartnerId
-    ? groupParticipants.find((p) => p.id === currentPartnerId)
+    ? groupPlayers.find((p) => p.id === currentPartnerId)
     : null;
 
-  // ── Submit handler ───────────────────────────
   const handleSubmit = async (
     partnerPlayerId: string | null,
     isBlindLoneWolf = false,
   ) => {
     if (!canDeclare || submitting) return;
-    await submitGameDecision({
+    await submitDecision({
       variables: {
-        competitionId: wolfComp.id,
+        gameId: wolfGame.id,
         roundId: round.id,
-        roundGroupId,
+        groupId,
         holeNumber,
-        wolfPlayerId: wolfParticipant.id,
+        wolfPlayerId: wolfPlayer.id,
         partnerPlayerId,
         isBlindLoneWolf,
       },
@@ -100,11 +84,11 @@ export function WolfDeclarationControl({
         const label = isBlindLoneWolf
           ? 'Going blind lone wolf'
           : partnerPlayerId
-            ? `Partner set to ${groupParticipants.find((p) => p.id === partnerPlayerId)?.person.displayName ?? 'unknown'}`
+            ? `Partner set to ${groupPlayers.find((p) => p.id === partnerPlayerId)?.person.displayName ?? 'unknown'}`
             : 'Going lone wolf';
         toast.success(label);
         void queryClient.invalidateQueries({
-          queryKey: ['game-decisions', wolfComp.id],
+          queryKey: ['decisions', wolfGame.id],
         });
       },
       onError: (error) =>
@@ -112,33 +96,25 @@ export function WolfDeclarationControl({
     });
   };
 
-  // ── Potential partners: everyone except the wolf ─
-  const potentialPartners = groupParticipants.filter(
-    (p) => p.id !== wolfParticipant.id,
-  );
+  const potentialPartners = groupPlayers.filter((p) => p.id !== wolfPlayer.id);
 
   return (
     <div className="rounded-lg border px-3 py-2">
-      {/* Header row */}
       <div className="mb-2 flex items-center gap-2">
         <Badge variant="outline" className="text-xs">
           Wolf
         </Badge>
-        <span className="text-sm font-medium">{wolfComp.name}</span>
+        <span className="text-sm font-medium">{wolfGame.name}</span>
       </div>
 
-      {/* Wolf info */}
       <div className="mb-3 flex items-center gap-2 text-sm">
         <span className="text-muted-foreground">Wolf:</span>
-        <span className="font-medium">
-          {wolfParticipant.person.displayName}
-        </span>
+        <span className="font-medium">{wolfPlayer.person.displayName}</span>
         <span className="text-muted-foreground text-xs">
           (Hole {holeNumber})
         </span>
       </div>
 
-      {/* Current declaration */}
       <div className="mb-2 flex items-center gap-2 text-sm">
         <span className="text-muted-foreground">Declaration:</span>
         {currentDecision ? (
@@ -162,10 +138,8 @@ export function WolfDeclarationControl({
         )}
       </div>
 
-      {/* Controls — only shown when user can declare */}
       {canDeclare && (
         <div className="mt-2 flex flex-wrap gap-2">
-          {/* Partner options */}
           {potentialPartners.map((partner) => (
             <Button
               key={partner.id}
@@ -179,7 +153,6 @@ export function WolfDeclarationControl({
             </Button>
           ))}
 
-          {/* Lone wolf option */}
           <Button
             variant={
               currentDecision && isLoneWolf && !isCurrentlyBlindLoneWolf
@@ -194,7 +167,6 @@ export function WolfDeclarationControl({
             Lone Wolf
           </Button>
 
-          {/* Blind lone wolf option */}
           <Button
             variant={isCurrentlyBlindLoneWolf ? 'destructive' : 'outline'}
             size="sm"

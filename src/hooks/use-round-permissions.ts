@@ -16,17 +16,17 @@ interface TournamentParticipantRole {
 
 interface RoundParticipant {
   id: string;
-  roundGroupId?: string | null;
+  groupId?: string | null;
   isMarker?: boolean;
   person: RoundParticipantPerson;
-  tournamentParticipant?: TournamentParticipantRole | null;
+  player?: TournamentParticipantRole | null;
 }
 
 interface RoundWithParticipants {
   id: string;
   tournamentId: string;
   status: string;
-  participants: RoundParticipant[];
+  players: RoundParticipant[];
 }
 
 interface TournamentParticipant {
@@ -38,7 +38,7 @@ interface TournamentParticipant {
 interface TournamentWithParticipants {
   id: string;
   createdByUserId: string;
-  participants: TournamentParticipant[];
+  players: TournamentParticipant[];
 }
 
 interface UseRoundPermissionsOptions {
@@ -57,17 +57,16 @@ export function useRoundPermissions({
 
     if (tournament) {
       const isCreator = userId === tournament.createdByUserId;
-      const isTournamentCommissioner = tournament.participants.some(
+      const isTournamentCommissioner = tournament.players.some(
         (p) => p.role === 'commissioner' && p.person?.userId === userId,
       );
       if (isCreator || isTournamentCommissioner) return true;
     }
 
     if (round) {
-      return round.participants.some(
+      return round.players.some(
         (rp) =>
-          rp.person.userId === userId &&
-          rp.tournamentParticipant?.role === 'commissioner',
+          rp.person.userId === userId && rp.player?.role === 'commissioner',
       );
     }
 
@@ -76,17 +75,17 @@ export function useRoundPermissions({
 
   const myParticipant = useMemo(() => {
     if (!round) return undefined;
-    return round.participants.find((rp) => rp.person.userId === userId);
+    return round.players.find((rp) => rp.person.userId === userId);
   }, [round, userId]);
 
-  const myRole = myParticipant?.tournamentParticipant?.role;
+  const myRole = myParticipant?.player?.role;
 
   const isRoundMarker = myParticipant?.isMarker === true;
 
   const getRecordingRole = (
     roundParticipantId: string,
   ): 'player' | 'marker' | 'commissioner' => {
-    const rp = round?.participants.find((p) => p.id === roundParticipantId);
+    const rp = round?.players.find((p) => p.id === roundParticipantId);
     if (rp?.person.userId === userId) return 'player';
     if (isCommissioner) return 'commissioner';
     return 'marker';
@@ -97,17 +96,15 @@ export function useRoundPermissions({
     if (!round || round.status !== 'open') return set;
 
     if (isCommissioner) {
-      for (const rp of round.participants) {
+      for (const rp of round.players) {
         set.add(rp.id);
       }
     } else if (isRoundMarker) {
-      // Marker can only edit participants in their own group
-      const myGroupId = myParticipant?.roundGroupId;
-      for (const rp of round.participants) {
-        if (myGroupId && rp.roundGroupId === myGroupId) {
+      const myGroupId = myParticipant?.groupId;
+      for (const rp of round.players) {
+        if (myGroupId && rp.groupId === myGroupId) {
           set.add(rp.id);
         } else if (!myGroupId) {
-          // If marker has no group assigned, fall back to all participants
           set.add(rp.id);
         }
       }
@@ -129,11 +126,11 @@ export function useRoundPermissions({
     const overriddenEditableIds = new Set<string>();
     if (round.status === 'open') {
       if (overriddenIsCommissioner) {
-        for (const rp of round.participants) overriddenEditableIds.add(rp.id);
+        for (const rp of round.players) overriddenEditableIds.add(rp.id);
       } else if (overriddenIsMarker) {
-        const myGroupId = myParticipant?.roundGroupId;
-        for (const rp of round.participants) {
-          if (myGroupId ? rp.roundGroupId === myGroupId : true) {
+        const myGroupId = myParticipant?.groupId;
+        for (const rp of round.players) {
+          if (myGroupId ? rp.groupId === myGroupId : true) {
             overriddenEditableIds.add(rp.id);
           }
         }
@@ -145,7 +142,7 @@ export function useRoundPermissions({
     const overriddenGetRecordingRole = (
       roundParticipantId: string,
     ): 'player' | 'marker' | 'commissioner' => {
-      const rp = round.participants.find((p) => p.id === roundParticipantId);
+      const rp = round.players.find((p) => p.id === roundParticipantId);
       if (rp?.person.userId === userId) return 'player';
       if (overriddenIsCommissioner) return 'commissioner';
       return 'marker';

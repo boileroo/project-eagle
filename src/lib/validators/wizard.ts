@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { competitionConfigSchema } from '../competition-config';
+import { gameConfigSchema } from '../game-config';
 import { handicapField, dateField, teeTimeField } from './shared';
 
 export const wizardPlayerSchema = z.object({
@@ -11,7 +11,7 @@ export type WizardPlayer = z.infer<typeof wizardPlayerSchema>;
 export const wizardCompetitionSchema = z.object({
   name: z.string().min(1, 'Competition name is required').max(150),
   competitionCategory: z.enum(['match', 'game', 'bonus']),
-  competitionConfig: competitionConfigSchema,
+  competitionConfig: gameConfigSchema,
 });
 export type WizardCompetition = z.infer<typeof wizardCompetitionSchema>;
 

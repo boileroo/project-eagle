@@ -112,7 +112,7 @@ export function ScoresTab({ roundCtx }: ScoresTabProps) {
         await bulkSubmit({
           variables: {
             roundId: roundCtx.roundId,
-            roundParticipantId: participantId,
+            roundPlayerId: participantId,
             scores: getScores(playerIndex),
           },
           onSuccess: () => {
@@ -140,7 +140,7 @@ export function ScoresTab({ roundCtx }: ScoresTabProps) {
       await bulkSubmit({
         variables: {
           roundId: roundCtx.roundId,
-          roundParticipantId: p.id,
+          roundPlayerId: p.id,
           scores: getScores(i),
         },
         onError: (error) => {

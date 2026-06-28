@@ -3,12 +3,12 @@ import { and, eq, count, asc, lt } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
 import {
-  competitions,
+  games,
   courses,
   rounds,
-  roundGroups,
-  roundParticipants,
-  tournamentParticipants,
+  groups,
+  roundPlayers,
+  players,
   tournaments,
   persons,
 } from '@/db/schema';
@@ -29,23 +29,15 @@ import { safeHandler } from './server/server-utils.server';
 import { generateInviteCode } from './server/invite-codes.server';
 import { isValidHandicap, parseHandicap } from './handicaps';
 
-// ──────────────────────────────────────────────
-// Helper: re-sort round numbers by date/teeTime
-// when any rounds have dates, sort chronologically
-// and reassign roundNumber values
-// ──────────────────────────────────────────────
-
 async function resortRoundsByDate(tournamentId: string) {
   const allRounds = await db.query.rounds.findMany({
     where: eq(rounds.tournamentId, tournamentId),
     orderBy: [asc(rounds.roundNumber)],
   });
 
-  // Only re-sort if at least two rounds have dates
   const datedRounds = allRounds.filter((r) => r.date != null);
   if (datedRounds.length < 2) return;
 
-  // Sort only the dated rounds chronologically
   const sortedDated = [...datedRounds].sort((a, b) => {
     const aTime = new Date(a.date!).getTime();
     const bTime = new Date(b.date!).getTime();
@@ -53,8 +45,6 @@ async function resortRoundsByDate(tournamentId: string) {
     return (a.teeTime ?? '').localeCompare(b.teeTime ?? '');
   });
 
-  // Place sorted dated rounds back into the positions currently occupied by dated rounds
-  // This preserves undated round positions
   const sorted = [...allRounds];
   let datedIdx = 0;
   for (let i = 0; i < sorted.length; i++) {
@@ -63,7 +53,6 @@ async function resortRoundsByDate(tournamentId: string) {
     }
   }
 
-  // Reassign round numbers
   for (let i = 0; i < sorted.length; i++) {
     if (sorted[i].roundNumber !== i + 1) {
       await db
@@ -73,10 +62,6 @@ async function resortRoundsByDate(tournamentId: string) {
     }
   }
 }
-
-// ──────────────────────────────────────────────
-// Helper: sync tournament status from round statuses
-// ──────────────────────────────────────────────
 
 async function syncTournamentStatus(tournamentId: string) {
   const allRounds = await db.query.rounds.findMany({
@@ -92,26 +77,18 @@ async function syncTournamentStatus(tournamentId: string) {
     .where(eq(tournaments.id, tournamentId));
 }
 
-// ──────────────────────────────────────────────
-// Get active rounds for the current user (dashboard)
-// Returns rounds with status 'open' that the user
-// participates in, with course + tournament info.
-// ──────────────────────────────────────────────
-
 export const getActiveRoundsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     const user = await requireAuth();
 
-    // Find the user's person record
     const person = await db.query.persons.findFirst({
       where: eq(persons.userId, user.id),
       columns: { id: true },
     });
     if (!person) return [];
 
-    // Find round participations for open rounds
-    const activeRPs = await db.query.roundParticipants.findMany({
-      where: eq(roundParticipants.personId, person.id),
+    const activeRPs = await db.query.roundPlayers.findMany({
+      where: eq(roundPlayers.personId, person.id),
       with: {
         round: {
           with: {
@@ -119,7 +96,7 @@ export const getActiveRoundsFn = createServerFn({ method: 'GET' }).handler(
             tournament: {
               columns: { id: true, name: true, isSingleRound: true },
             },
-            participants: { columns: { id: true } },
+            players: { columns: { id: true } },
           },
         },
       },
@@ -134,23 +111,16 @@ export const getActiveRoundsFn = createServerFn({ method: 'GET' }).handler(
         tournamentName: rp.round.tournament.name,
         isSingleRound: rp.round.tournament.isSingleRound,
         courseName: rp.round.course.name,
-        participantCount: rp.round.participants.length,
+        playerCount: rp.round.players.length,
         date: rp.round.date,
         teeTime: rp.round.teeTime,
       }));
   },
 );
 
-// ──────────────────────────────────────────────
-// List all single rounds (for /rounds page)
-// ──────────────────────────────────────────────
-
 export const getSingleRoundsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     const user = await requireAuth();
-    // Single rounds live inside auto-tournaments with isSingleRound=true
-    // Each auto-tournament has exactly one round.
-    // Only return tournaments created by (or participated in by) the current user.
     const singleTournaments = await db.query.tournaments.findMany({
       where: and(
         eq(tournaments.isSingleRound, true),
@@ -161,7 +131,7 @@ export const getSingleRoundsFn = createServerFn({ method: 'GET' }).handler(
         rounds: {
           with: {
             course: true,
-            participants: {
+            players: {
               with: { person: true },
             },
           },
@@ -169,14 +139,9 @@ export const getSingleRoundsFn = createServerFn({ method: 'GET' }).handler(
       },
     });
 
-    // Flatten: extract the single round from each tournament
     return singleTournaments.map((t) => t.rounds[0]).filter(Boolean);
   },
 );
-
-// ──────────────────────────────────────────────
-// Get a single round with participants & course
-// ──────────────────────────────────────────────
 
 export const getRoundFn = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ roundId: z.string().uuid() }))
@@ -200,15 +165,15 @@ export const getRoundFn = createServerFn({ method: 'GET' })
         groups: {
           orderBy: (g, { asc }) => [asc(g.groupNumber)],
           with: {
-            participants: {
+            players: {
               with: { person: true },
             },
           },
         },
-        participants: {
+        players: {
           with: {
             person: true,
-            tournamentParticipant: {
+            player: {
               with: {
                 teamMemberships: {
                   with: { team: true },
@@ -221,14 +186,9 @@ export const getRoundFn = createServerFn({ method: 'GET' })
       },
     });
     if (!round) throw new Error('Round not found');
-    // IDOR: verify the requesting user is a participant in this tournament
     await verifyTournamentMembership(user.id, round.tournamentId);
     return round;
   });
-
-// ──────────────────────────────────────────────
-// Create a round (within a tournament)
-// ──────────────────────────────────────────────
 
 export const createRoundFn = createServerFn({ method: 'POST' })
   .inputValidator(createRoundSchema)
@@ -236,7 +196,6 @@ export const createRoundFn = createServerFn({ method: 'POST' })
     safeHandler(async ({ data }) => {
       const user = await requireCommissioner(data.tournamentId);
 
-      // Only allow creating rounds when tournament is in setup
       const tournament = await db.query.tournaments.findFirst({
         where: eq(tournaments.id, data.tournamentId),
         columns: { status: true },
@@ -247,7 +206,6 @@ export const createRoundFn = createServerFn({ method: 'POST' })
       }
 
       const result = await db.transaction(async (tx) => {
-        // Auto-assign roundNumber as next in sequence
         const [{ value: existingCount }] = await tx
           .select({ value: count() })
           .from(rounds)
@@ -261,39 +219,35 @@ export const createRoundFn = createServerFn({ method: 'POST' })
             roundNumber: existingCount + 1,
             date: data.date ? new Date(data.date) : null,
             teeTime: data.teeTime || null,
-            format: data.format || null,
+            label: data.label || null,
             createdByUserId: user.id,
           })
           .returning();
 
-        // Auto-add all tournament participants as round participants
-        const tpList = await tx.query.tournamentParticipants.findMany({
-          where: eq(tournamentParticipants.tournamentId, data.tournamentId),
-          with: {
-            person: true,
-          },
+        const playerList = await tx.query.players.findMany({
+          where: eq(players.tournamentId, data.tournamentId),
+          with: { person: true },
         });
 
-        if (tpList.length > 0) {
-          await tx.insert(roundParticipants).values(
-            tpList.map((tp) => ({
+        if (playerList.length > 0) {
+          await tx.insert(roundPlayers).values(
+            playerList.map((p) => ({
               roundId: round.id,
-              personId: tp.personId,
-              tournamentParticipantId: tp.id,
+              personId: p.personId,
+              playerId: p.id,
               handicapSnapshot:
-                tp.handicapOverride ?? tp.person.currentHandicap ?? '0',
+                p.handicapOverride ?? p.person.currentHandicap ?? '0',
             })),
           );
         }
 
-        // Create groups and assign all participants
-        if (tpList.length >= 1) {
-          const numGroups = Math.ceil(tpList.length / 4);
-          const createdGroups: (typeof roundGroups.$inferSelect)[] = [];
+        if (playerList.length >= 1) {
+          const numGroups = Math.ceil(playerList.length / 4);
+          const createdGroups: (typeof groups.$inferSelect)[] = [];
 
           for (let i = 0; i < numGroups; i++) {
             const [group] = await tx
-              .insert(roundGroups)
+              .insert(groups)
               .values({
                 roundId: round.id,
                 groupNumber: i + 1,
@@ -303,15 +257,15 @@ export const createRoundFn = createServerFn({ method: 'POST' })
             createdGroups.push(group);
           }
 
-          for (let i = 0; i < tpList.length; i++) {
+          for (let i = 0; i < playerList.length; i++) {
             const groupIdx = i % numGroups;
             await tx
-              .update(roundParticipants)
-              .set({ roundGroupId: createdGroups[groupIdx].id })
+              .update(roundPlayers)
+              .set({ groupId: createdGroups[groupIdx].id })
               .where(
                 and(
-                  eq(roundParticipants.roundId, round.id),
-                  eq(roundParticipants.personId, tpList[i].personId),
+                  eq(roundPlayers.roundId, round.id),
+                  eq(roundPlayers.personId, playerList[i].personId),
                 ),
               );
           }
@@ -320,16 +274,11 @@ export const createRoundFn = createServerFn({ method: 'POST' })
         return { roundId: round.id };
       });
 
-      // Re-sort if dates are present
       await resortRoundsByDate(data.tournamentId);
 
       return result;
     }),
   );
-
-// ──────────────────────────────────────────────
-// Update a round (course, date, tee time)
-// ──────────────────────────────────────────────
 
 export const updateRoundFn = createServerFn({ method: 'POST' })
   .inputValidator(updateRoundSchema)
@@ -349,21 +298,16 @@ export const updateRoundFn = createServerFn({ method: 'POST' })
     if (data.date !== undefined)
       updates.date = data.date ? new Date(data.date) : null;
     if (data.teeTime !== undefined) updates.teeTime = data.teeTime || null;
-    if (data.format !== undefined) updates.format = data.format || null;
+    if (data.label !== undefined) updates.label = data.label || null;
 
     await db.update(rounds).set(updates).where(eq(rounds.id, data.id));
 
-    // Re-sort if dates changed
     if (data.date !== undefined || data.teeTime !== undefined) {
       await resortRoundsByDate(existing.tournamentId);
     }
 
     return { roundId: data.id };
   });
-
-// ──────────────────────────────────────────────
-// Delete a round
-// ──────────────────────────────────────────────
 
 export const deleteRoundFn = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ roundId: z.string().uuid() }))
@@ -383,10 +327,6 @@ export const deleteRoundFn = createServerFn({ method: 'POST' })
     return { success: true };
   });
 
-// ──────────────────────────────────────────────
-// Reorder rounds (swap two round numbers)
-// ──────────────────────────────────────────────
-
 export const reorderRoundsFn = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
@@ -397,13 +337,11 @@ export const reorderRoundsFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     await requireCommissioner(data.tournamentId);
 
-    // Fetch the rounds to validate dated-round chronological order
     const allRounds = await db.query.rounds.findMany({
       where: eq(rounds.tournamentId, data.tournamentId),
     });
     const roundMap = new Map(allRounds.map((r) => [r.id, r]));
 
-    // Check that dated rounds remain in chronological order in the new sequence
     let lastDatedTime = -Infinity;
     for (const id of data.roundIds) {
       const r = roundMap.get(id);
@@ -419,7 +357,6 @@ export const reorderRoundsFn = createServerFn({ method: 'POST' })
       lastDatedTime = fullTime;
     }
 
-    // Update round numbers to match the provided order
     for (let i = 0; i < data.roundIds.length; i++) {
       await db
         .update(rounds)
@@ -430,15 +367,11 @@ export const reorderRoundsFn = createServerFn({ method: 'POST' })
     return { success: true };
   });
 
-// ──────────────────────────────────────────────
-// Transition round status
-// ──────────────────────────────────────────────
-
 const validTransitions: Record<string, string[]> = {
   draft: ['scheduled'],
   scheduled: ['open', 'draft'],
   open: ['finalized', 'scheduled'],
-  finalized: ['open'], // reopen for corrections
+  finalized: ['open'],
 };
 
 export const transitionRoundFn = createServerFn({ method: 'POST' })
@@ -463,7 +396,6 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
       );
     }
 
-    // Sequential guards: check earlier rounds in the same tournament
     if (existing.roundNumber) {
       const earlierRounds = await db.query.rounds.findMany({
         where: and(
@@ -473,7 +405,6 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
       });
 
       if (data.newStatus === 'open') {
-        // Can't open if an earlier round is still open
         const openEarlier = earlierRounds.find((r) => r.status === 'open');
         if (openEarlier) {
           throw new Error(
@@ -483,7 +414,6 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
       }
 
       if (data.newStatus === 'scheduled') {
-        // Can't schedule if an earlier round is still in draft
         const draftEarlier = earlierRounds.find((r) => r.status === 'draft');
         if (draftEarlier) {
           throw new Error(
@@ -493,7 +423,6 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
       }
 
       if (data.newStatus === 'finalized') {
-        // Can't finalize if an earlier round isn't finalized
         const unfinalized = earlierRounds.find((r) => r.status !== 'finalized');
         if (unfinalized) {
           throw new Error(
@@ -503,138 +432,100 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
       }
     }
 
-    // Group-size validation when opening a round
     if (data.newStatus === 'open') {
-      const roundCompetitions = await db.query.competitions.findMany({
-        where: eq(competitions.roundId, data.roundId),
+      const roundGames = await db.query.games.findMany({
+        where: eq(games.roundId, data.roundId),
       });
 
-      const withinGroupComps = roundCompetitions.filter(
-        (c) => c.groupScope === 'within_group',
-      );
+      for (const game of roundGames) {
+        if (!game.groupId) continue;
 
-      if (withinGroupComps.length > 0) {
-        const roundGroupsWithParticipants = await db.query.roundGroups.findMany(
-          {
-            where: eq(roundGroups.roundId, data.roundId),
-            with: { participants: true },
-          },
-        );
+        const group = await db.query.groups.findFirst({
+          where: eq(groups.id, game.groupId),
+          with: { players: true },
+        });
+        if (!group) continue;
 
-        for (const comp of withinGroupComps) {
-          const relevantGroups = comp.roundGroupId
-            ? roundGroupsWithParticipants.filter(
-                (g) => g.id === comp.roundGroupId,
-              )
-            : roundGroupsWithParticipants;
+        const size = group.players.length;
+        const groupLabel = group.name ?? `Group ${group.groupNumber}`;
 
-          for (const group of relevantGroups) {
-            const size = group.participants.length;
-            const groupLabel = group.name ?? `Group ${group.groupNumber}`;
-
-            if (comp.formatType === 'wolf' && size !== 4) {
-              throw new Error(
-                `Cannot open round: "${comp.name}" (Wolf) requires exactly 4 players per group, but ${groupLabel} has ${size}.`,
-              );
-            }
-
-            if (comp.formatType === 'six_point' && size !== 3) {
-              throw new Error(
-                `Cannot open round: "${comp.name}" (Six Point) requires exactly 3 players per group, but ${groupLabel} has ${size}.`,
-              );
-            }
-
-            if (
-              (comp.formatType === 'best_ball' ||
-                comp.formatType === 'hi_lo' ||
-                comp.formatType === 'rumble') &&
-              size !== 4
-            ) {
-              throw new Error(
-                `Cannot open round: "${comp.name}" requires exactly 4 players per group, but ${groupLabel} has ${size}.`,
-              );
-            }
-
-            if (comp.formatType === 'chair' && size < 2) {
-              throw new Error(
-                `Cannot open round: "${comp.name}" (Chair) requires at least 2 players per group, but ${groupLabel} has ${size}.`,
-              );
-            }
-          }
+        if (game.format === 'wolf' && size !== 4) {
+          throw new Error(
+            `Cannot open round: "${game.name}" (Wolf) requires exactly 4 players per group, but ${groupLabel} has ${size}.`,
+          );
+        }
+        if (game.format === 'six_point' && size !== 3) {
+          throw new Error(
+            `Cannot open round: "${game.name}" (Six Point) requires exactly 3 players per group, but ${groupLabel} has ${size}.`,
+          );
+        }
+        if (
+          (game.format === 'best_ball' ||
+            game.format === 'hi_lo' ||
+            game.format === 'rumble') &&
+          size !== 4
+        ) {
+          throw new Error(
+            `Cannot open round: "${game.name}" requires exactly 4 players per group, but ${groupLabel} has ${size}.`,
+          );
+        }
+        if (game.format === 'chair' && size < 2) {
+          throw new Error(
+            `Cannot open round: "${game.name}" (Chair) requires at least 2 players per group, but ${groupLabel} has ${size}.`,
+          );
         }
       }
 
-      // Team-membership validation for team-based formats
-      const teamBasedComps = roundCompetitions.filter((c) =>
-        ['best_ball', 'hi_lo', 'rumble'].includes(c.formatType),
+      const teamBasedGames = roundGames.filter((g) =>
+        ['best_ball', 'hi_lo', 'rumble'].includes(g.format),
       );
 
-      if (teamBasedComps.length > 0) {
-        const roundGroupsWithParticipants = await db.query.roundGroups.findMany(
-          {
-            where: eq(roundGroups.roundId, data.roundId),
-            with: { participants: true },
-          },
-        );
+      for (const game of teamBasedGames) {
+        if (!game.groupId) continue;
 
-        const allTournamentParticipantIds = roundGroupsWithParticipants
-          .flatMap((g) => g.participants)
-          .map((rp) => rp.tournamentParticipantId)
+        const group = await db.query.groups.findFirst({
+          where: eq(groups.id, game.groupId),
+          with: { players: true },
+        });
+        if (!group) continue;
+
+        const groupLabel = group.name ?? `Group ${group.groupNumber}`;
+        const playerIds = group.players
+          .map((rp) => rp.playerId)
           .filter((id): id is string => id != null);
 
-        const teamMemberships =
-          allTournamentParticipantIds.length > 0
-            ? await db.query.tournamentTeamMembers.findMany({
-                where: (ttm, { inArray }) =>
-                  inArray(ttm.participantId, allTournamentParticipantIds),
+        const memberships =
+          playerIds.length > 0
+            ? await db.query.teamMembers.findMany({
+                where: (tm, { inArray }) => inArray(tm.playerId, playerIds),
               })
             : [];
 
-        const teamByParticipantId = new Map<string, string>();
-        for (const m of teamMemberships) {
-          teamByParticipantId.set(m.participantId, m.teamId);
+        const teamByPlayerId = new Map<string, string>();
+        for (const m of memberships) {
+          teamByPlayerId.set(m.playerId, m.teamId);
         }
 
-        for (const comp of teamBasedComps) {
-          const relevantGroups = comp.roundGroupId
-            ? roundGroupsWithParticipants.filter(
-                (g) => g.id === comp.roundGroupId,
+        for (const rp of group.players) {
+          if (!rp.playerId || !teamByPlayerId.has(rp.playerId)) {
+            throw new Error(
+              `Cannot open round: "${game.name}" requires all players to be assigned to a team. A player in ${groupLabel} has no team assignment.`,
+            );
+          }
+        }
+
+        if (game.format === 'best_ball' || game.format === 'hi_lo') {
+          const teamIds = new Set(
+            group.players
+              .map((rp) =>
+                rp.playerId ? teamByPlayerId.get(rp.playerId) : undefined,
               )
-            : roundGroupsWithParticipants;
-
-          for (const group of relevantGroups) {
-            const groupLabel = group.name ?? `Group ${group.groupNumber}`;
-
-            for (const rp of group.participants) {
-              if (
-                !rp.tournamentParticipantId ||
-                !teamByParticipantId.has(rp.tournamentParticipantId)
-              ) {
-                throw new Error(
-                  `Cannot open round: "${comp.name}" requires all players to be assigned to a team. A player in ${groupLabel} has no team assignment.`,
-                );
-              }
-            }
-
-            if (
-              comp.formatType === 'best_ball' ||
-              comp.formatType === 'hi_lo'
-            ) {
-              const teamIds = new Set(
-                group.participants
-                  .map((rp) =>
-                    rp.tournamentParticipantId
-                      ? teamByParticipantId.get(rp.tournamentParticipantId)
-                      : undefined,
-                  )
-                  .filter((id): id is string => id != null),
-              );
-              if (teamIds.size !== 2) {
-                throw new Error(
-                  `Cannot open round: "${comp.name}" requires exactly 2 teams per group, but ${groupLabel} has players from ${teamIds.size} team(s).`,
-                );
-              }
-            }
+              .filter((id): id is string => id != null),
+          );
+          if (teamIds.size !== 2) {
+            throw new Error(
+              `Cannot open round: "${game.name}" requires exactly 2 teams per group, but ${groupLabel} has players from ${teamIds.size} team(s).`,
+            );
           }
         }
       }
@@ -648,22 +539,17 @@ export const transitionRoundFn = createServerFn({ method: 'POST' })
       })
       .where(eq(rounds.id, data.roundId));
 
-    // Auto-sync tournament status based on new round statuses
     await syncTournamentStatus(existing.tournamentId);
 
     return { success: true };
   });
 
-// ──────────────────────────────────────────────
-// Add a participant to a round
-// ──────────────────────────────────────────────
-
-export const addRoundParticipantFn = createServerFn({ method: 'POST' })
+export const addRoundPlayerFn = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       roundId: z.string().uuid(),
       personId: z.string().uuid(),
-      tournamentParticipantId: z.string().uuid().optional(),
+      playerId: z.string().uuid().optional(),
       handicapSnapshot: z.string().refine((value) => {
         const parsed = parseHandicap(value);
         return parsed != null && isValidHandicap(parsed);
@@ -672,94 +558,82 @@ export const addRoundParticipantFn = createServerFn({ method: 'POST' })
   )
   .handler(
     safeHandler(async ({ data }) => {
-      // Only allow adding participants in draft or open status
       const round = await db.query.rounds.findFirst({
         where: eq(rounds.id, data.roundId),
       });
       if (!round) throw new Error('Round not found');
       if (round.status !== 'draft') {
-        throw new Error('Can only add participants to draft rounds');
+        throw new Error('Can only add players to draft rounds');
       }
 
       await requireCommissioner(round.tournamentId);
 
-      // Check for duplicates
-      const existing = await db.query.roundParticipants.findFirst({
+      const existing = await db.query.roundPlayers.findFirst({
         where: and(
-          eq(roundParticipants.roundId, data.roundId),
-          eq(roundParticipants.personId, data.personId),
+          eq(roundPlayers.roundId, data.roundId),
+          eq(roundPlayers.personId, data.personId),
         ),
       });
       if (existing) throw new Error('Person is already in this round');
 
       const [rp] = await db
-        .insert(roundParticipants)
+        .insert(roundPlayers)
         .values({
           roundId: data.roundId,
           personId: data.personId,
-          tournamentParticipantId: data.tournamentParticipantId ?? null,
+          playerId: data.playerId ?? null,
           handicapSnapshot: data.handicapSnapshot,
         })
         .returning();
 
-      // Auto-assign to group if there's exactly one group (the default)
-      const groups = await db.query.roundGroups.findMany({
-        where: eq(roundGroups.roundId, data.roundId),
+      const roundGroupList = await db.query.groups.findMany({
+        where: eq(groups.roundId, data.roundId),
       });
-      if (groups.length === 1) {
+      if (roundGroupList.length === 1) {
         await db
-          .update(roundParticipants)
-          .set({ roundGroupId: groups[0].id })
-          .where(eq(roundParticipants.id, rp.id));
+          .update(roundPlayers)
+          .set({ groupId: roundGroupList[0].id })
+          .where(eq(roundPlayers.id, rp.id));
       }
 
-      return { roundParticipantId: rp.id };
+      return { roundPlayerId: rp.id };
     }),
   );
 
-// ──────────────────────────────────────────────
-// Remove a participant from a round
-// ──────────────────────────────────────────────
-
-export const removeRoundParticipantFn = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ roundParticipantId: z.string().uuid() }))
+export const removeRoundPlayerFn = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ roundPlayerId: z.string().uuid() }))
   .handler(async ({ data }) => {
-    // Only allow removal in draft or open status
-    const rp = await db.query.roundParticipants.findFirst({
-      where: eq(roundParticipants.id, data.roundParticipantId),
+    const rp = await db.query.roundPlayers.findFirst({
+      where: eq(roundPlayers.id, data.roundPlayerId),
       with: { round: true },
     });
-    if (!rp) throw new Error('Participant not found');
+    if (!rp) throw new Error('Round player not found');
     if (rp.round.status !== 'draft') {
-      throw new Error('Can only remove participants from draft rounds');
+      throw new Error('Can only remove players from draft rounds');
     }
 
     await requireCommissioner(rp.round.tournamentId);
 
     await db
-      .delete(roundParticipants)
-      .where(eq(roundParticipants.id, data.roundParticipantId));
+      .delete(roundPlayers)
+      .where(eq(roundPlayers.id, data.roundPlayerId));
 
     return { success: true };
   });
 
-// ──────────────────────────────────────────────
-// Update round participant handicap override
-// ──────────────────────────────────────────────
-
-export const updateRoundParticipantFn = createServerFn({ method: 'POST' })
+export const updateRoundPlayerFn = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
-      roundParticipantId: z.string().uuid(),
+      roundPlayerId: z.string().uuid(),
       handicapOverride: handicapField,
     }),
   )
   .handler(async ({ data }) => {
-    const rp = await db.query.roundParticipants.findFirst({
-      where: eq(roundParticipants.id, data.roundParticipantId),
+    const rp = await db.query.roundPlayers.findFirst({
+      where: eq(roundPlayers.id, data.roundPlayerId),
       with: { round: true },
     });
-    if (!rp) throw new Error('Participant not found');
+    if (!rp) throw new Error('Round player not found');
     if (rp.round.status === 'finalized') {
       throw new Error('Cannot edit handicaps on finalized rounds');
     }
@@ -767,46 +641,38 @@ export const updateRoundParticipantFn = createServerFn({ method: 'POST' })
     await requireCommissioner(rp.round.tournamentId);
 
     await db
-      .update(roundParticipants)
+      .update(roundPlayers)
       .set({
         handicapOverride: data.handicapOverride?.toString() ?? null,
       })
-      .where(eq(roundParticipants.id, data.roundParticipantId));
+      .where(eq(roundPlayers.id, data.roundPlayerId));
 
     return { success: true };
   });
-
-// ──────────────────────────────────────────────
-// Toggle round-level marker flag
-// ──────────────────────────────────────────────
 
 export const toggleRoundMarkerFn = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
-      roundParticipantId: z.string().uuid(),
+      roundPlayerId: z.string().uuid(),
       isMarker: z.boolean(),
     }),
   )
   .handler(async ({ data }) => {
-    const rp = await db.query.roundParticipants.findFirst({
-      where: eq(roundParticipants.id, data.roundParticipantId),
+    const rp = await db.query.roundPlayers.findFirst({
+      where: eq(roundPlayers.id, data.roundPlayerId),
       with: { round: true },
     });
-    if (!rp) throw new Error('Participant not found');
+    if (!rp) throw new Error('Round player not found');
 
     await requireCommissioner(rp.round.tournamentId);
 
     await db
-      .update(roundParticipants)
+      .update(roundPlayers)
       .set({ isMarker: data.isMarker })
-      .where(eq(roundParticipants.id, data.roundParticipantId));
+      .where(eq(roundPlayers.id, data.roundPlayerId));
 
     return { success: true };
   });
-
-// ──────────────────────────────────────────────────
-// Create a single round (auto-creates tournament)
-// ──────────────────────────────────────────────────
 
 export const createSingleRoundFn = createServerFn({ method: 'POST' })
   .inputValidator(createSingleRoundSchema)
@@ -815,7 +681,6 @@ export const createSingleRoundFn = createServerFn({ method: 'POST' })
 
     const person = await resolveOrCreatePersonForUser(user.id);
 
-    // Look up the course name for the auto-generated tournament name
     const course = await db.query.courses.findFirst({
       where: eq(courses.id, data.courseId),
     });
@@ -833,7 +698,6 @@ export const createSingleRoundFn = createServerFn({ method: 'POST' })
         });
     const tournamentName = `${courseName} – ${dateLabel}`;
 
-    // 1. Create the auto-tournament
     const [tournament] = await db
       .insert(tournaments)
       .values({
@@ -844,9 +708,8 @@ export const createSingleRoundFn = createServerFn({ method: 'POST' })
       })
       .returning();
 
-    // 2. Add creator as commissioner participant
-    const [tp] = await db
-      .insert(tournamentParticipants)
+    const [player] = await db
+      .insert(players)
       .values({
         tournamentId: tournament.id,
         personId: person.id,
@@ -854,7 +717,6 @@ export const createSingleRoundFn = createServerFn({ method: 'POST' })
       })
       .returning();
 
-    // 3. Create the round
     const [round] = await db
       .insert(rounds)
       .values({
@@ -867,27 +729,25 @@ export const createSingleRoundFn = createServerFn({ method: 'POST' })
       })
       .returning();
 
-    // 4. Add creator as round participant
-    const [roundParticipant] = await db
-      .insert(roundParticipants)
+    const [roundPlayer] = await db
+      .insert(roundPlayers)
       .values({
         roundId: round.id,
         personId: person.id,
-        tournamentParticipantId: tp.id,
+        playerId: player.id,
         handicapSnapshot: person.currentHandicap ?? '0',
       })
       .returning();
 
-    // 5. Create default Group 1 and assign the creator to it
     const [defaultGroup] = await db
-      .insert(roundGroups)
+      .insert(groups)
       .values({ roundId: round.id, groupNumber: 1, name: 'Group 1' })
       .returning();
 
     await db
-      .update(roundParticipants)
-      .set({ roundGroupId: defaultGroup.id })
-      .where(eq(roundParticipants.id, roundParticipant.id));
+      .update(roundPlayers)
+      .set({ groupId: defaultGroup.id })
+      .where(eq(roundPlayers.id, roundPlayer.id));
 
     return {
       tournamentId: tournament.id,

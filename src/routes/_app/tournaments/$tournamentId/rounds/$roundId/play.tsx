@@ -5,7 +5,8 @@ import { useScoreRealtime } from '@/hooks/use-score-realtime';
 import {
   roundQueryOptions,
   scorecardQueryOptions,
-  competitionsQueryOptions,
+  gamesQueryOptions,
+  sideGamesQueryOptions,
 } from '@/lib/query-options';
 import { LiveScoringPage } from '@/components/pages';
 
@@ -27,7 +28,8 @@ export const Route = createFileRoute(
     await Promise.all([
       queryClient.ensureQueryData(roundQueryOptions(params.roundId)),
       queryClient.ensureQueryData(scorecardQueryOptions(params.roundId)),
-      queryClient.ensureQueryData(competitionsQueryOptions(params.roundId)),
+      queryClient.ensureQueryData(gamesQueryOptions(params.roundId)),
+      queryClient.ensureQueryData(sideGamesQueryOptions(params.roundId)),
     ]);
   },
 
@@ -41,9 +43,8 @@ function RouteComponent() {
 
   const { data: round } = useSuspenseQuery(roundQueryOptions(roundId));
   const { data: scorecard } = useSuspenseQuery(scorecardQueryOptions(roundId));
-  const { data: competitions } = useSuspenseQuery(
-    competitionsQueryOptions(roundId),
-  );
+  const { data: games } = useSuspenseQuery(gamesQueryOptions(roundId));
+  const { data: sideGames } = useSuspenseQuery(sideGamesQueryOptions(roundId));
   const { user, accessToken } = useAuth();
 
   useScoreRealtime(roundId, user!.id, accessToken);
@@ -60,7 +61,8 @@ function RouteComponent() {
     <LiveScoringPage
       round={round}
       scorecard={scorecard}
-      competitions={competitions}
+      games={games}
+      sideGames={sideGames}
       userId={user!.id}
       currentHole={hole}
       selectedGroupId={group}

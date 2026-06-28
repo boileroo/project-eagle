@@ -18,7 +18,8 @@ import { useRoundPermissions } from '@/hooks/use-round-permissions';
 import type {
   RoundData,
   ScorecardData,
-  RoundCompetitionsData,
+  RoundGamesData,
+  SideGamesData,
   TournamentLoaderData,
 } from '@/types';
 
@@ -26,7 +27,8 @@ export function RoundDetailPage({
   round,
   courses,
   scorecard,
-  competitions,
+  games,
+  sideGames,
   tournament,
   myPerson,
   userId,
@@ -36,7 +38,8 @@ export function RoundDetailPage({
     ReturnType<typeof import('@/lib/courses.server').getCoursesFn>
   >;
   scorecard: ScorecardData;
-  competitions: RoundCompetitionsData;
+  games: RoundGamesData;
+  sideGames: SideGamesData;
   tournament: TournamentLoaderData | null;
   myPerson: { id: string } | null;
   userId: string;
@@ -48,7 +51,10 @@ export function RoundDetailPage({
   const invalidateRoundData = () => {
     void queryClient.invalidateQueries({ queryKey: ['round', round.id] });
     void queryClient.invalidateQueries({
-      queryKey: ['competition', 'round', round.id],
+      queryKey: ['game', 'round', round.id],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ['side-game', 'round', round.id],
     });
     void queryClient.invalidateQueries({
       queryKey: ['individual-scoreboard', round.id],
@@ -68,11 +74,10 @@ export function RoundDetailPage({
   );
 
   const totalHoles = round.course.holes.length;
-  const allScorecardsComplete = round.participants.every(
+  const allScorecardsComplete = round.players.every(
     (rp) => Object.keys(scorecard[rp.id] ?? {}).length >= totalHoles,
   );
 
-  // Score entry dialog state
   const [scoreDialogOpen, setScoreDialogOpen] = useState(false);
   const [scoreTarget, setScoreTarget] = useState<{
     roundParticipantId: string;
@@ -82,7 +87,6 @@ export function RoundDetailPage({
     par: number;
   } | null>(null);
 
-  // Permissions derived from the hook (fixes bug + group-scoped marker logic)
   const { isCommissioner, editableParticipantIds, getRecordingRole } =
     useRoundPermissions({
       round,
@@ -90,21 +94,20 @@ export function RoundDetailPage({
         ? {
             id: tournament.id,
             createdByUserId: tournament.createdByUserId,
-            participants: tournament.participants.map((participant) => ({
-              personId: participant.personId,
-              person: { userId: participant.person.userId },
-              role: participant.role as 'player' | 'commissioner',
+            players: tournament.players.map((player) => ({
+              personId: player.personId,
+              person: { userId: player.person.userId },
+              role: player.role as 'player' | 'commissioner',
             })),
           }
         : undefined,
       userId,
     });
 
-  // Build participant team colour map (roundParticipantId → hex)
   const participantTeamColours = useMemo(() => {
     const teamMap = new Map<string, { id: string; createdAt: Date | string }>();
-    for (const rp of round.participants) {
-      for (const tm of rp.tournamentParticipant?.teamMemberships ?? []) {
+    for (const rp of round.players) {
+      for (const tm of rp.player?.teamMemberships ?? []) {
         if (!teamMap.has(tm.team.id)) {
           teamMap.set(tm.team.id, tm.team);
         }
@@ -116,20 +119,19 @@ export function RoundDetailPage({
     );
     const tColours = buildTeamColourMap(sortedTeams);
     const pColours = new Map<string, string>();
-    for (const rp of round.participants) {
-      const teamId = rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id;
+    for (const rp of round.players) {
+      const teamId = rp.player?.teamMemberships?.[0]?.team?.id;
       if (teamId) {
         const colour = tColours.get(teamId);
         if (colour) pColours.set(rp.id, colour);
       }
     }
     return pColours;
-  }, [round.participants]);
+  }, [round.players]);
 
-  // Compute match pairings per group
   const matchPairingsForGroups = useMemo(
-    () => buildMatchPairings({ round, scorecard, competitions }),
-    [competitions, round, scorecard],
+    () => buildMatchPairings({ round, scorecard, games }),
+    [games, round, scorecard],
   );
 
   const tournamentId = round.tournamentId;
@@ -154,7 +156,7 @@ export function RoundDetailPage({
     holeNumber: number,
     currentStrokes?: number,
   ) => {
-    const rp = round.participants.find((p) => p.id === rpId);
+    const rp = round.players.find((p) => p.id === rpId);
     const hole = round.course.holes.find((h) => h.holeNumber === holeNumber);
     if (!rp || !hole) return;
     setScoreTarget({
@@ -169,7 +171,6 @@ export function RoundDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <RoundHeader
         round={round}
         courses={courses}
@@ -183,7 +184,6 @@ export function RoundDetailPage({
         allScorecardsComplete={allScorecardsComplete}
       />
 
-      {/* Locked banner — shown when round is awaiting start */}
       {round.status === 'scheduled' && (
         <div className="bg-surface-high flex items-start gap-3 rounded-xl px-4 py-3 text-sm">
           <Lock className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
@@ -196,13 +196,12 @@ export function RoundDetailPage({
         </div>
       )}
 
-      {/* Participants Section - hidden once round is in play or finished */}
       {(isDraft || isScheduled) && (
         <ParticipantsSection
           tournament={tournament ?? undefined}
           round={round}
           isSingleRound={isSingleRound}
-          competitions={competitions}
+          games={games}
           isCommissioner={isCommissioner}
           userId={userId}
           myPerson={myPerson}
@@ -211,14 +210,13 @@ export function RoundDetailPage({
         />
       )}
 
-      {/* Scorecards — one per group, visible when round is open or finalized */}
       <ScorecardSections
         round={round}
         scorecard={scorecard}
         matchPairingsForGroups={matchPairingsForGroups}
         editableParticipantIds={editableParticipantIds}
         participantTeamColours={participantTeamColours}
-        competitions={competitions}
+        games={games}
         isCommissioner={isCommissioner}
         onScoreClick={handleScoreClick}
         quickScoreProps={
@@ -228,7 +226,6 @@ export function RoundDetailPage({
         }
       />
 
-      {/* Score entry dialog */}
       {scoreTarget && (
         <ScoreEntryDialog
           open={scoreDialogOpen}
@@ -243,25 +240,22 @@ export function RoundDetailPage({
         />
       )}
 
-      {/* Individual Scoreboard — shown when round is open or finalized */}
       {(round.status === 'open' || round.status === 'finalized') && (
         <IndividualScoreboardSection roundId={round.id} />
       )}
 
-      {/* Team Competitions — hidden when no competitions exist and round is past draft */}
-      {(isDraft || competitions.length > 0) && (
+      {(isDraft || games.length > 0 || sideGames.length > 0) && (
         <TeamCompetitionsSection
           round={round}
           scorecard={scorecard}
-          competitions={competitions}
+          games={games}
+          sideGames={sideGames}
           isCommissioner={isCommissioner}
           hasTeams={
             isSingleRound
               ? (tournament?.teams?.length ?? 0) > 0
-              : round.participants.some(
-                  (rp) =>
-                    (rp.tournamentParticipant?.teamMemberships?.length ?? 0) >
-                    0,
+              : round.players.some(
+                  (rp) => (rp.player?.teamMemberships?.length ?? 0) > 0,
                 )
           }
           onChanged={() => invalidateRoundData()}

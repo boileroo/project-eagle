@@ -6,8 +6,8 @@ import {
   transitionRoundFn,
   reorderRoundsFn,
   createSingleRoundFn,
-  removeRoundParticipantFn,
-  updateRoundParticipantFn,
+  removeRoundPlayerFn,
+  updateRoundPlayerFn,
   toggleRoundMarkerFn,
 } from '@/lib/rounds.server';
 import type { CreateSingleRoundInput } from '@/lib/validators';
@@ -272,7 +272,7 @@ export function useCreateSingleRound(): MutationHookReturn<
 // useRemoveRoundParticipant
 // ──────────────────────────────────────────────
 
-type RemoveRoundParticipantVariables = { roundParticipantId: string };
+type RemoveRoundParticipantVariables = { roundPlayerId: string };
 type RemoveRoundParticipantResult = { success: boolean };
 
 export function useRemoveRoundParticipant(): MutationHookReturn<
@@ -281,7 +281,7 @@ export function useRemoveRoundParticipant(): MutationHookReturn<
 > {
   const mutation = useMutation({
     mutationFn: (variables: RemoveRoundParticipantVariables) =>
-      removeRoundParticipantFn({ data: variables }),
+      removeRoundPlayerFn({ data: variables }),
   });
 
   const mutate = async ({
@@ -315,7 +315,7 @@ export function useRemoveRoundParticipant(): MutationHookReturn<
 // ──────────────────────────────────────────────
 
 type UpdateRoundParticipantVariables = {
-  roundParticipantId: string;
+  roundPlayerId: string;
   handicapOverride: number | null;
 };
 type UpdateRoundParticipantResult = { success: boolean };
@@ -326,7 +326,7 @@ export function useUpdateRoundParticipant(): MutationHookReturn<
 > {
   const mutation = useMutation({
     mutationFn: (variables: UpdateRoundParticipantVariables) =>
-      updateRoundParticipantFn({ data: variables }),
+      updateRoundPlayerFn({ data: variables }),
   });
 
   const mutate = async ({
@@ -360,7 +360,7 @@ export function useUpdateRoundParticipant(): MutationHookReturn<
 // ──────────────────────────────────────────────
 
 type ToggleRoundMarkerVariables = {
-  roundParticipantId: string;
+  roundPlayerId: string;
   isMarker: boolean;
 };
 type ToggleRoundMarkerResult = { success: boolean };

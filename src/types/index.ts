@@ -1,5 +1,5 @@
 export * from './account';
-export * from './competition';
+export * from './game';
 export * from './course';
 export * from './person';
 export * from './round';

@@ -91,7 +91,7 @@ export const chairConfigSchema = z.object({
   }),
 });
 
-export const competitionConfigSchema = z.discriminatedUnion('formatType', [
+export const gameConfigSchema = z.discriminatedUnion('formatType', [
   matchPlayConfigSchema,
   bestBallConfigSchema,
   nearestPinConfigSchema,
@@ -102,7 +102,7 @@ export const competitionConfigSchema = z.discriminatedUnion('formatType', [
   sixPointConfigSchema,
   chairConfigSchema,
 ]);
-export type CompetitionConfig = z.infer<typeof competitionConfigSchema>;
+export type GameConfig = z.infer<typeof gameConfigSchema>;
 
 export type MatchPlayConfig = z.infer<typeof matchPlayConfigSchema>;
 export type BestBallConfig = z.infer<typeof bestBallConfigSchema>;
@@ -114,10 +114,7 @@ export type WolfConfig = z.infer<typeof wolfConfigSchema>;
 export type SixPointConfig = z.infer<typeof sixPointConfigSchema>;
 export type ChairConfig = z.infer<typeof chairConfigSchema>;
 
-export const FORMAT_TYPE_LABELS: Record<
-  CompetitionConfig['formatType'],
-  string
-> = {
+export const GAME_FORMAT_LABELS: Record<GameConfig['formatType'], string> = {
   match_play: 'Singles',
   best_ball: 'Best Ball',
   nearest_pin: 'Nearest the Pin',
@@ -129,18 +126,16 @@ export const FORMAT_TYPE_LABELS: Record<
   chair: 'Chair',
 };
 
-export const FORMAT_TYPES = Object.keys(
-  FORMAT_TYPE_LABELS,
-) as CompetitionConfig['formatType'][];
+export const GAME_FORMATS = Object.keys(
+  GAME_FORMAT_LABELS,
+) as GameConfig['formatType'][];
 
 /**
  * Returns true for formats that inherently require team composition
  * (2v2 pairs or same-team groups). Does not include match_play, which
  * can be either individual or team-based depending on context.
  */
-export function isTeamFormat(
-  formatType: CompetitionConfig['formatType'],
-): boolean {
+export function isTeamFormat(formatType: GameConfig['formatType']): boolean {
   return (
     formatType === 'best_ball' ||
     formatType === 'hi_lo' ||
@@ -148,68 +143,17 @@ export function isTeamFormat(
   );
 }
 
-export function isBonusFormat(
-  formatType: CompetitionConfig['formatType'],
-): boolean {
+/**
+ * Returns true for side-game formats (NTP / LD) that belong in the
+ * side_games table rather than the games table.
+ */
+export function isBonusFormat(formatType: GameConfig['formatType']): boolean {
   return formatType === 'nearest_pin' || formatType === 'longest_drive';
 }
 
 /**
- * Returns true for any scored competition format (everything except bonus).
+ * Returns true for any group-game format (everything except side-game formats).
  */
-export function isGameFormat(
-  formatType: CompetitionConfig['formatType'],
-): boolean {
+export function isGameFormat(formatType: GameConfig['formatType']): boolean {
   return !isBonusFormat(formatType);
 }
-
-export type CompetitionCategory = 'game' | 'match' | 'bonus';
-
-export type GroupScope = 'all' | 'within_group';
-
-/**
- * Derives the group scope from the competition category.
- * Games and team matches run within each group; bonus spans all players.
- */
-export function deriveGroupScope(category: CompetitionCategory): GroupScope {
-  return category === 'bonus' ? 'all' : 'within_group';
-}
-
-export const sumStablefordAggregationSchema = z.object({
-  method: z.literal('sum_stableford'),
-});
-
-export const lowestStrokesAggregationSchema = z.object({
-  method: z.literal('lowest_strokes'),
-  config: z.object({
-    scoringBasis: z.enum(['net_strokes', 'gross_strokes']),
-  }),
-});
-
-export const matchWinsAggregationSchema = z.object({
-  method: z.literal('match_wins'),
-  config: z.object({
-    pointsPerWin: z.number().min(0).default(1),
-    pointsPerHalf: z.number().min(0).default(0.5),
-  }),
-});
-
-export const aggregationConfigSchema = z.discriminatedUnion('method', [
-  sumStablefordAggregationSchema,
-  lowestStrokesAggregationSchema,
-  matchWinsAggregationSchema,
-]);
-export type AggregationConfig = z.infer<typeof aggregationConfigSchema>;
-
-export const AGGREGATION_METHOD_LABELS: Record<
-  AggregationConfig['method'],
-  string
-> = {
-  sum_stableford: 'Total Stableford Points',
-  lowest_strokes: 'Lowest Total Strokes',
-  match_wins: 'Match Wins',
-};
-
-export const AGGREGATION_METHODS = Object.keys(
-  AGGREGATION_METHOD_LABELS,
-) as AggregationConfig['method'][];

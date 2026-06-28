@@ -1,6 +1,9 @@
-import type { getTournamentLeaderboardFn } from '@/lib/scoreboards.server';
-import type { getIndividualScoreboardFn } from '@/lib/scoreboards.server';
+import type {
+  getTournamentLeaderboardFn,
+  getIndividualScoreboardFn,
+} from '@/lib/scoreboards.server';
 import type { TournamentLeaderboardRow } from '@/lib/domain/tournament-leaderboard';
+import type { getSideGamesFn } from '@/lib/games.server';
 
 export type LeaderboardData = Awaited<
   ReturnType<typeof getTournamentLeaderboardFn>
@@ -8,11 +11,14 @@ export type LeaderboardData = Awaited<
 
 export type LeaderboardRow = TournamentLeaderboardRow;
 
-export type CompetitionData = {
+export type GameData = {
   id: string;
-  formatType: string;
+  format: string;
   name: string;
 };
+
+export type SideGamesData = Awaited<ReturnType<typeof getSideGamesFn>>;
+export type SideGameData = SideGamesData[number];
 
 export type ScoreboardData = Awaited<
   ReturnType<typeof getIndividualScoreboardFn>

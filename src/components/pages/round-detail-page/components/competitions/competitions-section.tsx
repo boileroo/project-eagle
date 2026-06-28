@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { CircleHelp } from 'lucide-react';
-import { useDeleteCompetition } from '@/lib/competitions';
-import { FORMAT_TYPE_LABELS, isBonusFormat } from '@/lib/competitions';
-import type { CompetitionConfig } from '@/lib/competitions';
+import { useDeleteGame } from '@/lib/games';
+import { GAME_FORMAT_LABELS, isTeamFormat } from '@/lib/games';
+import type { GameConfig } from '@/lib/games';
 import {
   calculateCompetitionResults,
   calculateGroupedResults,
@@ -19,7 +19,7 @@ import {
   type TeamPointsEntry,
 } from '@/lib/domain/team-points';
 import { useQuery } from '@tanstack/react-query';
-import { getAllGameDecisionsFn } from '@/lib/game-decisions.server';
+import { getAllDecisionsFn } from '@/lib/decisions.server';
 import { resolveEffectiveHandicap, getPlayingHandicap } from '@/lib/handicaps';
 import { buildTeamColourMap } from '@/lib/team-colours';
 import { CompetitionResults } from '@/components/shared/competition-results';
@@ -37,7 +37,12 @@ import { AddBonusCompDialog } from './add-bonus-comp-dialog';
 import { BonusCompRow } from './bonus-comp-row';
 import { CompetitionsExplainerDialog } from './components/competitions-explainer-dialog';
 import { TeamStandingsBanner } from './components/team-standings-banner';
-import type { RoundData, ScorecardData, RoundCompetitionsData } from '../types';
+import type {
+  RoundData,
+  ScorecardData,
+  RoundGamesData,
+  SideGamesData,
+} from '../types';
 
 type EngineInputs = {
   holes: HoleData[];
@@ -59,7 +64,7 @@ function CompetitionEntry({
   onDelete,
   onChanged,
 }: {
-  comp: RoundCompetitionsData[number];
+  comp: RoundGamesData[number];
   engineInputs: EngineInputs;
   participantTeamColours: Map<string, string>;
   teamColours: Map<string, string>;
@@ -70,11 +75,11 @@ function CompetitionEntry({
   onDelete: (id: string) => void;
   onChanged: () => void;
 }) {
-  const isWolf = comp.formatType === 'wolf';
+  const isWolf = comp.format === 'wolf';
 
   const { data: rawDecisions } = useQuery({
-    queryKey: ['game-decisions', comp.id],
-    queryFn: () => getAllGameDecisionsFn({ data: { competitionId: comp.id } }),
+    queryKey: ['decisions', comp.id],
+    queryFn: () => getAllDecisionsFn({ data: { gameId: comp.id } }),
     enabled: isWolf,
     staleTime: 30_000,
   });
@@ -96,7 +101,7 @@ function CompetitionEntry({
       )
       .map((d: any) => ({
         holeNumber: d.holeNumber,
-        roundGroupId: (d.roundGroupId as string | null) ?? null,
+        roundGroupId: (d.groupId as string | null) ?? null,
         data: {
           wolfPlayerId: (
             d.data as {
@@ -124,30 +129,24 @@ function CompetitionEntry({
   }, [isWolf, rawDecisions]);
 
   const groupedResult = useMemo(() => {
-    const config: CompetitionConfig = {
-      formatType: comp.formatType as CompetitionConfig['formatType'],
-      config: (comp.configJson ?? {}) as CompetitionConfig['config'],
-    } as CompetitionConfig;
-    // Rumble handles all groups internally; force 'all' regardless of stored value
-    const groupScope =
-      comp.formatType === 'rumble'
-        ? 'all'
-        : ((comp.groupScope ?? 'all') as 'all' | 'within_group');
+    const config: GameConfig = {
+      formatType: comp.format as GameConfig['formatType'],
+      config: (comp.config ?? {}) as GameConfig['config'],
+    } as GameConfig;
     const input: CompetitionInput = {
       competition: {
         id: comp.id,
         name: comp.name,
         config,
-        groupScope,
-        roundGroupId:
-          (comp as { roundGroupId?: string | null }).roundGroupId ?? null,
+        groupScope: 'within_group',
+        roundGroupId: comp.groupId,
       },
       ...engineInputs,
       gameDecisions: isWolf ? gameDecisions : undefined,
     };
 
     try {
-      if (groupScope === 'within_group' && engineInputs.groups.length > 0) {
+      if (engineInputs.groups.length > 0) {
         return calculateGroupedResults(input);
       }
       return {
@@ -167,26 +166,23 @@ function CompetitionEntry({
           <Heading level={4}>{comp.name}</Heading>
           <div className="mt-1 flex flex-wrap gap-1.5">
             <Badge variant="outline" className="text-xs">
-              {FORMAT_TYPE_LABELS[
-                comp.formatType as CompetitionConfig['formatType']
-              ] ?? comp.formatType}
+              {GAME_FORMAT_LABELS[comp.format as GameConfig['formatType']] ??
+                comp.format}
             </Badge>
             <Badge variant="secondary" className="text-xs">
-              {comp.competitionCategory === 'match'
+              {isTeamFormat(comp.format as GameConfig['formatType'])
                 ? 'Team Match'
-                : comp.competitionCategory === 'game'
-                  ? 'Game'
-                  : 'Bonus'}
+                : 'Game'}
             </Badge>
           </div>
         </div>
         {isCommissioner && isDraft && (
           <div className="flex shrink-0 items-center gap-1">
             <EditCompetitionDialog comp={comp} onSaved={onChanged} />
-            {comp.formatType === 'match_play' && (
+            {comp.format === 'match_play' && (
               <ConfigureMatchesDialog
                 comp={comp}
-                participants={round.participants}
+                players={round.players}
                 groups={round.groups}
                 onSaved={onChanged}
               />
@@ -262,21 +258,23 @@ function CompetitionEntry({
 export function TeamCompetitionsSection({
   round,
   scorecard,
-  competitions,
+  games,
+  sideGames,
   isCommissioner,
   hasTeams,
   onChanged,
 }: {
   round: RoundData;
   scorecard: ScorecardData;
-  competitions: RoundCompetitionsData;
+  games: RoundGamesData;
+  sideGames: SideGamesData;
   isCommissioner: boolean;
   hasTeams: boolean;
   onChanged: () => void;
 }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [explainerOpen, setExplainerOpen] = useState(false);
-  const [deleteCompetition] = useDeleteCompetition();
+  const [deleteGame] = useDeleteGame();
   const isDraft = round.status === 'draft';
 
   const engineInputs = useMemo(() => {
@@ -286,12 +284,12 @@ export function TeamCompetitionsSection({
       strokeIndex: h.strokeIndex,
     }));
 
-    const participants: ParticipantData[] = round.participants.map((rp) => {
+    const participants: ParticipantData[] = round.players.map((rp) => {
       const effectiveHC = resolveEffectiveHandicap({
         handicapOverride: rp.handicapOverride,
         handicapSnapshot: rp.handicapSnapshot,
-        tournamentParticipant: rp.tournamentParticipant
-          ? { handicapOverride: rp.tournamentParticipant.handicapOverride }
+        tournamentParticipant: rp.player
+          ? { handicapOverride: rp.player.handicapOverride }
           : null,
       });
       return {
@@ -300,7 +298,7 @@ export function TeamCompetitionsSection({
         displayName: rp.person.displayName,
         effectiveHandicap: effectiveHC,
         playingHandicap: getPlayingHandicap(effectiveHC),
-        roundGroupId: rp.roundGroupId ?? null,
+        roundGroupId: rp.groupId ?? null,
       };
     });
 
@@ -319,8 +317,8 @@ export function TeamCompetitionsSection({
       roundGroupId: g.id,
       groupNumber: g.groupNumber,
       name: g.name ?? null,
-      memberParticipantIds: round.participants
-        .filter((rp) => rp.roundGroupId === g.id)
+      memberParticipantIds: round.players
+        .filter((rp) => rp.groupId === g.id)
         .map((rp) => rp.id),
     }));
 
@@ -328,8 +326,8 @@ export function TeamCompetitionsSection({
       string,
       { teamId: string; name: string; memberParticipantIds: string[] }
     >();
-    for (const rp of round.participants) {
-      for (const tm of rp.tournamentParticipant?.teamMemberships ?? []) {
+    for (const rp of round.players) {
+      for (const tm of rp.player?.teamMemberships ?? []) {
         const entry = teamMap.get(tm.team.id) ?? {
           teamId: tm.team.id,
           name: tm.team.name,
@@ -349,12 +347,10 @@ export function TeamCompetitionsSection({
     return { holes, participants, scores, groups, teams };
   }, [round, scorecard]);
 
-  // Build team colour maps from participant team membership data
   const { participantTeamColours, teamColours } = useMemo(() => {
-    // Collect unique teams from all participants, sorted by createdAt for stable ordering
     const teamMap = new Map<string, { id: string; createdAt: Date | string }>();
-    for (const rp of round.participants) {
-      for (const tm of rp.tournamentParticipant?.teamMemberships ?? []) {
+    for (const rp of round.players) {
+      for (const tm of rp.player?.teamMemberships ?? []) {
         if (!teamMap.has(tm.team.id)) {
           teamMap.set(tm.team.id, tm.team);
         }
@@ -366,22 +362,21 @@ export function TeamCompetitionsSection({
     );
     const tColours = buildTeamColourMap(sortedTeams);
 
-    // Map roundParticipantId → hex colour via their team membership
     const pColours = new Map<string, string>();
-    for (const rp of round.participants) {
-      const teamId = rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id;
+    for (const rp of round.players) {
+      const teamId = rp.player?.teamMemberships?.[0]?.team?.id;
       if (teamId) {
         const colour = tColours.get(teamId);
         if (colour) pColours.set(rp.id, colour);
       }
     }
     return { participantTeamColours: pColours, teamColours: tColours };
-  }, [round.participants]);
+  }, [round.players]);
 
   const handleDelete = async (compId: string) => {
     setDeletingId(compId);
-    await deleteCompetition({
-      variables: { competitionId: compId },
+    await deleteGame({
+      variables: { gameId: compId },
       onSuccess: () => {
         toast.success('Competition deleted.');
         onChanged();
@@ -393,24 +388,13 @@ export function TeamCompetitionsSection({
     setDeletingId(null);
   };
 
-  const hasEnoughPlayers = round.participants.length >= 2;
-
-  const { scoredComps, bonusComps } = useMemo(() => {
-    const scored = competitions.filter(
-      (c) => !isBonusFormat(c.formatType as CompetitionConfig['formatType']),
-    );
-    const bonus = competitions.filter((c) =>
-      isBonusFormat(c.formatType as CompetitionConfig['formatType']),
-    );
-    return { scoredComps: scored, bonusComps: bonus };
-  }, [competitions]);
+  const hasEnoughPlayers = round.players.length >= 2;
 
   const teamStandings = useMemo(() => {
     const isActive = round.status === 'open' || round.status === 'finalized';
     if (!isActive || engineInputs.teams.length < 2) return null;
 
     const TEAM_APPLICABLE = new Set(['best_ball', 'hi_lo', 'match_play']);
-    // Include rumble only when round is finalized (for winner banner)
     if (round.status === 'finalized') {
       TEAM_APPLICABLE.add('rumble');
     }
@@ -428,25 +412,20 @@ export function TeamCompetitionsSection({
       }
     };
 
-    for (const comp of scoredComps) {
-      if (!TEAM_APPLICABLE.has(comp.formatType)) continue;
+    for (const comp of games) {
+      if (!TEAM_APPLICABLE.has(comp.format)) continue;
 
-      const config: CompetitionConfig = {
-        formatType: comp.formatType as CompetitionConfig['formatType'],
-        config: (comp.configJson ?? {}) as CompetitionConfig['config'],
-      } as CompetitionConfig;
-      const groupScope =
-        comp.formatType === 'rumble'
-          ? 'all'
-          : ((comp.groupScope ?? 'all') as 'all' | 'within_group');
+      const config: GameConfig = {
+        formatType: comp.format as GameConfig['formatType'],
+        config: (comp.config ?? {}) as GameConfig['config'],
+      } as GameConfig;
       const input = {
         competition: {
           id: comp.id,
           name: comp.name,
           config,
-          groupScope,
-          roundGroupId:
-            (comp as { roundGroupId?: string | null }).roundGroupId ?? null,
+          groupScope: 'within_group' as const,
+          roundGroupId: comp.groupId,
         },
         ...engineInputs,
       };
@@ -467,9 +446,8 @@ export function TeamCompetitionsSection({
 
     if (totals.size < 2) return null;
     return [...totals.values()].sort((a, b) => b.points - a.points);
-  }, [round.status, engineInputs, scoredComps]);
+  }, [round.status, engineInputs, games]);
 
-  // Fetch tournament-wide aggregated team points (automatic aggregation)
   const { data: overallData } = useQuery({
     queryKey: ['tournament-team-points', round.tournamentId],
     queryFn: () =>
@@ -480,7 +458,6 @@ export function TeamCompetitionsSection({
       ),
     staleTime: 30_000,
   });
-  // Only show overall standings when the tournament has more than one round
   const overallTeamStandings =
     overallData && overallData.roundCount > 1
       ? overallData.standings
@@ -516,7 +493,7 @@ export function TeamCompetitionsSection({
                 tournamentId={round.tournamentId}
                 roundId={round.id}
                 round={round}
-                competitions={competitions}
+                games={games}
                 onSaved={onChanged}
                 disabled={!hasTeams || !hasEnoughPlayers}
               />
@@ -530,7 +507,7 @@ export function TeamCompetitionsSection({
           )}
         </CardHeader>
         <CardContent>
-          {competitions.length === 0 ? (
+          {games.length === 0 && sideGames.length === 0 ? (
             <Text size="sm" color="muted">
               Individual scores (strokes + stableford) are automatically tracked
               and will be visible once the round is underway.
@@ -551,7 +528,7 @@ export function TeamCompetitionsSection({
                   teamColours={teamColours}
                 />
               )}
-              {scoredComps.map((comp) => (
+              {games.map((comp) => (
                 <CompetitionEntry
                   key={comp.id}
                   comp={comp}
@@ -567,32 +544,21 @@ export function TeamCompetitionsSection({
                 />
               ))}
 
-              {bonusComps.length > 0 && (
+              {sideGames.length > 0 && (
                 <div>
                   <Heading level={4} className="mb-3">
                     Bonus Prizes
                   </Heading>
                   <div className="space-y-2">
-                    {bonusComps.map((comp) => {
-                      const config = comp.configJson as {
-                        holeNumber?: number;
-                      } | null;
-                      const holeNumber = config?.holeNumber ?? 0;
-                      const award = comp.bonusAwards?.[0];
-
-                      return (
-                        <BonusCompRow
-                          key={comp.id}
-                          comp={comp}
-                          holeNumber={holeNumber}
-                          award={award}
-                          participants={round.participants}
-                          isCommissioner={isCommissioner}
-                          roundStatus={round.status}
-                          onChanged={onChanged}
-                        />
-                      );
-                    })}
+                    {sideGames.map((sideGame) => (
+                      <BonusCompRow
+                        key={sideGame.id}
+                        sideGame={sideGame}
+                        players={round.players}
+                        isCommissioner={isCommissioner}
+                        onChanged={onChanged}
+                      />
+                    ))}
                   </div>
                 </div>
               )}

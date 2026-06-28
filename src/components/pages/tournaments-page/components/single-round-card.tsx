@@ -57,8 +57,8 @@ export function SingleRoundCard({ tournament }: SingleRoundCardProps) {
         <CardContent>
           <div className="flex gap-2">
             <Badge variant="secondary">
-              {tournament.participants.length} player
-              {tournament.participants.length !== 1 ? 's' : ''}
+              {tournament.players.length} player
+              {tournament.players.length !== 1 ? 's' : ''}
             </Badge>
           </div>
         </CardContent>

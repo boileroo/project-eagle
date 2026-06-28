@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useUpdateCompetition } from '@/lib/competitions';
+import { useUpdateGame } from '@/lib/games';
+import type { GameConfig } from '@/lib/games';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
@@ -13,24 +14,23 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import type { CompetitionConfig } from '@/lib/competitions';
-import type { RoundData, RoundCompetitionsData } from '../types';
+import type { RoundData, RoundGamesData } from '../types';
 
 export function ConfigureMatchesDialog({
   comp,
-  participants,
+  players,
   groups,
   onSaved,
 }: {
-  comp: RoundCompetitionsData[number];
-  participants: RoundData['participants'];
+  comp: RoundGamesData[number];
+  players: RoundData['players'];
   groups: RoundData['groups'];
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [updateCompetition, { isPending: saving }] = useUpdateCompetition();
+  const [updateGame, { isPending: saving }] = useUpdateGame();
 
-  const existingConfig = comp.configJson as Record<string, unknown> | null;
+  const existingConfig = (comp.config ?? {}) as Record<string, unknown>;
   const existingPairings: { playerA: string; playerB: string }[] =
     (existingConfig?.pairings as
       | { playerA: string; playerB: string }[]
@@ -67,16 +67,16 @@ export function ConfigureMatchesDialog({
   }, [pairings]);
 
   const getPlayerName = (rpId: string) =>
-    participants.find((rp) => rp.id === rpId)?.person.displayName ?? 'Unknown';
+    players.find((rp) => rp.id === rpId)?.person.displayName ?? 'Unknown';
 
   const getPlayerTeam = (rpId: string) => {
-    const rp = participants.find((p) => p.id === rpId);
-    return rp?.tournamentParticipant?.teamMemberships?.[0]?.team?.name ?? null;
+    const rp = players.find((p) => p.id === rpId);
+    return rp?.player?.teamMemberships?.[0]?.team?.name ?? null;
   };
 
   const getPlayerTeamId = (rpId: string) => {
-    const rp = participants.find((p) => p.id === rpId);
-    return rp?.tournamentParticipant?.teamMemberships?.[0]?.team?.id ?? null;
+    const rp = players.find((p) => p.id === rpId);
+    return rp?.player?.teamMemberships?.[0]?.team?.id ?? null;
   };
 
   const getPairingsForGroup = (groupId: string) => {
@@ -84,9 +84,7 @@ export function ConfigureMatchesDialog({
       return pairings.map((p, i) => ({ ...p, index: i }));
     }
     const groupMemberIds = new Set(
-      participants
-        .filter((rp) => rp.roundGroupId === groupId)
-        .map((rp) => rp.id),
+      players.filter((rp) => rp.groupId === groupId).map((rp) => rp.id),
     );
     return pairings
       .map((p, i) => ({ ...p, index: i }))
@@ -97,23 +95,21 @@ export function ConfigureMatchesDialog({
 
   const getAvailableInGroup = (groupId: string) => {
     if (groupId === UNGROUPED_ID) {
-      return participants.filter((rp) => !assignedIds.has(rp.id));
+      return players.filter((rp) => !assignedIds.has(rp.id));
     }
-    return participants.filter(
-      (rp) => rp.roundGroupId === groupId && !assignedIds.has(rp.id),
+    return players.filter(
+      (rp) => rp.groupId === groupId && !assignedIds.has(rp.id),
     );
   };
 
-  /** Returns the two distinct team IDs present in a group (in insertion order), or [] if not exactly 2. */
   const getGroupTeamIds = (groupId: string): [string, string] | [] => {
-    const groupParticipants =
+    const groupPlayers =
       groupId === UNGROUPED_ID
-        ? participants
-        : participants.filter((p) => p.roundGroupId === groupId);
+        ? players
+        : players.filter((p) => p.groupId === groupId);
     const seen = new Map<string, boolean>();
-    for (const rp of groupParticipants) {
-      const teamId =
-        rp.tournamentParticipant?.teamMemberships?.[0]?.team?.id ?? null;
+    for (const rp of groupPlayers) {
+      const teamId = rp.player?.teamMemberships?.[0]?.team?.id ?? null;
       if (teamId && !seen.has(teamId)) seen.set(teamId, true);
     }
     const ids = [...seen.keys()];
@@ -135,18 +131,18 @@ export function ConfigureMatchesDialog({
   };
 
   const handleSave = async () => {
-    const config: CompetitionConfig = {
-      formatType: comp.formatType as CompetitionConfig['formatType'],
+    const config: GameConfig = {
+      formatType: comp.format as GameConfig['formatType'],
       config: {
         ...existingConfig,
         pairings,
       },
-    } as CompetitionConfig;
+    } as GameConfig;
 
-    await updateCompetition({
+    await updateGame({
       variables: {
         id: comp.id,
-        competitionConfig: config,
+        gameConfig: config,
       },
       onSuccess: () => {
         toast.success('Matches configured.');
@@ -171,27 +167,25 @@ export function ConfigureMatchesDialog({
 
   const hasRealGroups = groups.length > 0;
 
-  // When no groups have been created yet (legacy rounds or very small games),
-  // expose all participants as a single virtual pool so matches can still be configured.
   const effectiveGroups: {
     id: string;
     groupNumber: number;
     name: string | null;
   }[] = hasRealGroups
     ? groups
-    : participants.length >= 2
+    : players.length >= 2
       ? [{ id: UNGROUPED_ID, groupNumber: 1, name: 'All Players' }]
       : [];
 
   const hasGroups = effectiveGroups.length > 0;
 
   const getGroupMemberCount = (groupId: string) => {
-    if (groupId === UNGROUPED_ID) return participants.length;
-    return participants.filter((rp) => rp.roundGroupId === groupId).length;
+    if (groupId === UNGROUPED_ID) return players.length;
+    return players.filter((rp) => rp.groupId === groupId).length;
   };
 
   const ungroupedPlayers = hasRealGroups
-    ? participants.filter((rp) => !rp.roundGroupId && !assignedIds.has(rp.id))
+    ? players.filter((rp) => !rp.groupId && !assignedIds.has(rp.id))
     : [];
 
   return (
@@ -289,16 +283,13 @@ export function ConfigureMatchesDialog({
                           if (rp.id === playerB) return false;
                           if (teamAId) {
                             const rpTeamId =
-                              rp.tournamentParticipant?.teamMemberships?.[0]
-                                ?.team?.id ?? null;
+                              rp.player?.teamMemberships?.[0]?.team?.id ?? null;
                             return rpTeamId === teamAId;
                           }
-                          // No team split: fall back to excluding same team as playerB
                           if (playerB) {
                             const selectedTeamId = getPlayerTeamId(playerB);
                             const rpTeamId =
-                              rp.tournamentParticipant?.teamMemberships?.[0]
-                                ?.team?.id ?? null;
+                              rp.player?.teamMemberships?.[0]?.team?.id ?? null;
                             if (
                               selectedTeamId &&
                               rpTeamId &&
@@ -313,16 +304,13 @@ export function ConfigureMatchesDialog({
                           if (rp.id === playerA) return false;
                           if (teamBId) {
                             const rpTeamId =
-                              rp.tournamentParticipant?.teamMemberships?.[0]
-                                ?.team?.id ?? null;
+                              rp.player?.teamMemberships?.[0]?.team?.id ?? null;
                             return rpTeamId === teamBId;
                           }
-                          // No team split: fall back to excluding same team as playerA
                           if (playerA) {
                             const selectedTeamId = getPlayerTeamId(playerA);
                             const rpTeamId =
-                              rp.tournamentParticipant?.teamMemberships?.[0]
-                                ?.team?.id ?? null;
+                              rp.player?.teamMemberships?.[0]?.team?.id ?? null;
                             if (
                               selectedTeamId &&
                               rpTeamId &&
@@ -348,8 +336,7 @@ export function ConfigureMatchesDialog({
                                 </option>
                                 {availableForA.map((rp) => {
                                   const team =
-                                    rp.tournamentParticipant
-                                      ?.teamMemberships?.[0]?.team?.name;
+                                    rp.player?.teamMemberships?.[0]?.team?.name;
                                   return (
                                     <option key={rp.id} value={rp.id}>
                                       {rp.person.displayName}
@@ -375,8 +362,7 @@ export function ConfigureMatchesDialog({
                                 </option>
                                 {availableForB.map((rp) => {
                                   const team =
-                                    rp.tournamentParticipant
-                                      ?.teamMemberships?.[0]?.team?.name;
+                                    rp.player?.teamMemberships?.[0]?.team?.name;
                                   return (
                                     <option key={rp.id} value={rp.id}>
                                       {rp.person.displayName}

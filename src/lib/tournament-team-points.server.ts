@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { eq, inArray, desc } from 'drizzle-orm';
 import { db } from '@/db';
-import { rounds, scoreEvents } from '@/db/schema';
+import { rounds, scores } from '@/db/schema';
 import { requireTournamentParticipant } from './server/auth.helpers.server';
 import { resolveLatestScores } from './server/score-events.server';
 import { resolveEffectiveHandicap, getPlayingHandicap } from './handicaps';
@@ -16,7 +16,7 @@ import type {
 } from './domain/index';
 import { calculateGroupedResults } from './domain';
 import { collectTeamPoints, type TeamPointsEntry } from './domain/team-points';
-import type { CompetitionConfig } from './competitions';
+import type { GameConfig } from './game-config';
 
 /**
  * Aggregates team competition points across all rounds in a tournament.
@@ -36,10 +36,10 @@ export const getTournamentTeamPointsFn = createServerFn({ method: 'GET' })
           with: { holes: { orderBy: (h, { asc }) => [asc(h.holeNumber)] } },
         },
         groups: { orderBy: (g, { asc }) => [asc(g.groupNumber)] },
-        participants: {
+        players: {
           with: {
             person: true,
-            tournamentParticipant: {
+            player: {
               with: {
                 teamMemberships: {
                   with: { team: true },
@@ -48,16 +48,16 @@ export const getTournamentTeamPointsFn = createServerFn({ method: 'GET' })
             },
           },
         },
-        competitions: { with: { bonusAwards: true } },
+        games: true,
       },
     });
 
     const allRoundIds = tournamentRounds.map((r) => r.id);
     const allEvents =
       allRoundIds.length > 0
-        ? await db.query.scoreEvents.findMany({
-            where: inArray(scoreEvents.roundId, allRoundIds),
-            orderBy: [desc(scoreEvents.createdAt)],
+        ? await db.query.scores.findMany({
+            where: inArray(scores.roundId, allRoundIds),
+            orderBy: [desc(scores.createdAt)],
           })
         : [];
 
@@ -79,7 +79,7 @@ export const getTournamentTeamPointsFn = createServerFn({ method: 'GET' })
       const events = eventsByRound.get(round.id) ?? [];
       const resolvedScores: ResolvedScore[] = resolveLatestScores(events).map(
         (e) => ({
-          roundParticipantId: e.roundParticipantId,
+          roundParticipantId: e.roundPlayerId,
           holeNumber: e.holeNumber,
           strokes: e.strokes,
         }),
@@ -91,8 +91,8 @@ export const getTournamentTeamPointsFn = createServerFn({ method: 'GET' })
         strokeIndex: h.strokeIndex,
       }));
 
-      const participants: ParticipantData[] = round.participants.map((rp) => {
-        const tp = rp.tournamentParticipant as
+      const participants: ParticipantData[] = round.players.map((rp) => {
+        const tp = rp.player as
           | { handicapOverride: string | null }
           | null
           | undefined;
@@ -109,7 +109,7 @@ export const getTournamentTeamPointsFn = createServerFn({ method: 'GET' })
           displayName: rp.person.displayName,
           effectiveHandicap: effectiveHC,
           playingHandicap: getPlayingHandicap(effectiveHC),
-          roundGroupId: rp.roundGroupId ?? null,
+          roundGroupId: rp.groupId ?? null,
         };
       });
 
@@ -117,8 +117,8 @@ export const getTournamentTeamPointsFn = createServerFn({ method: 'GET' })
         roundGroupId: g.id,
         groupNumber: g.groupNumber,
         name: g.name ?? null,
-        memberParticipantIds: round.participants
-          .filter((rp) => rp.roundGroupId === g.id)
+        memberParticipantIds: round.players
+          .filter((rp) => rp.groupId === g.id)
           .map((rp) => rp.id),
       }));
 
@@ -126,10 +126,10 @@ export const getTournamentTeamPointsFn = createServerFn({ method: 'GET' })
         string,
         { teamId: string; name: string; memberParticipantIds: string[] }
       >();
-      for (const rp of round.participants) {
+      for (const rp of round.players) {
         const memberships =
           (
-            rp.tournamentParticipant as
+            rp.player as
               | { teamMemberships?: { team: { id: string; name: string } }[] }
               | null
               | undefined
@@ -153,24 +153,22 @@ export const getTournamentTeamPointsFn = createServerFn({ method: 'GET' })
       const TEAM_APPLICABLE = new Set(['best_ball', 'hi_lo', 'match_play']);
       if (round.status === 'finalized') TEAM_APPLICABLE.add('rumble');
 
-      for (const comp of round.competitions) {
-        if (!TEAM_APPLICABLE.has(comp.formatType)) continue;
+      for (const comp of round.games) {
+        if (!TEAM_APPLICABLE.has(comp.format)) continue;
 
-        const config = {
-          formatType: comp.formatType,
-          config: comp.configJson ?? {},
-        } as CompetitionConfig;
+        const gameConfig = {
+          formatType: comp.format,
+          config: comp.config ?? {},
+        } as GameConfig;
         const groupScope =
-          comp.formatType === 'rumble'
-            ? ('all' as const)
-            : ((comp.groupScope ?? 'all') as 'all' | 'within_group');
+          comp.groupId != null ? ('within_group' as const) : ('all' as const);
         const input: CompetitionInput = {
           competition: {
             id: comp.id,
             name: comp.name,
-            config,
+            config: gameConfig,
             groupScope,
-            roundGroupId: null,
+            roundGroupId: comp.groupId ?? null,
           },
           holes,
           participants,

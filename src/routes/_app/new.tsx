@@ -3,7 +3,7 @@ import { getCoursesFn } from '@/lib/courses.server';
 import { getMyPersonFn } from '@/lib/tournaments.server';
 import { WizardPage } from '@/components/pages';
 
-export const Route = createFileRoute('/_app/tournaments/wizard')({
+export const Route = createFileRoute('/_app/new')({
   loader: async () => {
     const [courses, person] = await Promise.all([
       getCoursesFn(),
@@ -11,7 +11,7 @@ export const Route = createFileRoute('/_app/tournaments/wizard')({
     ]);
     return { courses, person };
   },
-  component: function WizardRoute() {
+  component: function NewRoute() {
     const { courses, person } = Route.useLoaderData();
     return (
       <WizardPage

@@ -2,7 +2,7 @@ import { getStrokesOnHole } from '../handicaps';
 import { stablefordPoints, buildScoreLookup } from './stableford';
 import { assignRanks } from './rank';
 import type { CompetitionInput } from './index';
-import type { ChairConfig } from '../competition-config';
+import type { ChairConfig } from '../game-config';
 
 // ──────────────────────────────────────────────
 // Types

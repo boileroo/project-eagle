@@ -6,7 +6,7 @@ import type {
   TeamData,
   HoleData,
 } from './index';
-import type { RumbleConfig } from '../competitions';
+import type { RumbleConfig } from '../games';
 
 function makeParticipant(id: string, hc = 0): ParticipantData {
   return {

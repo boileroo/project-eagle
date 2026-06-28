@@ -4,8 +4,8 @@ import type {
   WizardPlayer,
   WizardTeam,
 } from '@/lib/validators';
-import type { CompetitionConfig } from '@/lib/competition-config';
-import { isBonusFormat, isTeamFormat } from '@/lib/competition-config';
+import type { GameConfig } from '@/lib/game-config';
+import { isBonusFormat, isTeamFormat } from '@/lib/game-config';
 import {
   INDIVIDUAL_FORMATS,
   TEAM_FORMATS,
@@ -29,9 +29,9 @@ function defaultMatchPoints(teams: WizardTeam[] | undefined): number {
 }
 
 function defaultConfig(
-  formatType: CompetitionConfig['formatType'],
+  formatType: GameConfig['formatType'],
   teams?: WizardTeam[],
-): CompetitionConfig {
+): GameConfig {
   const matchPoints = defaultMatchPoints(teams);
   switch (formatType) {
     case 'match_play':
@@ -77,7 +77,7 @@ function defaultConfig(
 }
 
 function categoryForFormat(
-  formatType: CompetitionConfig['formatType'],
+  formatType: GameConfig['formatType'],
   hasTeams: boolean,
 ): CompetitionCategory {
   if (isBonusFormat(formatType)) return 'bonus';
@@ -89,7 +89,7 @@ function categoryForFormat(
 function initialFormat(
   mode: 'game' | 'bonus',
   hasTeams: boolean,
-): CompetitionConfig['formatType'] {
+): GameConfig['formatType'] {
   if (mode === 'bonus') return BONUS_FORMATS[0].value;
   if (hasTeams) return TEAM_FORMATS[0].value;
   return INDIVIDUAL_FORMATS[0].value;
@@ -114,25 +114,25 @@ export function WizardCompetitionForm({
   const startFormat = initialFormat(mode, hasTeams);
   const [name, setName] = useState('');
   const [formatType, setFormatType] =
-    useState<CompetitionConfig['formatType']>(startFormat);
-  const [config, setConfig] = useState<CompetitionConfig>(
+    useState<GameConfig['formatType']>(startFormat);
+  const [config, setConfig] = useState<GameConfig>(
     defaultConfig(startFormat, teams),
   );
 
   const category = categoryForFormat(formatType, hasTeams);
 
-  const handleFormatChange = (ft: CompetitionConfig['formatType']) => {
+  const handleFormatChange = (ft: GameConfig['formatType']) => {
     setFormatType(ft);
     setConfig(defaultConfig(ft, teams));
   };
 
-  const updateConfig = (patch: Partial<CompetitionConfig['config']>) => {
+  const updateConfig = (patch: Partial<GameConfig['config']>) => {
     setConfig(
-      (prev) =>
+      (prev: GameConfig) =>
         ({
           ...prev,
           config: { ...prev.config, ...patch },
-        }) as CompetitionConfig,
+        }) as GameConfig,
     );
   };
 
@@ -177,9 +177,7 @@ export function WizardCompetitionForm({
           id="comp-format"
           value={formatType}
           onChange={(e) =>
-            handleFormatChange(
-              e.target.value as CompetitionConfig['formatType'],
-            )
+            handleFormatChange(e.target.value as GameConfig['formatType'])
           }
         >
           {mode === 'bonus' &&

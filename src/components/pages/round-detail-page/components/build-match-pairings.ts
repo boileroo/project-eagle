@@ -10,12 +10,8 @@ import {
   type GroupData,
 } from '@/lib/domain';
 import { resolveEffectiveHandicap, getPlayingHandicap } from '@/lib/handicaps';
-import type { CompetitionConfig } from '@/lib/competitions';
-import type { RoundData, ScorecardData, RoundCompetitionsData } from '@/types';
-
-// ──────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────
+import type { GameConfig } from '@/lib/game-config';
+import type { RoundData, ScorecardData, RoundGamesData } from '@/types';
 
 export type SectionPairing =
   | {
@@ -32,22 +28,18 @@ export type SectionPairing =
       participantIds: string[];
     };
 
-// ──────────────────────────────────────────────
-// Builder
-// ──────────────────────────────────────────────
-
 /**
- * Computes match pairings per group from the match_play competition (if any)
+ * Computes match pairings per group from the match_play game (if any)
  * and hi_lo team matches (if any). Used for scorecard grouping + running scores.
  */
 export function buildMatchPairings({
   round,
   scorecard,
-  competitions,
+  games,
 }: {
   round: RoundData;
   scorecard: ScorecardData;
-  competitions: RoundCompetitionsData;
+  games: RoundGamesData;
 }): Map<string, SectionPairing[]> {
   const result = new Map<string, SectionPairing[]>();
 
@@ -56,12 +48,12 @@ export function buildMatchPairings({
     par: h.par,
     strokeIndex: h.strokeIndex,
   }));
-  const participants: ParticipantData[] = round.participants.map((rp) => {
+  const participants: ParticipantData[] = round.players.map((rp) => {
     const effectiveHC = resolveEffectiveHandicap({
       handicapOverride: rp.handicapOverride,
       handicapSnapshot: rp.handicapSnapshot,
-      tournamentParticipant: rp.tournamentParticipant
-        ? { handicapOverride: rp.tournamentParticipant.handicapOverride }
+      tournamentParticipant: rp.player
+        ? { handicapOverride: rp.player.handicapOverride }
         : null,
     });
     return {
@@ -70,7 +62,7 @@ export function buildMatchPairings({
       displayName: rp.person.displayName,
       effectiveHandicap: effectiveHC,
       playingHandicap: getPlayingHandicap(effectiveHC),
-      roundGroupId: rp.roundGroupId ?? null,
+      roundGroupId: rp.groupId ?? null,
     };
   });
   const scores: ResolvedScore[] = [];
@@ -85,35 +77,39 @@ export function buildMatchPairings({
   }
 
   const rpGroupMap = new Map<string, string>();
-  for (const rp of round.participants) {
-    rpGroupMap.set(rp.id, rp.roundGroupId ?? 'ungrouped');
+  for (const rp of round.players) {
+    rpGroupMap.set(rp.id, rp.groupId ?? 'ungrouped');
   }
 
   const groups: GroupData[] = (round.groups ?? []).map((g) => ({
     roundGroupId: g.id,
     groupNumber: g.groupNumber,
     name: g.name ?? null,
-    memberParticipantIds: round.participants
-      .filter((rp) => rp.roundGroupId === g.id)
+    memberParticipantIds: round.players
+      .filter((rp) => rp.groupId === g.id)
       .map((rp) => rp.id),
   }));
 
   // ── Match play ────────────────────────────────
-  const matchComp = competitions.find((c) => c.formatType === 'match_play');
-  if (matchComp) {
-    const config: CompetitionConfig = {
+  const matchGame = games.find((g) => g.format === 'match_play');
+  if (matchGame) {
+    const config: GameConfig = {
       formatType: 'match_play',
-      config: (matchComp.configJson ?? {}) as CompetitionConfig['config'],
-    } as CompetitionConfig;
+      config: (matchGame.config ?? {}) as Extract<
+        GameConfig,
+        { formatType: 'match_play' }
+      >['config'],
+    };
 
     let compResult;
     try {
       compResult = calculateCompetitionResults({
         competition: {
-          id: matchComp.id,
-          name: matchComp.name,
+          id: matchGame.id,
+          name: matchGame.name,
           config,
-          groupScope: (matchComp.groupScope ?? 'all') as 'all' | 'within_group',
+          groupScope: 'within_group',
+          roundGroupId: matchGame.groupId ?? null,
         },
         holes,
         participants,
@@ -151,12 +147,10 @@ export function buildMatchPairings({
   }
 
   // ── Hi-Lo ─────────────────────────────────────
-  const hiLoComp = competitions.find((c) => c.formatType === 'hi_lo');
-  if (hiLoComp) {
-    const hiLoConfig = hiLoComp.configJson as
-      | Record<string, unknown>
-      | undefined;
-    const config: CompetitionConfig = {
+  const hiLoGame = games.find((g) => g.format === 'hi_lo');
+  if (hiLoGame) {
+    const hiLoConfig = hiLoGame.config as Record<string, unknown> | undefined;
+    const config: GameConfig = {
       formatType: 'hi_lo',
       config: {
         pointsPerWin:
@@ -170,13 +164,13 @@ export function buildMatchPairings({
       },
     };
 
-    // Build team data from tournament participant memberships
+    // Build team data from player team memberships
     const teamMap = new Map<
       string,
       { teamId: string; name: string; memberParticipantIds: string[] }
     >();
-    for (const rp of round.participants) {
-      for (const tm of rp.tournamentParticipant?.teamMemberships ?? []) {
+    for (const rp of round.players) {
+      for (const tm of rp.player?.teamMemberships ?? []) {
         const entry = teamMap.get(tm.team.id) ?? {
           teamId: tm.team.id,
           name: tm.team.name,
@@ -197,10 +191,11 @@ export function buildMatchPairings({
     try {
       groupedResult = calculateGroupedResults({
         competition: {
-          id: hiLoComp.id,
-          name: hiLoComp.name,
+          id: hiLoGame.id,
+          name: hiLoGame.name,
           config,
           groupScope: 'within_group',
+          roundGroupId: hiLoGame.groupId ?? null,
         },
         holes,
         participants,

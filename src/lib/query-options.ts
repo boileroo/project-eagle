@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import { getRoundFn, getActiveRoundsFn } from './rounds.server';
 import { getScorecardFn } from './scores.server';
-import { getRoundCompetitionsFn } from './competitions.server';
+import { getRoundGamesFn, getSideGamesFn } from './games.server';
 import {
   getIndividualScoreboardFn,
   getTournamentLeaderboardFn,
@@ -35,10 +35,17 @@ export function scorecardQueryOptions(roundId: string) {
   });
 }
 
-export function competitionsQueryOptions(roundId: string) {
+export function gamesQueryOptions(roundId: string) {
   return queryOptions({
-    queryKey: ['competition', 'round', roundId] as const,
-    queryFn: () => getRoundCompetitionsFn({ data: { roundId } }),
+    queryKey: ['game', 'round', roundId] as const,
+    queryFn: () => getRoundGamesFn({ data: { roundId } }),
+  });
+}
+
+export function sideGamesQueryOptions(roundId: string) {
+  return queryOptions({
+    queryKey: ['side-game', 'round', roundId] as const,
+    queryFn: () => getSideGamesFn({ data: { roundId } }),
   });
 }
 

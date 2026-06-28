@@ -45,7 +45,7 @@ export function useScoreMutation(roundId: string) {
         : {};
 
       const participantScores = {
-        ...nextScorecard[variables.roundParticipantId],
+        ...nextScorecard[variables.roundPlayerId],
       };
       const existing = participantScores[variables.holeNumber];
       participantScores[variables.holeNumber] = {
@@ -53,7 +53,7 @@ export function useScoreMutation(roundId: string) {
         recordedByRole: variables.recordedByRole,
         eventCount: (existing?.eventCount ?? 0) + 1,
       };
-      nextScorecard[variables.roundParticipantId] = participantScores;
+      nextScorecard[variables.roundPlayerId] = participantScores;
       queryClient.setQueryData(scorecardQueryKey, nextScorecard);
 
       const savedOffline = variables.clientMeta?.savedOffline ?? false;

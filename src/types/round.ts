@@ -1,12 +1,10 @@
 import type { getRoundFn, getActiveRoundsFn } from '@/lib/rounds.server';
 import type { getScorecardFn } from '@/lib/scores.server';
-import type { getRoundCompetitionsFn } from '@/lib/competitions.server';
+import type { getRoundGamesFn } from '@/lib/games.server';
 
 export type RoundData = Awaited<ReturnType<typeof getRoundFn>>;
 export type ScorecardData = Awaited<ReturnType<typeof getScorecardFn>>;
-export type RoundCompetitionsData = Awaited<
-  ReturnType<typeof getRoundCompetitionsFn>
->;
+export type RoundGamesData = Awaited<ReturnType<typeof getRoundGamesFn>>;
 
 export type ActiveRound = Awaited<ReturnType<typeof getActiveRoundsFn>>[number];
 
@@ -16,5 +14,5 @@ export type RoundSummary = {
   date: Date | null;
   teeTime: string | null;
   course: { name: string };
-  participants: { id: string }[];
+  players: { id: string }[];
 };

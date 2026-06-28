@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useCreateCompetition } from '@/lib/competitions';
-import type { CompetitionConfig } from '@/lib/competitions';
+import { useCreateSideGame } from '@/lib/games';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -27,13 +26,12 @@ export function AddBonusCompDialog({
   onSaved: () => void;
   disabled?: boolean;
 }) {
-  // optional prop passed via `arguments[0].disabled` to control trigger state
-
   const disabledProp = (arguments[0] as any).disabled as boolean | undefined;
   const [open, setOpen] = useState(false);
-  const [createCompetition, { isPending }] = useCreateCompetition();
-  const [formatType, setFormatType] =
-    useState<CompetitionConfig['formatType']>('nearest_pin');
+  const [createSideGame, { isPending }] = useCreateSideGame();
+  const [format, setFormat] = useState<'nearest_pin' | 'longest_drive'>(
+    'nearest_pin',
+  );
   const [holeNumber, setHoleNumber] = useState(1);
   const [bonusMode, setBonusMode] = useState<'standalone' | 'contributor'>(
     'standalone',
@@ -42,48 +40,30 @@ export function AddBonusCompDialog({
 
   const getFormatLabel = () => {
     const label =
-      BONUS_FORMATS.find((f) => f.value === formatType)?.label ?? formatType;
+      BONUS_FORMATS.find((f) => f.value === format)?.label ?? format;
     return `${label} - Hole ${holeNumber}`;
   };
 
   const resetForm = () => {
-    setFormatType('nearest_pin');
+    setFormat('nearest_pin');
     setHoleNumber(1);
     setBonusMode('standalone');
     setBonusPoints(1);
   };
 
-  const buildConfig = (): CompetitionConfig => {
-    switch (formatType) {
-      case 'nearest_pin':
-        return {
-          formatType: 'nearest_pin',
-          config: { holeNumber, bonusMode, bonusPoints },
-        };
-      case 'longest_drive':
-        return {
-          formatType: 'longest_drive',
-          config: { holeNumber, bonusMode, bonusPoints },
-        };
-      default:
-        return {
-          formatType: 'nearest_pin',
-          config: { holeNumber, bonusMode, bonusPoints },
-        };
-    }
-  };
-
   const handleSave = async () => {
-    await createCompetition({
+    await createSideGame({
       variables: {
         tournamentId,
-        name: getFormatLabel(),
-        competitionCategory: 'bonus',
         roundId,
-        competitionConfig: buildConfig(),
+        name: getFormatLabel(),
+        format,
+        holeNumber,
+        bonusMode,
+        bonusPoints,
       },
       onSuccess: () => {
-        toast.success('Bonus competition created.');
+        toast.success('Bonus prize created.');
         setOpen(false);
         resetForm();
         onSaved();
@@ -119,9 +99,9 @@ export function AddBonusCompDialog({
             <Label htmlFor="bonus-comp-format">Type</Label>
             <Select
               id="bonus-comp-format"
-              value={formatType}
+              value={format}
               onChange={(e) =>
-                setFormatType(e.target.value as CompetitionConfig['formatType'])
+                setFormat(e.target.value as 'nearest_pin' | 'longest_drive')
               }
               autoFocus
             >

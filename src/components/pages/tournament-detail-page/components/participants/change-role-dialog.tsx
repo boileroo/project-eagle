@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { useUpdateParticipant } from '@/lib/tournaments';
-import type { UpdateParticipantInput } from '@/lib/validators';
+import { useUpdatePlayer } from '@/lib/tournaments';
+import type { UpdatePlayerInput } from '@/lib/validators';
 import {
   Dialog,
   DialogContent,
@@ -38,7 +38,7 @@ export function ChangeRoleDialog({
 }: ChangeRoleDialogProps) {
   const [open, setOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>(currentRole);
-  const [updateParticipant, { isPending }] = useUpdateParticipant();
+  const [updatePlayer, { isPending }] = useUpdatePlayer();
 
   const handleRoleChange = async () => {
     if (selectedRole === currentRole) {
@@ -46,12 +46,12 @@ export function ChangeRoleDialog({
       return;
     }
 
-    const data: UpdateParticipantInput = {
-      participantId,
+    const data: UpdatePlayerInput = {
+      playerId: participantId,
       role: selectedRole as 'commissioner' | 'player',
     };
 
-    await updateParticipant({
+    await updatePlayer({
       variables: data,
       onSuccess: () => {
         const roleText =

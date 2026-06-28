@@ -13,7 +13,7 @@ import { getTeamColor } from '@/config/team-colors';
 
 type TeamMember = {
   id: string;
-  participant: {
+  player: {
     person: {
       displayName: string;
     };
@@ -91,7 +91,7 @@ export function TeamItem({
               className="flex items-center justify-between rounded-md border px-3 py-2"
             >
               <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                {m.participant.person.displayName}
+                {m.player.person.displayName}
               </span>
               {canEdit && (
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -120,7 +120,7 @@ export function TeamItem({
                     </DropdownMenu>
                   )}
                   <RemoveButton
-                    label={`Remove ${m.participant.person.displayName} from team`}
+                    label={`Remove ${m.player.person.displayName} from team`}
                     onClick={() => onRemoveMember(m.id)}
                   />
                 </div>

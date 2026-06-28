@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/collapsible';
 import { WolfDeclarationPanel } from './wolf-declaration-panel';
 import type { SectionPairing } from './build-match-pairings';
-import type { RoundData, ScorecardData, RoundCompetitionsData } from '@/types';
+import type { RoundData, ScorecardData, RoundGamesData } from '@/types';
 
 interface ScorecardSectionsProps {
   round: RoundData;
@@ -19,7 +19,7 @@ interface ScorecardSectionsProps {
   matchPairingsForGroups: Map<string, SectionPairing[]>;
   editableParticipantIds: Set<string>;
   participantTeamColours: Map<string, string>;
-  competitions: RoundCompetitionsData;
+  games: RoundGamesData;
   isCommissioner: boolean;
   onScoreClick: (
     rpId: string,
@@ -35,7 +35,7 @@ export function ScorecardSections({
   matchPairingsForGroups,
   editableParticipantIds,
   participantTeamColours,
-  competitions,
+  games,
   isCommissioner,
   onScoreClick,
   quickScoreProps,
@@ -43,22 +43,20 @@ export function ScorecardSections({
   if (
     round.status === 'draft' ||
     round.status === 'scheduled' ||
-    round.participants.length === 0
+    round.players.length === 0
   ) {
     return null;
   }
 
   const groups = round.groups ?? [];
-  const ungrouped = round.participants.filter((rp) => !rp.roundGroupId);
+  const ungrouped = round.players.filter((rp) => !rp.groupId);
 
   const sections: {
     label: string;
-    participants: typeof round.participants;
+    participants: typeof round.players;
   }[] = [];
   for (const g of groups) {
-    const groupParticipants = round.participants.filter(
-      (rp) => rp.roundGroupId === g.id,
-    );
+    const groupParticipants = round.players.filter((rp) => rp.groupId === g.id);
     if (groupParticipants.length > 0) {
       sections.push({
         label: g.name ?? `Group ${g.groupNumber}`,
@@ -72,7 +70,7 @@ export function ScorecardSections({
   if (sections.length === 0) {
     sections.push({
       label: 'Scorecard',
-      participants: round.participants,
+      participants: round.players,
     });
   }
 
@@ -85,24 +83,16 @@ export function ScorecardSections({
           )?.id ?? 'ungrouped';
         const pairings = matchPairingsForGroups.get(sectionGroupId) ?? [];
 
-        // Find Wolf competition for this section
-        // Prefer a Wolf competition scoped to this group, fall back to one scoped to all groups
-        const wolfComp =
+        // Find Wolf game for this section.
+        // Prefer a Wolf game scoped to this group, fall back to one without a group filter.
+        const wolfGame =
           sectionGroupId !== 'ungrouped'
-            ? (competitions.find(
-                (c) =>
-                  c.formatType === 'wolf' &&
-                  ((c as { roundGroupId?: string | null }).roundGroupId ??
-                    null) === sectionGroupId,
+            ? (games.find(
+                (g) => g.format === 'wolf' && g.groupId === sectionGroupId,
               ) ??
-              competitions.find(
-                (c) =>
-                  c.formatType === 'wolf' &&
-                  ((c as { roundGroupId?: string | null }).roundGroupId ??
-                    null) === null,
-              ) ??
+              games.find((g) => g.format === 'wolf' && g.groupId == null) ??
               null)
-            : (competitions.find((c) => c.formatType === 'wolf') ?? null);
+            : (games.find((g) => g.format === 'wolf') ?? null);
 
         const quickScoreButton =
           sectionIdx === 0 && quickScoreProps ? (
@@ -216,9 +206,9 @@ export function ScorecardSections({
                         />
                       </div>
                     )}
-                    {wolfComp && (
+                    {wolfGame && (
                       <WolfDeclarationPanel
-                        wolfComp={wolfComp}
+                        wolfGame={wolfGame}
                         groupParticipants={section.participants}
                         round={round}
                         holeCount={round.course.holes.length}
@@ -267,9 +257,9 @@ export function ScorecardSections({
                     editableParticipantIds={editableParticipantIds}
                     participantTeamColours={participantTeamColours}
                   />
-                  {wolfComp && (
+                  {wolfGame && (
                     <WolfDeclarationPanel
-                      wolfComp={wolfComp}
+                      wolfGame={wolfGame}
                       groupParticipants={section.participants}
                       round={round}
                       holeCount={round.course.holes.length}
